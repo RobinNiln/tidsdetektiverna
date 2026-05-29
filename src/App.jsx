@@ -12,10 +12,10 @@ import React, { useState } from "react";
 // ============================================================
 
 const ASSETS = {
-  map: "/map.jpg",
-  tickelton: "/tickelton.jpg",
-  mira: "/mira.jpg",
-  klonk: "/klonk.jpg",
+  map: "/tidsdetektiverna/map.jpg",
+  tickelton: "/tidsdetektiverna/tickelton.jpg",
+  mira: "/tidsdetektiverna/mira.jpg",
+  klonk: "/tidsdetektiverna/klonk.jpg",
 };
 
 // Hotspots — position i procent av kartans bredd/höjd.
