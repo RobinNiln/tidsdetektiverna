@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 
 // ============================================================
-// TIDSDETEKTIVERNA — v5: levande verkstad
+// TIDSDETEKTIVERNA — v6
+// Nedtonade indikatorer + Pusselverkstaden med 3 delpussel
 // ============================================================
 
 const ASSETS = {
@@ -45,7 +46,6 @@ export default function App() {
   const [completed, setCompleted] = useState({
     reading: false, clock: false, puzzle: false,
   });
-  const [feedback, setFeedback] = useState(null);
   const [hovered, setHovered] = useState(null);
   const [foundItems, setFoundItems] = useState([]);
   const [interiorDialog, setInteriorDialog] = useState(null);
@@ -62,10 +62,10 @@ export default function App() {
     setInteriorDialog(null);
     setView("interior");
   }
-  function startMission() { setFeedback(null); setView("mission"); }
-  function backToInterior() { setFeedback(null); setView("interior"); }
+  function startMission() { setView("mission"); }
+  function backToInterior() { setView("interior"); }
   function backToMap() {
-    setActiveLocation(null); setInteriorDialog(null); setFeedback(null); setView("map");
+    setActiveLocation(null); setInteriorDialog(null); setView("map");
   }
   function completeMission(key) { setCompleted((p) => ({ ...p, [key]: true })); }
   function pickUpItem(id) {
@@ -73,7 +73,7 @@ export default function App() {
   }
   function reset() {
     setCompleted({ reading: false, clock: false, puzzle: false });
-    setFoundItems([]); setFeedback(null); setActiveLocation(null);
+    setFoundItems([]); setActiveLocation(null);
     setInteriorDialog(null); setView("start");
   }
 
@@ -101,19 +101,22 @@ export default function App() {
       {view === "mission" && activeLocation && (
         <MissionOverlay hotspot={HOTSPOTS[activeLocation]} onClose={backToInterior}>
           {activeLocation === "reading" && (
-            <ReadingMission feedback={feedback} setFeedback={setFeedback}
+            <ReadingMission
               alreadyDone={completed.reading}
-              onComplete={() => completeMission("reading")} onBack={backToInterior} />
+              onComplete={() => completeMission("reading")}
+              onBack={backToInterior} />
           )}
           {activeLocation === "clock" && (
-            <ClockMission feedback={feedback} setFeedback={setFeedback}
+            <ClockMission
               alreadyDone={completed.clock}
-              onComplete={() => completeMission("clock")} onBack={backToInterior} />
+              onComplete={() => completeMission("clock")}
+              onBack={backToInterior} />
           )}
           {activeLocation === "puzzle" && (
-            <PuzzleMission feedback={feedback} setFeedback={setFeedback}
+            <PuzzleMissionMulti
               alreadyDone={completed.puzzle}
-              onComplete={() => completeMission("puzzle")} onBack={backToInterior} />
+              onComplete={() => completeMission("puzzle")}
+              onBack={backToInterior} />
           )}
         </MissionOverlay>
       )}
@@ -284,9 +287,8 @@ function InteriorView({ locationKey, completed, foundItems, dialog, setDialog,
 }
 
 // ============================================================
-// PUSSELVERKSTADENS SCEN — levande version
-// Klickbara objekt = osynliga klickytor MED visuella indikatorer
-// (glödande prickar / animerade overlays direkt på objekten)
+// PUSSELVERKSTADENS SCEN
+// Nu med subtil "andning" på klickbara objekt istället för pricklar
 // ============================================================
 function PuzzleWorkshopScene({ completed, foundItems, setDialog, onPickUpItem, onStartMission }) {
   const gearFound = foundItems.includes("puzzle:gear");
@@ -295,21 +297,17 @@ function PuzzleWorkshopScene({ completed, foundItems, setDialog, onPickUpItem, o
     <div className="td-scene-image" style={{ backgroundImage: `url(${ASSETS.puzzleWorkshop})` }}>
 
       {/* === ANIMERADE OVERLAYS PÅ MASKINEN === */}
-      {/* Roterande kugghjul ovanpå maskinens kugghjul (vänster) */}
       <svg className="td-anim-overlay" viewBox="0 0 100 100"
            style={{ left: "67%", top: "30%", width: "5%", height: "9%" }}>
         <circle cx="50" cy="50" r="42" fill="rgba(253, 201, 77, 0.18)"
                 style={{ transformOrigin: "50% 50%", animation: "tdSpin 8s linear infinite" }} />
       </svg>
-
-      {/* Roterande kugghjul (höger) */}
       <svg className="td-anim-overlay" viewBox="0 0 100 100"
            style={{ left: "75%", top: "32%", width: "4%", height: "7%" }}>
         <circle cx="50" cy="50" r="42" fill="rgba(253, 201, 77, 0.15)"
                 style={{ transformOrigin: "50% 50%", animation: "tdSpinReverse 12s linear infinite" }} />
       </svg>
 
-      {/* Ångpuff från skorstenen */}
       <div className="td-steam"
            style={{ left: "76%", top: "8%", width: "5%", height: "10%" }}>
         <span className="td-steam-puff td-steam-puff-1" />
@@ -317,11 +315,9 @@ function PuzzleWorkshopScene({ completed, foundItems, setDialog, onPickUpItem, o
         <span className="td-steam-puff td-steam-puff-3" />
       </div>
 
-      {/* Flimrande lampa (hänger i taket, mitten) */}
       <div className="td-lamp-flicker"
            style={{ left: "42%", top: "23%", width: "8%", height: "10%" }} />
 
-      {/* Pussel-rutornas färgblink (på maskinens display) */}
       <div className="td-puzzle-grid"
            style={{ left: "63.5%", top: "44%", width: "8%", height: "13%" }}>
         <span style={{ animationDelay: "0s" }} />
@@ -330,71 +326,59 @@ function PuzzleWorkshopScene({ completed, foundItems, setDialog, onPickUpItem, o
         <span style={{ animationDelay: "1.2s" }} />
       </div>
 
-      {/* === KLICKBARA YTOR (osynliga ramar) + INDIKATORER === */}
+      {/* === KLICKBARA OBJEKT === */}
+      {/* Varje objekt = en knapp med subtil andning. Etikett dyker upp på hover. */}
 
-      {/* Maskinen — stor klickyta över hela höger sida */}
-      <button
-        className="td-hit"
+      <BreathingHotspot
         style={{ left: "57%", top: "10%", width: "34%", height: "65%" }}
         onClick={onStartMission}
-        aria-label="Den stora maskinen"
+        label={completed ? "Maskinen är lagad ✓" : "Maskinen"}
+        glow="primary"
+        ariaLabel="Den stora maskinen"
       />
-      {/* Klick-indikator (pulserande pulserande prick) ovanpå maskinen */}
-      {!completed && (
-        <ClickIndicator label="Starta pusslet" x="70%" y="38%" pulse="strong" />
-      )}
-      {completed && (
-        <ClickIndicator label="Maskinen är lagad ✓" x="70%" y="38%" pulse="none" done />
-      )}
 
-      {/* Verktygsväggen */}
-      <button
-        className="td-hit"
+      <BreathingHotspot
         style={{ left: "1%", top: "26%", width: "32%", height: "40%" }}
         onClick={() =>
           setDialog(
             "På verktygsväggen hänger skiftnycklar, tänger och en gammal karta. Konstigt — det ser ut som en karta över stadens kloaker. Vem har ritat den?"
           )
         }
-        aria-label="Verktygsväggen"
+        label="Verktygsväggen"
+        glow="medium"
+        ariaLabel="Verktygsväggen"
       />
-      <ClickIndicator label="Titta närmre" x="17%" y="44%" pulse="medium" />
 
-      {/* Fönstret */}
-      <button
-        className="td-hit"
+      <BreathingHotspot
         style={{ left: "10%", top: "4%", width: "22%", height: "20%" }}
         onClick={() =>
           setDialog(
             "Genom fönstret ser du stadens tak. Solen står ovanligt högt för att vara så här tidigt. Något är fel med tiden..."
           )
         }
-        aria-label="Fönstret"
+        label="Fönstret"
+        glow="soft"
+        ariaLabel="Fönstret"
       />
-      <ClickIndicator label="Titta ut" x="21%" y="14%" pulse="soft" />
 
-      {/* Glittrande kugghjul */}
       {!gearFound && (
-        <>
-          <button
-            className="td-hit td-hit-treasure"
-            style={{ left: "78%", top: "80%", width: "8%", height: "12%" }}
-            onClick={() => {
-              onPickUpItem("puzzle:gear");
-              setDialog("Du hittade ett glittrande kugghjul på arbetsbänken! Det glömmer du inte i första taget.");
-            }}
-            aria-label="Glittrande kugghjul"
-          />
-          <ClickIndicator x="82%" y="86%" pulse="treasure" label="Skatt!" />
-        </>
+        <BreathingHotspot
+          style={{ left: "78%", top: "80%", width: "8%", height: "12%" }}
+          onClick={() => {
+            onPickUpItem("puzzle:gear");
+            setDialog("Du hittade ett glittrande kugghjul på arbetsbänken! Det glömmer du inte i första taget.");
+          }}
+          label="Skatt!"
+          glow="treasure"
+          ariaLabel="Glittrande kugghjul"
+        />
       )}
 
-      {/* === KLONK — som karaktärsfigur === */}
       <button
         className="td-character-figure"
         onClick={() =>
           setDialog(
-            "Bra dag för att skruva! Tack att du kom. Min maskin har glömt sitt mönster. Kan du hjälpa den minnas?"
+            "Bra dag för att skruva! Tack att du kom. Min maskin har glömt sina mönster. Kan du hjälpa den minnas?"
           )
         }
         aria-label="Prata med Herr Klonk"
@@ -404,25 +388,27 @@ function PuzzleWorkshopScene({ completed, foundItems, setDialog, onPickUpItem, o
       </button>
 
       <div className="td-scene-hint">
-        Klicka på det som lyser för att utforska
+        Klicka på maskinen för att börja pusslet
       </div>
     </div>
   );
 }
 
 // ============================================================
-// CLICK INDICATOR — den lilla glödande pricken
-// Visar barnet att HÄR kan man klicka, utan stora ramar
+// BreathingHotspot: en klickbar yta som har en mjuk inre glöd
+// som långsamt växer och avtar — som om objektet "andas"
+// På hover: en handritad papperslapp dyker upp
 // ============================================================
-function ClickIndicator({ x, y, pulse, label, done }) {
+function BreathingHotspot({ style, onClick, label, glow, ariaLabel }) {
   return (
-    <div className={`td-indicator td-indicator-${pulse}`}
-         style={{ left: x, top: y }}>
-      <div className="td-indicator-dot" />
-      <div className="td-indicator-ring" />
-      {done && <div className="td-indicator-check">✓</div>}
-      {label && <div className="td-indicator-label">{label}</div>}
-    </div>
+    <button
+      className={`td-breathing td-breathing-${glow || "medium"}`}
+      style={style}
+      onClick={onClick}
+      aria-label={ariaLabel}
+    >
+      <span className="td-breathing-label">{label}</span>
+    </button>
   );
 }
 
@@ -478,9 +464,279 @@ function MissionOverlay({ hotspot, grand, onClose, children }) {
 }
 
 // ============================================================
-// UPPDRAG
+// PUSSELUPPDRAGET — nu med 3 delsteg
 // ============================================================
-function ReadingMission({ feedback, setFeedback, alreadyDone, onComplete, onBack }) {
+function PuzzleMissionMulti({ alreadyDone, onComplete, onBack }) {
+  // Tre pussel i ordning. Varje steg har: text, val, rätt svar, ledtråd.
+  const puzzles = [
+    {
+      type: "color",
+      text: "Vilken färg fortsätter mönstret?",
+      sequence: [
+        { kind: "color", value: "red" },
+        { kind: "color", value: "blue" },
+        { kind: "color", value: "red" },
+        { kind: "color", value: "blue" },
+        { kind: "mystery" },
+      ],
+      choices: [
+        { id: "a", display: { kind: "color", value: "red" }, label: "röd", correct: true },
+        { id: "b", display: { kind: "color", value: "green" }, label: "grön", correct: false },
+        { id: "c", display: { kind: "color", value: "blue" }, label: "blå", correct: false },
+      ],
+      hint: "Färgerna turas om — röd, blå, röd, blå...",
+      success: "Första kugghjulet snurrar!",
+    },
+    {
+      type: "size",
+      text: "Vilken storlek fortsätter mönstret?",
+      sequence: [
+        { kind: "size", value: "small" },
+        { kind: "size", value: "medium" },
+        { kind: "size", value: "large" },
+        { kind: "size", value: "small" },
+        { kind: "size", value: "medium" },
+        { kind: "mystery" },
+      ],
+      choices: [
+        { id: "a", display: { kind: "size", value: "small" }, label: "liten", correct: false },
+        { id: "b", display: { kind: "size", value: "medium" }, label: "mellan", correct: false },
+        { id: "c", display: { kind: "size", value: "large" }, label: "stor", correct: true },
+      ],
+      hint: "Liten, mellan, stor — sedan börjar det om från början.",
+      success: "Andra kugghjulet snurrar!",
+    },
+    {
+      type: "shape",
+      text: "Vilken form fortsätter mönstret?",
+      sequence: [
+        { kind: "shape", value: "triangle" },
+        { kind: "shape", value: "circle" },
+        { kind: "shape", value: "triangle" },
+        { kind: "shape", value: "circle" },
+        { kind: "shape", value: "triangle" },
+        { kind: "mystery" },
+      ],
+      choices: [
+        { id: "a", display: { kind: "shape", value: "square" }, label: "fyrkant", correct: false },
+        { id: "b", display: { kind: "shape", value: "circle" }, label: "cirkel", correct: true },
+        { id: "c", display: { kind: "shape", value: "triangle" }, label: "triangel", correct: false },
+      ],
+      hint: "Trianglar och cirklar turas om.",
+      success: "Tredje kugghjulet snurrar! Maskinen lever igen!",
+    },
+  ];
+
+  const [step, setStep] = useState(0);
+  const [feedback, setFeedback] = useState(null);
+  const [solvedSteps, setSolvedSteps] = useState([false, false, false]);
+
+  const current = puzzles[step];
+  const allSolved = solvedSteps.every(Boolean);
+
+  function pick(choice) {
+    if (choice.correct) {
+      const newSolved = [...solvedSteps];
+      newSolved[step] = true;
+      setSolvedSteps(newSolved);
+      setFeedback({ type: "success", text: current.success });
+    } else {
+      setFeedback({ type: "error", text: `Inte riktigt. Ledtråd: ${current.hint}` });
+    }
+  }
+
+  function nextStep() {
+    setFeedback(null);
+    if (step < puzzles.length - 1) {
+      setStep(step + 1);
+    } else {
+      // Sista steget klart
+      if (!alreadyDone) onComplete();
+    }
+  }
+
+  // Sista steget klart? Visa avslutsskärm
+  if (allSolved && feedback?.type === "success" && step === puzzles.length - 1) {
+    return (
+      <div className="td-puzzle-complete">
+        <div className="td-puzzle-progress">
+          <GearIndicator solved={true} />
+          <GearIndicator solved={true} />
+          <GearIndicator solved={true} />
+        </div>
+        <p className="td-mission-text">
+          <em>"Maskinen lever igen!"</em> Herr Klonk klappar händerna och torkar
+          en oljedroppe från mustaschen. Tre kugghjul snurrar i takt — pusslet är
+          löst.
+        </p>
+        <button className="td-btn td-btn-gold td-btn-big" onClick={onBack}>
+          ★ Tillbaka till verkstaden
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <div className="td-puzzle-progress">
+        {solvedSteps.map((s, i) => (
+          <GearIndicator key={i} solved={s} active={i === step} />
+        ))}
+      </div>
+
+      <p className="td-mission-text">
+        <em>{stepIntro(step)}</em>
+        {current.text}
+      </p>
+
+      <PuzzleSequence sequence={current.sequence} />
+
+      <div className="td-choices td-choices-row">
+        {current.choices.map((c) => (
+          <button key={c.id} className="td-choice td-choice-visual"
+                  onClick={() => pick(c)}>
+            <PuzzleItem item={c.display} small />
+            <span>{c.label}</span>
+          </button>
+        ))}
+      </div>
+
+      {feedback && (
+        <div className={`td-feedback td-feedback-${feedback.type}`}>
+          <p>{feedback.text}</p>
+          {feedback.type === "success" && (
+            <button className="td-btn td-btn-gold" onClick={nextStep}>
+              {step < puzzles.length - 1 ? "→ Nästa pussel" : "★ Avsluta"}
+            </button>
+          )}
+        </div>
+      )}
+    </>
+  );
+}
+
+function stepIntro(step) {
+  if (step === 0) return `"Vi börjar enkelt — färger."`;
+  if (step === 1) return `"Bra! Nu storlekar."`;
+  return `"Sista pusslet — former!"`;
+}
+
+// Indikator-kugghjul som visar progression
+function GearIndicator({ solved, active }) {
+  return (
+    <div className={`td-gear-indicator ${solved ? "solved" : ""} ${active ? "active" : ""}`}>
+      <svg viewBox="0 0 40 40">
+        {[...Array(8)].map((_, i) => (
+          <rect key={i} x="18" y="2" width="4" height="6"
+            fill={solved ? "#fdc94d" : "#a08878"}
+            stroke="#3a2a17" strokeWidth="1.2"
+            transform={`rotate(${i * 45} 20 20)`} />
+        ))}
+        <circle cx="20" cy="20" r="12"
+          fill={solved ? "#fdc94d" : "#a08878"}
+          stroke="#3a2a17" strokeWidth="1.5" />
+        <circle cx="20" cy="20" r="5" fill="#3a2a17" />
+      </svg>
+    </div>
+  );
+}
+
+// Visar sekvensen i pusslet
+function PuzzleSequence({ sequence }) {
+  return (
+    <div className="td-puzzle-sequence">
+      {sequence.map((item, i) => (
+        <React.Fragment key={i}>
+          <PuzzleItem item={item} />
+          {i < sequence.length - 1 && <span className="td-sequence-arrow">→</span>}
+        </React.Fragment>
+      ))}
+    </div>
+  );
+}
+
+// Visar ett enskilt pussel-objekt (färg, storlek, form, eller mystery)
+function PuzzleItem({ item, small }) {
+  const sz = small ? 28 : 44;
+
+  if (item.kind === "mystery") {
+    return (
+      <span className="td-puzzle-item td-puzzle-item-mystery"
+            style={{ width: sz, height: sz, fontSize: sz * 0.5 }}>?</span>
+    );
+  }
+
+  if (item.kind === "color") {
+    const colors = { red: "#d94c3d", blue: "#3a6ea8", green: "#5fa860" };
+    return (
+      <span className="td-puzzle-item"
+            style={{
+              width: sz, height: sz,
+              background: colors[item.value],
+              borderRadius: "50%",
+            }} />
+    );
+  }
+
+  if (item.kind === "size") {
+    const sizeMap = { small: 0.55, medium: 0.8, large: 1.0 };
+    const ratio = sizeMap[item.value];
+    return (
+      <span className="td-puzzle-item-wrap" style={{ width: sz, height: sz }}>
+        <span className="td-puzzle-item"
+              style={{
+                width: sz * ratio, height: sz * ratio,
+                background: "#3a6ea8",
+                borderRadius: "50%",
+              }} />
+      </span>
+    );
+  }
+
+  if (item.kind === "shape") {
+    return (
+      <span className="td-puzzle-item-shape"
+            style={{ width: sz, height: sz }}>
+        <ShapeSvg shape={item.value} size={sz} />
+      </span>
+    );
+  }
+
+  return null;
+}
+
+function ShapeSvg({ shape, size }) {
+  const stroke = "#3a2a17";
+  const strokeW = 2.5;
+  if (shape === "triangle") {
+    return (
+      <svg viewBox="0 0 40 40" width={size} height={size}>
+        <polygon points="20,5 36,35 4,35" fill="#d94c3d" stroke={stroke} strokeWidth={strokeW} strokeLinejoin="round" />
+      </svg>
+    );
+  }
+  if (shape === "circle") {
+    return (
+      <svg viewBox="0 0 40 40" width={size} height={size}>
+        <circle cx="20" cy="20" r="16" fill="#5fa860" stroke={stroke} strokeWidth={strokeW} />
+      </svg>
+    );
+  }
+  if (shape === "square") {
+    return (
+      <svg viewBox="0 0 40 40" width={size} height={size}>
+        <rect x="6" y="6" width="28" height="28" fill="#fdc94d" stroke={stroke} strokeWidth={strokeW} strokeLinejoin="round" />
+      </svg>
+    );
+  }
+  return null;
+}
+
+// ============================================================
+// LÄSUPPDRAG (oförändrat tills vidare)
+// ============================================================
+function ReadingMission({ alreadyDone, onComplete, onBack }) {
+  const [feedback, setFeedback] = useState(null);
   const choices = [
     { id: "a", text: "Den blå väskan på bordet", correct: false },
     { id: "b", text: "Den röda väskan bredvid katten", correct: true },
@@ -510,7 +766,11 @@ function ReadingMission({ feedback, setFeedback, alreadyDone, onComplete, onBack
   );
 }
 
-function ClockMission({ feedback, setFeedback, alreadyDone, onComplete, onBack }) {
+// ============================================================
+// KLOCKUPPDRAG (oförändrat tills vidare)
+// ============================================================
+function ClockMission({ alreadyDone, onComplete, onBack }) {
+  const [feedback, setFeedback] = useState(null);
   const choices = [
     { id: "a", text: "13:30", correct: false },
     { id: "b", text: "14:30", correct: true },
@@ -576,51 +836,6 @@ function AnalogClock({ hour, minute }) {
         stroke="#c0392b" strokeWidth="4" strokeLinecap="round" />
       <circle cx="100" cy="100" r="5" fill="#3a2a17" />
     </svg>
-  );
-}
-
-function PuzzleMission({ feedback, setFeedback, alreadyDone, onComplete, onBack }) {
-  const choices = [
-    { id: "a", color: "red", label: "röd", correct: true },
-    { id: "b", color: "green", label: "grön", correct: false },
-    { id: "c", color: "blue", label: "blå", correct: false },
-  ];
-  function pick(c) {
-    if (c.correct) {
-      setFeedback({ type: "success", text: "Du hittade ledtråden! Maskinen surrar igång." });
-      if (!alreadyDone) onComplete();
-    } else {
-      setFeedback({ type: "error", text: "Bra försök! Ledtråd: färgerna turas om." });
-    }
-  }
-  return (
-    <>
-      <p className="td-mission-text">
-        <em>"Maskinen behöver rätt kugghjul!"</em> Herr Klonk torkar händerna
-        på förklädet: Vilken färg fortsätter mönstret?
-      </p>
-      <div className="td-pattern">
-        <Dot color="red" /><Dot color="blue" /><Dot color="red" /><Dot color="blue" /><Dot color="mystery" />
-      </div>
-      <div className="td-choices td-choices-row">
-        {choices.map((c) => (
-          <button key={c.id} className="td-choice td-choice-dot" onClick={() => pick(c)}>
-            <Dot color={c.color} small /><span>{c.label}</span>
-          </button>
-        ))}
-      </div>
-      <Feedback feedback={feedback} done={alreadyDone || feedback?.type === "success"} onBack={onBack} />
-    </>
-  );
-}
-
-function Dot({ color, small }) {
-  const colors = { red: "#d94c3d", blue: "#3a6ea8", green: "#5fa860", mystery: "#fdf3d8" };
-  return (
-    <span className={`td-dot ${small ? "td-dot-small" : ""}`}
-      style={{ background: colors[color], borderStyle: color === "mystery" ? "dashed" : "solid" }}>
-      {color === "mystery" ? "?" : ""}
-    </span>
   );
 }
 
@@ -888,7 +1103,6 @@ function Styles() {
         pointer-events: none;
       }
 
-      /* Ångpuff från skorstenen */
       .td-steam {
         position: absolute;
         pointer-events: none;
@@ -897,7 +1111,7 @@ function Styles() {
         position: absolute;
         bottom: 0; left: 50%;
         width: 30px; height: 30px;
-        background: radial-gradient(circle, rgba(255, 255, 255, 0.7) 0%, rgba(255, 255, 255, 0) 70%);
+        background: radial-gradient(circle, rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0) 70%);
         border-radius: 50%;
         opacity: 0;
         animation: tdSteamRise 3s ease-out infinite;
@@ -907,15 +1121,14 @@ function Styles() {
       .td-steam-puff-3 { animation-delay: 2s; }
       @keyframes tdSteamRise {
         0% { transform: translate(-50%, 0) scale(0.4); opacity: 0; }
-        20% { opacity: 0.6; }
+        20% { opacity: 0.5; }
         100% { transform: translate(-50%, -120px) scale(1.8); opacity: 0; }
       }
 
-      /* Flimrande lampa */
       .td-lamp-flicker {
         position: absolute;
         pointer-events: none;
-        background: radial-gradient(circle, rgba(253, 201, 77, 0.35) 0%, rgba(253, 201, 77, 0) 60%);
+        background: radial-gradient(circle, rgba(253, 201, 77, 0.3) 0%, rgba(253, 201, 77, 0) 60%);
         border-radius: 50%;
         animation: tdLampFlicker 4s ease-in-out infinite;
       }
@@ -927,7 +1140,6 @@ function Styles() {
         60% { opacity: 0.85; }
       }
 
-      /* Pussel-rutornas färgblink */
       .td-puzzle-grid {
         position: absolute;
         pointer-events: none;
@@ -944,119 +1156,93 @@ function Styles() {
       @keyframes tdPuzzleBlink {
         0%, 100% { background: rgba(255, 255, 255, 0); box-shadow: none; }
         50% {
-          background: rgba(253, 201, 77, 0.55);
-          box-shadow: 0 0 12px rgba(253, 201, 77, 0.9);
+          background: rgba(253, 201, 77, 0.45);
+          box-shadow: 0 0 10px rgba(253, 201, 77, 0.7);
         }
       }
 
-      /* === KLICKBARA YTOR (osynliga) === */
-      .td-hit {
+      /* === BREATHING HOTSPOTS — subtila andande klickytor === */
+      .td-breathing {
         position: absolute;
         background: transparent;
         border: none;
         cursor: pointer;
         padding: 0;
         z-index: 3;
-        transition: background 0.2s;
+        border-radius: 16px;
+        transition: background 0.3s ease;
       }
-      .td-hit:hover {
-        background: rgba(253, 201, 77, 0.12);
+      /* Inner-glow via box-shadow inset — andas långsamt */
+      .td-breathing::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+        pointer-events: none;
+        animation: tdBreathe 4s ease-in-out infinite;
       }
-      .td-hit:focus {
-        outline: none;
+      @keyframes tdBreathe {
+        0%, 100% { box-shadow: inset 0 0 0 rgba(253, 201, 77, 0); }
+        50% { box-shadow: inset 0 0 40px rgba(253, 201, 77, 0.18); }
       }
-      .td-hit:focus-visible {
-        outline: 3px dashed rgba(253, 201, 77, 0.8);
+      .td-breathing-soft::before { animation-duration: 6s; }
+      .td-breathing-soft::before {
+        animation-name: tdBreatheSoft;
+      }
+      @keyframes tdBreatheSoft {
+        0%, 100% { box-shadow: inset 0 0 0 rgba(253, 201, 77, 0); }
+        50% { box-shadow: inset 0 0 30px rgba(253, 201, 77, 0.1); }
+      }
+      .td-breathing-primary::before {
+        animation: tdBreathePrimary 3s ease-in-out infinite;
+      }
+      @keyframes tdBreathePrimary {
+        0%, 100% { box-shadow: inset 0 0 0 rgba(253, 201, 77, 0); }
+        50% { box-shadow: inset 0 0 60px rgba(253, 201, 77, 0.25); }
+      }
+      .td-breathing-treasure::before {
+        animation: tdBreatheTreasure 1.5s ease-in-out infinite;
+      }
+      @keyframes tdBreatheTreasure {
+        0%, 100% { box-shadow: inset 0 0 8px rgba(253, 201, 77, 0.3); }
+        50% { box-shadow: inset 0 0 25px rgba(253, 201, 77, 0.6),
+                          0 0 20px rgba(253, 201, 77, 0.5); }
+      }
+
+      /* Hover-tillstånd */
+      .td-breathing:hover {
+        background: rgba(253, 201, 77, 0.08);
+      }
+      .td-breathing:hover::before {
+        animation-play-state: paused;
+        box-shadow: inset 0 0 40px rgba(253, 201, 77, 0.3);
+      }
+
+      .td-breathing:focus { outline: none; }
+      .td-breathing:focus-visible {
+        outline: 3px dashed rgba(253, 201, 77, 0.7);
         outline-offset: -3px;
       }
 
-      /* === CLICK INDICATORS (glödande prickar) === */
-      .td-indicator {
+      /* Handritad papperslapp som dyker upp på hover */
+      .td-breathing-label {
         position: absolute;
-        width: 28px; height: 28px;
-        transform: translate(-50%, -50%);
-        pointer-events: none;
-        z-index: 4;
-      }
-      .td-indicator-dot {
-        position: absolute; inset: 0;
-        background: var(--gold);
-        border: 3px solid var(--ink);
-        border-radius: 50%;
-        box-shadow: 0 0 12px rgba(253, 201, 77, 0.9), 2px 2px 0 var(--ink);
-        animation: tdDotPulse 1.5s ease-in-out infinite;
-      }
-      .td-indicator-ring {
-        position: absolute; inset: -4px;
-        border: 2px solid var(--gold);
-        border-radius: 50%;
-        animation: tdRingPulse 1.5s ease-out infinite;
-      }
-      @keyframes tdDotPulse {
-        0%, 100% { transform: scale(1); }
-        50% { transform: scale(1.15); }
-      }
-      @keyframes tdRingPulse {
-        0% { transform: scale(1); opacity: 0.9; }
-        100% { transform: scale(2.4); opacity: 0; }
-      }
-
-      /* Olika pulse-styrkor */
-      .td-indicator-strong .td-indicator-dot {
-        background: var(--red);
-        animation-duration: 1s;
-        box-shadow: 0 0 18px rgba(192, 57, 43, 1), 2px 2px 0 var(--ink);
-      }
-      .td-indicator-strong .td-indicator-ring {
-        border-color: var(--red);
-        animation-duration: 1s;
-      }
-      .td-indicator-soft .td-indicator-dot {
-        animation-duration: 2.4s;
-        opacity: 0.85;
-      }
-      .td-indicator-soft .td-indicator-ring {
-        animation-duration: 2.4s;
-        opacity: 0.7;
-      }
-      .td-indicator-treasure .td-indicator-dot {
-        background: var(--gold);
-        animation-duration: 0.7s;
-        box-shadow: 0 0 20px rgba(253, 201, 77, 1), 0 0 40px rgba(253, 201, 77, 0.7), 2px 2px 0 var(--ink);
-      }
-      .td-indicator-treasure .td-indicator-ring {
-        animation-duration: 0.9s;
-      }
-      .td-indicator-none .td-indicator-dot {
-        background: var(--green);
-        animation: none;
-      }
-      .td-indicator-none .td-indicator-ring { display: none; }
-
-      .td-indicator-check {
-        position: absolute; inset: 0;
-        display: flex; align-items: center; justify-content: center;
-        color: var(--cream); font-weight: 900; font-size: 18px;
-      }
-
-      .td-indicator-label {
-        position: absolute;
-        top: calc(100% + 8px);
-        left: 50%; transform: translateX(-50%);
+        bottom: 12px; left: 50%;
+        transform: translateX(-50%) rotate(-2deg);
         background: var(--cream);
         border: 2.5px solid var(--ink);
-        border-radius: 6px;
-        padding: 3px 10px;
-        font-size: 12px; font-weight: bold;
+        border-radius: 4px;
+        padding: 4px 14px;
+        font-size: 13px; font-weight: bold;
         white-space: nowrap;
-        box-shadow: 2px 2px 0 var(--ink);
+        box-shadow: 2px 3px 0 var(--ink);
         opacity: 0;
-        transition: opacity 0.2s;
+        transition: opacity 0.2s, transform 0.2s;
+        pointer-events: none;
       }
-      /* Visa label när muspekaren är över klickytan i samma område */
-      .td-hit:hover ~ .td-indicator .td-indicator-label,
-      .td-indicator:hover .td-indicator-label {
+      .td-breathing:hover .td-breathing-label {
         opacity: 1;
+        transform: translateX(-50%) rotate(-2deg) translateY(-2px);
       }
 
       /* === KLONK SOM KARAKTÄRSFIGUR === */
@@ -1071,7 +1257,7 @@ function Styles() {
         padding: 0;
         cursor: pointer;
         z-index: 4;
-        transition: transform 0.2s, filter 0.2s;
+        transition: filter 0.2s;
         animation: tdCharSway 4s ease-in-out infinite;
         transform-origin: bottom center;
         filter: drop-shadow(4px 6px 8px rgba(0, 0, 0, 0.4));
@@ -1088,29 +1274,29 @@ function Styles() {
       }
       .td-character-figure:hover {
         filter: drop-shadow(4px 6px 8px rgba(0, 0, 0, 0.4))
-                drop-shadow(0 0 16px rgba(253, 201, 77, 0.9));
+                drop-shadow(0 0 14px rgba(253, 201, 77, 0.7));
       }
       .td-character-bubble {
         position: absolute;
         top: 8%; right: -6%;
-        width: 40px; height: 40px;
+        width: 34px; height: 34px;
         background: var(--gold);
-        border: 3px solid var(--ink);
+        border: 2.5px solid var(--ink);
         border-radius: 50%;
         display: flex; align-items: center; justify-content: center;
-        font-size: 22px; font-weight: 900; color: var(--ink);
-        box-shadow: 3px 3px 0 var(--ink);
-        animation: tdBubblePulse 1.2s ease-in-out infinite;
+        font-size: 20px; font-weight: 900; color: var(--ink);
+        box-shadow: 2px 2px 0 var(--ink);
+        animation: tdBubbleFloat 2.4s ease-in-out infinite;
       }
-      @keyframes tdBubblePulse {
-        0%, 100% { transform: scale(1); }
-        50% { transform: scale(1.18); }
+      @keyframes tdBubbleFloat {
+        0%, 100% { transform: translateY(0); opacity: 0.9; }
+        50% { transform: translateY(-4px); opacity: 1; }
       }
 
       .td-scene-hint {
         position: absolute;
         bottom: 12px; left: 50%; transform: translateX(-50%);
-        background: rgba(40, 30, 18, 0.75);
+        background: rgba(40, 30, 18, 0.7);
         color: var(--cream);
         padding: 6px 18px;
         border-radius: 20px;
@@ -1179,7 +1365,7 @@ function Styles() {
       .td-overlay-card {
         background: var(--cream);
         border: 4px solid var(--ink); border-radius: 12px;
-        padding: 28px; max-width: 560px; width: 100%;
+        padding: 28px; max-width: 600px; width: 100%;
         max-height: 90vh; overflow-y: auto;
         box-shadow: 10px 10px 0 var(--ink);
         animation: cardDrop 0.25s ease;
@@ -1227,26 +1413,74 @@ function Styles() {
         background: var(--gold); transform: translate(-2px, -2px);
         box-shadow: 6px 6px 0 var(--ink);
       }
-      .td-choice-dot {
+      .td-choice-visual, .td-choice-dot {
         display: flex; flex-direction: column; align-items: center;
-        gap: 6px; text-align: center; min-width: 90px;
+        gap: 8px; text-align: center; min-width: 100px;
       }
 
       .td-clock { display: block; width: 180px; margin: 10px auto 20px; }
 
-      .td-pattern {
+      /* === PUSSEL-UI === */
+      .td-puzzle-progress {
+        display: flex; justify-content: center; gap: 16px;
+        margin-bottom: 20px;
+      }
+      .td-gear-indicator {
+        width: 48px; height: 48px;
+        opacity: 0.5;
+        transition: opacity 0.3s, transform 0.3s;
+      }
+      .td-gear-indicator.active { opacity: 1; }
+      .td-gear-indicator.solved {
+        opacity: 1;
+        animation: tdGearSolved 0.6s ease;
+      }
+      .td-gear-indicator.solved svg {
+        animation: tdSpin 4s linear infinite;
+      }
+      @keyframes tdGearSolved {
+        0% { transform: scale(0.5) rotate(0deg); }
+        60% { transform: scale(1.25) rotate(60deg); }
+        100% { transform: scale(1) rotate(45deg); }
+      }
+
+      .td-puzzle-sequence {
         display: flex; justify-content: center; align-items: center;
-        gap: 12px; margin: 20px 0; padding: 16px;
-        background: var(--paper); border-radius: 8px;
+        gap: 8px; flex-wrap: wrap;
+        margin: 20px 0;
+        padding: 18px;
+        background: var(--paper);
+        border-radius: 8px;
         border: 2.5px dashed var(--ink);
       }
-      .td-dot {
-        width: 46px; height: 46px; border-radius: 50%;
-        border: 3px solid var(--ink); display: flex;
-        align-items: center; justify-content: center;
-        font-weight: bold; font-size: 22px;
+      .td-sequence-arrow {
+        font-size: 16px; color: var(--ink); opacity: 0.5;
       }
-      .td-dot-small { width: 32px; height: 32px; }
+
+      .td-puzzle-item {
+        display: inline-block;
+        border: 3px solid var(--ink);
+        flex-shrink: 0;
+      }
+      .td-puzzle-item-mystery {
+        display: inline-flex;
+        align-items: center; justify-content: center;
+        background: var(--cream);
+        border: 3px dashed var(--ink);
+        border-radius: 50%;
+        font-weight: bold;
+        color: var(--ink);
+      }
+      .td-puzzle-item-wrap {
+        display: inline-flex;
+        align-items: center; justify-content: center;
+        flex-shrink: 0;
+      }
+      .td-puzzle-item-shape {
+        display: inline-flex;
+        align-items: center; justify-content: center;
+        flex-shrink: 0;
+      }
 
       .td-feedback {
         margin-top: 20px; padding: 16px;
@@ -1256,6 +1490,10 @@ function Styles() {
       .td-feedback p { font-size: 17px; margin: 0 0 10px; font-weight: bold; }
       .td-feedback-success { background: #c8e6b8; }
       .td-feedback-error { background: #fde2c8; }
+
+      .td-puzzle-complete {
+        text-align: center;
+      }
 
       .td-end-stars { margin: 20px 0; }
       .td-end-stars .td-star { font-size: 44px; margin: 0 4px; }
@@ -1276,10 +1514,11 @@ function Styles() {
         .td-interior-title-banner { font-size: 14px; padding: 4px 14px; }
         .td-dialog-bubble p { font-size: 15px; }
         .td-character-figure { height: 55%; left: 28%; }
-        .td-character-bubble { width: 30px; height: 30px; font-size: 18px; }
+        .td-character-bubble { width: 26px; height: 26px; font-size: 16px; }
         .td-scene-hint { font-size: 11px; }
-        .td-indicator { width: 22px; height: 22px; }
-        .td-indicator-label { font-size: 10px; padding: 2px 8px; }
+        .td-breathing-label { font-size: 11px; padding: 3px 10px; }
+        .td-gear-indicator { width: 36px; height: 36px; }
+        .td-puzzle-progress { gap: 10px; }
       }
     `}</style>
   );
