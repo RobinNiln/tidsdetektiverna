@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 
 // ============================================================
-// TIDSDETEKTIVERNA — v4 med riktig verkstadsinteriör
+// TIDSDETEKTIVERNA — v5: levande verkstad
 // ============================================================
 
 const ASSETS = {
@@ -9,6 +9,7 @@ const ASSETS = {
   tickelton: "/tidsdetektiverna/tickelton.jpg",
   mira: "/tidsdetektiverna/mira.jpg",
   klonk: "/tidsdetektiverna/klonk.jpg",
+  klonkFull: "/tidsdetektiverna/klonk_full.png",
   puzzleWorkshop: "/tidsdetektiverna/pusselverkstaden.jpg",
 };
 
@@ -283,28 +284,72 @@ function InteriorView({ locationKey, completed, foundItems, dialog, setDialog,
 }
 
 // ============================================================
-// PUSSELVERKSTADENS SCEN
+// PUSSELVERKSTADENS SCEN — levande version
+// Klickbara objekt = osynliga klickytor MED visuella indikatorer
+// (glödande prickar / animerade overlays direkt på objekten)
 // ============================================================
 function PuzzleWorkshopScene({ completed, foundItems, setDialog, onPickUpItem, onStartMission }) {
   const gearFound = foundItems.includes("puzzle:gear");
 
   return (
     <div className="td-scene-image" style={{ backgroundImage: `url(${ASSETS.puzzleWorkshop})` }}>
-      {/* Maskinen */}
+
+      {/* === ANIMERADE OVERLAYS PÅ MASKINEN === */}
+      {/* Roterande kugghjul ovanpå maskinens kugghjul (vänster) */}
+      <svg className="td-anim-overlay" viewBox="0 0 100 100"
+           style={{ left: "67%", top: "30%", width: "5%", height: "9%" }}>
+        <circle cx="50" cy="50" r="42" fill="rgba(253, 201, 77, 0.18)"
+                style={{ transformOrigin: "50% 50%", animation: "tdSpin 8s linear infinite" }} />
+      </svg>
+
+      {/* Roterande kugghjul (höger) */}
+      <svg className="td-anim-overlay" viewBox="0 0 100 100"
+           style={{ left: "75%", top: "32%", width: "4%", height: "7%" }}>
+        <circle cx="50" cy="50" r="42" fill="rgba(253, 201, 77, 0.15)"
+                style={{ transformOrigin: "50% 50%", animation: "tdSpinReverse 12s linear infinite" }} />
+      </svg>
+
+      {/* Ångpuff från skorstenen */}
+      <div className="td-steam"
+           style={{ left: "76%", top: "8%", width: "5%", height: "10%" }}>
+        <span className="td-steam-puff td-steam-puff-1" />
+        <span className="td-steam-puff td-steam-puff-2" />
+        <span className="td-steam-puff td-steam-puff-3" />
+      </div>
+
+      {/* Flimrande lampa (hänger i taket, mitten) */}
+      <div className="td-lamp-flicker"
+           style={{ left: "42%", top: "23%", width: "8%", height: "10%" }} />
+
+      {/* Pussel-rutornas färgblink (på maskinens display) */}
+      <div className="td-puzzle-grid"
+           style={{ left: "63.5%", top: "44%", width: "8%", height: "13%" }}>
+        <span style={{ animationDelay: "0s" }} />
+        <span style={{ animationDelay: "0.4s" }} />
+        <span style={{ animationDelay: "0.8s" }} />
+        <span style={{ animationDelay: "1.2s" }} />
+      </div>
+
+      {/* === KLICKBARA YTOR (osynliga ramar) + INDIKATORER === */}
+
+      {/* Maskinen — stor klickyta över hela höger sida */}
       <button
-        className="td-scene-hotspot td-scene-hotspot-big"
+        className="td-hit"
         style={{ left: "57%", top: "10%", width: "34%", height: "65%" }}
         onClick={onStartMission}
         aria-label="Den stora maskinen"
-      >
-        <span className="td-scene-label">
-          {completed ? "✓ Maskinen är lagad" : "Starta pusslet"}
-        </span>
-      </button>
+      />
+      {/* Klick-indikator (pulserande pulserande prick) ovanpå maskinen */}
+      {!completed && (
+        <ClickIndicator label="Starta pusslet" x="70%" y="38%" pulse="strong" />
+      )}
+      {completed && (
+        <ClickIndicator label="Maskinen är lagad ✓" x="70%" y="38%" pulse="none" done />
+      )}
 
       {/* Verktygsväggen */}
       <button
-        className="td-scene-hotspot"
+        className="td-hit"
         style={{ left: "1%", top: "26%", width: "32%", height: "40%" }}
         onClick={() =>
           setDialog(
@@ -312,13 +357,12 @@ function PuzzleWorkshopScene({ completed, foundItems, setDialog, onPickUpItem, o
           )
         }
         aria-label="Verktygsväggen"
-      >
-        <span className="td-scene-label">Verktygsväggen</span>
-      </button>
+      />
+      <ClickIndicator label="Titta närmre" x="17%" y="44%" pulse="medium" />
 
       {/* Fönstret */}
       <button
-        className="td-scene-hotspot"
+        className="td-hit"
         style={{ left: "10%", top: "4%", width: "22%", height: "20%" }}
         onClick={() =>
           setDialog(
@@ -326,26 +370,28 @@ function PuzzleWorkshopScene({ completed, foundItems, setDialog, onPickUpItem, o
           )
         }
         aria-label="Fönstret"
-      >
-        <span className="td-scene-label">Fönstret</span>
-      </button>
+      />
+      <ClickIndicator label="Titta ut" x="21%" y="14%" pulse="soft" />
 
-      {/* Det glittrande kugghjulet */}
+      {/* Glittrande kugghjul */}
       {!gearFound && (
-        <button
-          className="td-scene-hotspot td-scene-hotspot-glow"
-          style={{ left: "78%", top: "80%", width: "8%", height: "12%" }}
-          onClick={() => {
-            onPickUpItem("puzzle:gear");
-            setDialog("Du hittade ett glittrande kugghjul på arbetsbänken! Det glömmer du inte i första taget.");
-          }}
-          aria-label="Glittrande kugghjul"
-        />
+        <>
+          <button
+            className="td-hit td-hit-treasure"
+            style={{ left: "78%", top: "80%", width: "8%", height: "12%" }}
+            onClick={() => {
+              onPickUpItem("puzzle:gear");
+              setDialog("Du hittade ett glittrande kugghjul på arbetsbänken! Det glömmer du inte i första taget.");
+            }}
+            aria-label="Glittrande kugghjul"
+          />
+          <ClickIndicator x="82%" y="86%" pulse="treasure" label="Skatt!" />
+        </>
       )}
 
-      {/* Herr Klonk */}
+      {/* === KLONK — som karaktärsfigur === */}
       <button
-        className="td-scene-character"
+        className="td-character-figure"
         onClick={() =>
           setDialog(
             "Bra dag för att skruva! Tack att du kom. Min maskin har glömt sitt mönster. Kan du hjälpa den minnas?"
@@ -353,13 +399,29 @@ function PuzzleWorkshopScene({ completed, foundItems, setDialog, onPickUpItem, o
         }
         aria-label="Prata med Herr Klonk"
       >
-        <img src={ASSETS.klonk} alt="Herr Klonk" />
-        <span className="td-character-indicator">!</span>
+        <img src={ASSETS.klonkFull} alt="Herr Klonk" />
+        <span className="td-character-bubble">!</span>
       </button>
 
       <div className="td-scene-hint">
-        Klicka runt i verkstaden för att utforska. Maskinen är huvudpusslet.
+        Klicka på det som lyser för att utforska
       </div>
+    </div>
+  );
+}
+
+// ============================================================
+// CLICK INDICATOR — den lilla glödande pricken
+// Visar barnet att HÄR kan man klicka, utan stora ramar
+// ============================================================
+function ClickIndicator({ x, y, pulse, label, done }) {
+  return (
+    <div className={`td-indicator td-indicator-${pulse}`}
+         style={{ left: x, top: y }}>
+      <div className="td-indicator-dot" />
+      <div className="td-indicator-ring" />
+      {done && <div className="td-indicator-check">✓</div>}
+      {label && <div className="td-indicator-label">{label}</div>}
     </div>
   );
 }
@@ -621,6 +683,8 @@ function Styles() {
 
       .td-fade-in { animation: tdFadeIn 0.5s ease; }
       @keyframes tdFadeIn { from { opacity: 0; } to { opacity: 1; } }
+      @keyframes tdSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+      @keyframes tdSpinReverse { from { transform: rotate(0deg); } to { transform: rotate(-360deg); } }
 
       /* === STARTSKÄRM === */
       .td-start-screen {
@@ -818,91 +882,227 @@ function Styles() {
         background-color: #1a1208;
       }
 
-      .td-scene-hotspot {
+      /* === ANIMERADE OVERLAYS PÅ MASKINEN === */
+      .td-anim-overlay {
         position: absolute;
-        background: rgba(253, 201, 77, 0.05);
-        border: 3px dashed transparent;
-        border-radius: 12px;
-        cursor: pointer; padding: 0;
-        transition: all 0.2s ease;
+        pointer-events: none;
       }
-      .td-scene-hotspot:hover {
-        background: rgba(253, 201, 77, 0.22);
-        border-color: var(--ink);
-        box-shadow: 0 0 0 3px rgba(253, 201, 77, 0.4), 0 0 25px rgba(253, 201, 77, 0.6);
-        transform: scale(1.02);
-      }
-      .td-scene-hotspot-big:hover { transform: scale(1.01); }
 
-      .td-scene-label {
+      /* Ångpuff från skorstenen */
+      .td-steam {
         position: absolute;
-        bottom: 8px; left: 50%; transform: translateX(-50%);
+        pointer-events: none;
+      }
+      .td-steam-puff {
+        position: absolute;
+        bottom: 0; left: 50%;
+        width: 30px; height: 30px;
+        background: radial-gradient(circle, rgba(255, 255, 255, 0.7) 0%, rgba(255, 255, 255, 0) 70%);
+        border-radius: 50%;
+        opacity: 0;
+        animation: tdSteamRise 3s ease-out infinite;
+      }
+      .td-steam-puff-1 { animation-delay: 0s; }
+      .td-steam-puff-2 { animation-delay: 1s; }
+      .td-steam-puff-3 { animation-delay: 2s; }
+      @keyframes tdSteamRise {
+        0% { transform: translate(-50%, 0) scale(0.4); opacity: 0; }
+        20% { opacity: 0.6; }
+        100% { transform: translate(-50%, -120px) scale(1.8); opacity: 0; }
+      }
+
+      /* Flimrande lampa */
+      .td-lamp-flicker {
+        position: absolute;
+        pointer-events: none;
+        background: radial-gradient(circle, rgba(253, 201, 77, 0.35) 0%, rgba(253, 201, 77, 0) 60%);
+        border-radius: 50%;
+        animation: tdLampFlicker 4s ease-in-out infinite;
+      }
+      @keyframes tdLampFlicker {
+        0%, 100% { opacity: 0.7; transform: scale(1); }
+        15% { opacity: 0.9; }
+        25% { opacity: 0.4; transform: scale(0.95); }
+        28% { opacity: 0.9; transform: scale(1.02); }
+        60% { opacity: 0.85; }
+      }
+
+      /* Pussel-rutornas färgblink */
+      .td-puzzle-grid {
+        position: absolute;
+        pointer-events: none;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        grid-template-rows: 1fr 1fr;
+        gap: 2%;
+      }
+      .td-puzzle-grid span {
+        background: rgba(255, 255, 255, 0);
+        border-radius: 4px;
+        animation: tdPuzzleBlink 2.4s ease-in-out infinite;
+      }
+      @keyframes tdPuzzleBlink {
+        0%, 100% { background: rgba(255, 255, 255, 0); box-shadow: none; }
+        50% {
+          background: rgba(253, 201, 77, 0.55);
+          box-shadow: 0 0 12px rgba(253, 201, 77, 0.9);
+        }
+      }
+
+      /* === KLICKBARA YTOR (osynliga) === */
+      .td-hit {
+        position: absolute;
+        background: transparent;
+        border: none;
+        cursor: pointer;
+        padding: 0;
+        z-index: 3;
+        transition: background 0.2s;
+      }
+      .td-hit:hover {
+        background: rgba(253, 201, 77, 0.12);
+      }
+      .td-hit:focus {
+        outline: none;
+      }
+      .td-hit:focus-visible {
+        outline: 3px dashed rgba(253, 201, 77, 0.8);
+        outline-offset: -3px;
+      }
+
+      /* === CLICK INDICATORS (glödande prickar) === */
+      .td-indicator {
+        position: absolute;
+        width: 28px; height: 28px;
+        transform: translate(-50%, -50%);
+        pointer-events: none;
+        z-index: 4;
+      }
+      .td-indicator-dot {
+        position: absolute; inset: 0;
+        background: var(--gold);
+        border: 3px solid var(--ink);
+        border-radius: 50%;
+        box-shadow: 0 0 12px rgba(253, 201, 77, 0.9), 2px 2px 0 var(--ink);
+        animation: tdDotPulse 1.5s ease-in-out infinite;
+      }
+      .td-indicator-ring {
+        position: absolute; inset: -4px;
+        border: 2px solid var(--gold);
+        border-radius: 50%;
+        animation: tdRingPulse 1.5s ease-out infinite;
+      }
+      @keyframes tdDotPulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.15); }
+      }
+      @keyframes tdRingPulse {
+        0% { transform: scale(1); opacity: 0.9; }
+        100% { transform: scale(2.4); opacity: 0; }
+      }
+
+      /* Olika pulse-styrkor */
+      .td-indicator-strong .td-indicator-dot {
+        background: var(--red);
+        animation-duration: 1s;
+        box-shadow: 0 0 18px rgba(192, 57, 43, 1), 2px 2px 0 var(--ink);
+      }
+      .td-indicator-strong .td-indicator-ring {
+        border-color: var(--red);
+        animation-duration: 1s;
+      }
+      .td-indicator-soft .td-indicator-dot {
+        animation-duration: 2.4s;
+        opacity: 0.85;
+      }
+      .td-indicator-soft .td-indicator-ring {
+        animation-duration: 2.4s;
+        opacity: 0.7;
+      }
+      .td-indicator-treasure .td-indicator-dot {
+        background: var(--gold);
+        animation-duration: 0.7s;
+        box-shadow: 0 0 20px rgba(253, 201, 77, 1), 0 0 40px rgba(253, 201, 77, 0.7), 2px 2px 0 var(--ink);
+      }
+      .td-indicator-treasure .td-indicator-ring {
+        animation-duration: 0.9s;
+      }
+      .td-indicator-none .td-indicator-dot {
+        background: var(--green);
+        animation: none;
+      }
+      .td-indicator-none .td-indicator-ring { display: none; }
+
+      .td-indicator-check {
+        position: absolute; inset: 0;
+        display: flex; align-items: center; justify-content: center;
+        color: var(--cream); font-weight: 900; font-size: 18px;
+      }
+
+      .td-indicator-label {
+        position: absolute;
+        top: calc(100% + 8px);
+        left: 50%; transform: translateX(-50%);
         background: var(--cream);
         border: 2.5px solid var(--ink);
         border-radius: 6px;
-        padding: 4px 12px;
-        font-size: 13px; font-weight: bold;
+        padding: 3px 10px;
+        font-size: 12px; font-weight: bold;
         white-space: nowrap;
-        box-shadow: 3px 3px 0 var(--ink);
-        opacity: 0; transition: opacity 0.2s;
+        box-shadow: 2px 2px 0 var(--ink);
+        opacity: 0;
+        transition: opacity 0.2s;
+      }
+      /* Visa label när muspekaren är över klickytan i samma område */
+      .td-hit:hover ~ .td-indicator .td-indicator-label,
+      .td-indicator:hover .td-indicator-label {
+        opacity: 1;
+      }
+
+      /* === KLONK SOM KARAKTÄRSFIGUR === */
+      .td-character-figure {
+        position: absolute;
+        bottom: 0;
+        left: 32%;
+        height: 70%;
+        width: auto;
+        background: transparent;
+        border: none;
+        padding: 0;
+        cursor: pointer;
+        z-index: 4;
+        transition: transform 0.2s, filter 0.2s;
+        animation: tdCharSway 4s ease-in-out infinite;
+        transform-origin: bottom center;
+        filter: drop-shadow(4px 6px 8px rgba(0, 0, 0, 0.4));
+      }
+      .td-character-figure img {
+        height: 100%;
+        width: auto;
+        display: block;
         pointer-events: none;
       }
-      .td-scene-hotspot:hover .td-scene-label { opacity: 1; }
-
-      .td-scene-hotspot-glow {
-        background: radial-gradient(circle, rgba(253, 201, 77, 0.4) 0%, rgba(253, 201, 77, 0) 70%);
-        border-color: transparent;
-        animation: tdGlow 1.5s ease-in-out infinite;
+      @keyframes tdCharSway {
+        0%, 100% { transform: rotate(-0.5deg); }
+        50% { transform: rotate(0.5deg); }
       }
-      @keyframes tdGlow {
-        0%, 100% {
-          box-shadow: 0 0 10px rgba(253, 201, 77, 0.5), 0 0 20px rgba(253, 201, 77, 0.3);
-          background: radial-gradient(circle, rgba(253, 201, 77, 0.4) 0%, rgba(253, 201, 77, 0) 70%);
-        }
-        50% {
-          box-shadow: 0 0 25px rgba(253, 201, 77, 1), 0 0 50px rgba(253, 201, 77, 0.5);
-          background: radial-gradient(circle, rgba(253, 201, 77, 0.7) 0%, rgba(253, 201, 77, 0) 70%);
-        }
+      .td-character-figure:hover {
+        filter: drop-shadow(4px 6px 8px rgba(0, 0, 0, 0.4))
+                drop-shadow(0 0 16px rgba(253, 201, 77, 0.9));
       }
-
-      .td-scene-character {
+      .td-character-bubble {
         position: absolute;
-        bottom: 4%; left: 36%;
-        width: 14%; max-width: 180px; min-width: 100px;
-        aspect-ratio: 1 / 1;
-        background: var(--paper);
-        border: 4px solid var(--ink);
-        border-radius: 50%;
-        overflow: hidden;
-        cursor: pointer; padding: 0;
-        box-shadow: 6px 6px 0 var(--ink), 0 0 0 4px var(--cream);
-        transition: transform 0.2s;
-        animation: tdCharBob 3s ease-in-out infinite;
-      }
-      @keyframes tdCharBob {
-        0%, 100% { transform: translateY(0); }
-        50% { transform: translateY(-6px); }
-      }
-      .td-scene-character:hover {
-        transform: scale(1.08);
-        box-shadow: 8px 8px 0 var(--ink), 0 0 0 4px var(--cream),
-                    0 0 30px rgba(253, 201, 77, 0.8);
-      }
-      .td-scene-character img {
-        width: 100%; height: 100%; object-fit: cover; display: block;
-      }
-      .td-character-indicator {
-        position: absolute;
-        top: -8px; right: -8px;
-        width: 32px; height: 32px;
+        top: 8%; right: -6%;
+        width: 40px; height: 40px;
         background: var(--gold);
         border: 3px solid var(--ink);
         border-radius: 50%;
         display: flex; align-items: center; justify-content: center;
-        font-size: 18px; font-weight: 900; color: var(--ink);
-        animation: tdBlink 1.2s ease-in-out infinite;
+        font-size: 22px; font-weight: 900; color: var(--ink);
+        box-shadow: 3px 3px 0 var(--ink);
+        animation: tdBubblePulse 1.2s ease-in-out infinite;
       }
-      @keyframes tdBlink {
+      @keyframes tdBubblePulse {
         0%, 100% { transform: scale(1); }
         50% { transform: scale(1.18); }
       }
@@ -910,12 +1110,13 @@ function Styles() {
       .td-scene-hint {
         position: absolute;
         bottom: 12px; left: 50%; transform: translateX(-50%);
-        background: rgba(40, 30, 18, 0.7);
+        background: rgba(40, 30, 18, 0.75);
         color: var(--cream);
         padding: 6px 18px;
         border-radius: 20px;
         font-style: italic; font-size: 13px;
         pointer-events: none; white-space: nowrap;
+        z-index: 5;
       }
 
       .td-dialog-bubble {
@@ -1074,9 +1275,11 @@ function Styles() {
         .td-portrait-name { font-size: 12px; }
         .td-interior-title-banner { font-size: 14px; padding: 4px 14px; }
         .td-dialog-bubble p { font-size: 15px; }
-        .td-scene-character { width: 20%; min-width: 80px; }
-        .td-character-indicator { width: 24px; height: 24px; font-size: 14px; }
+        .td-character-figure { height: 55%; left: 28%; }
+        .td-character-bubble { width: 30px; height: 30px; font-size: 18px; }
         .td-scene-hint { font-size: 11px; }
+        .td-indicator { width: 22px; height: 22px; }
+        .td-indicator-label { font-size: 10px; padding: 2px 8px; }
       }
     `}</style>
   );
