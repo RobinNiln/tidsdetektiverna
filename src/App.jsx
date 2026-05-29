@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 
 // ============================================================
-// TIDSDETEKTIVERNA — v6
-// Nedtonade indikatorer + Pusselverkstaden med 3 delpussel
+// TIDSDETEKTIVERNA — v7
+// Pappersetiketter på klickbara objekt + zoom-in på karta och fönster
 // ============================================================
 
 const ASSETS = {
@@ -12,6 +12,8 @@ const ASSETS = {
   klonk: "/tidsdetektiverna/klonk.jpg",
   klonkFull: "/tidsdetektiverna/klonk_full.png",
   puzzleWorkshop: "/tidsdetektiverna/pusselverkstaden.jpg",
+  kartaDetalj: "/tidsdetektiverna/karta_detalj.jpg",
+  fonsterDetalj: "/tidsdetektiverna/fonster_detalj.jpg",
 };
 
 const HOTSPOTS = {
@@ -49,6 +51,7 @@ export default function App() {
   const [hovered, setHovered] = useState(null);
   const [foundItems, setFoundItems] = useState([]);
   const [interiorDialog, setInteriorDialog] = useState(null);
+  const [detailView, setDetailView] = useState(null); // "karta" | "fonster" | null
 
   const stars = Object.values(completed).filter(Boolean).length;
   const allDone = stars === 3;
@@ -60,12 +63,14 @@ export default function App() {
     }
     setActiveLocation(key);
     setInteriorDialog(null);
+    setDetailView(null);
     setView("interior");
   }
   function startMission() { setView("mission"); }
   function backToInterior() { setView("interior"); }
   function backToMap() {
-    setActiveLocation(null); setInteriorDialog(null); setView("map");
+    setActiveLocation(null); setInteriorDialog(null);
+    setDetailView(null); setView("map");
   }
   function completeMission(key) { setCompleted((p) => ({ ...p, [key]: true })); }
   function pickUpItem(id) {
@@ -74,7 +79,7 @@ export default function App() {
   function reset() {
     setCompleted({ reading: false, clock: false, puzzle: false });
     setFoundItems([]); setActiveLocation(null);
-    setInteriorDialog(null); setView("start");
+    setInteriorDialog(null); setDetailView(null); setView("start");
   }
 
   return (
@@ -95,7 +100,8 @@ export default function App() {
           foundItems={foundItems} dialog={interiorDialog}
           setDialog={setInteriorDialog}
           onPickUpItem={pickUpItem}
-          onStartMission={startMission} onBack={backToMap} />
+          onStartMission={startMission} onBack={backToMap}
+          detailView={detailView} setDetailView={setDetailView} />
       )}
 
       {view === "mission" && activeLocation && (
@@ -252,7 +258,8 @@ function StarRow({ filled = 0 }) {
 // INTERIÖR-VY
 // ============================================================
 function InteriorView({ locationKey, completed, foundItems, dialog, setDialog,
-                        onPickUpItem, onStartMission, onBack }) {
+                        onPickUpItem, onStartMission, onBack,
+                        detailView, setDetailView }) {
   const hotspot = HOTSPOTS[locationKey];
 
   let scene;
@@ -260,7 +267,8 @@ function InteriorView({ locationKey, completed, foundItems, dialog, setDialog,
     scene = (
       <PuzzleWorkshopScene completed={completed} foundItems={foundItems}
         setDialog={setDialog} onPickUpItem={onPickUpItem}
-        onStartMission={onStartMission} />
+        onStartMission={onStartMission}
+        setDetailView={setDetailView} />
     );
   } else {
     scene = <ComingSoonScene title={hotspot.title} onStartMission={onStartMission} />;
@@ -282,15 +290,76 @@ function InteriorView({ locationKey, completed, foundItems, dialog, setDialog,
           <div className="td-dialog-tip">Klicka för att stänga</div>
         </div>
       )}
+
+      {detailView && (
+        <DetailOverlay
+          type={detailView}
+          onClose={() => setDetailView(null)}
+        />
+      )}
     </div>
   );
 }
 
 // ============================================================
-// PUSSELVERKSTADENS SCEN
-// Nu med subtil "andning" på klickbara objekt istället för pricklar
+// DETALJ-OVERLAY: zoomar in på karta eller fönster
 // ============================================================
-function PuzzleWorkshopScene({ completed, foundItems, setDialog, onPickUpItem, onStartMission }) {
+function DetailOverlay({ type, onClose }) {
+  if (type === "karta") {
+    return (
+      <div className="td-detail-overlay" onClick={onClose}>
+        <div className="td-detail-content" onClick={(e) => e.stopPropagation()}>
+          <div className="td-detail-stamp">UPPHITTAD KARTA</div>
+          <div className="td-detail-image-wrap">
+            <img src={ASSETS.kartaDetalj} alt="Kartan på verktygsväggen" />
+          </div>
+          <p className="td-detail-caption">
+            En gammal karta över stadens kloakgångar. Linjerna slingrar sig som
+            en labyrint under hela staden. Två kompassrosor markerar ingångar.
+            Vem ritade den här?
+          </p>
+          <button className="td-btn td-btn-gold" onClick={onClose}>
+            ✕ Lägg tillbaka
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (type === "fonster") {
+    return (
+      <div className="td-detail-overlay" onClick={onClose}>
+        <div className="td-detail-content td-detail-window" onClick={(e) => e.stopPropagation()}>
+          <div className="td-detail-stamp">UTSIKTEN</div>
+          {/* Fönsterluckor som öppnas */}
+          <div className="td-window-frame">
+            <div className="td-window-shutter td-window-shutter-left" />
+            <div className="td-window-shutter td-window-shutter-right" />
+            <div className="td-window-view">
+              <img src={ASSETS.fonsterDetalj} alt="Utsikt över staden" />
+            </div>
+          </div>
+          <p className="td-detail-caption">
+            Stadens tak breder ut sig. Två tornspiror reser sig i fjärran — det
+            ena är säkert klocktornet. Solen står konstigt högt på himlen för
+            att vara så här tidigt på dagen...
+          </p>
+          <button className="td-btn td-btn-gold" onClick={onClose}>
+            ✕ Stäng fönstret
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return null;
+}
+
+// ============================================================
+// PUSSELVERKSTADENS SCEN
+// ============================================================
+function PuzzleWorkshopScene({ completed, foundItems, setDialog, onPickUpItem,
+                                onStartMission, setDetailView }) {
   const gearFound = foundItems.includes("puzzle:gear");
 
   return (
@@ -326,50 +395,47 @@ function PuzzleWorkshopScene({ completed, foundItems, setDialog, onPickUpItem, o
         <span style={{ animationDelay: "1.2s" }} />
       </div>
 
-      {/* === KLICKBARA OBJEKT === */}
-      {/* Varje objekt = en knapp med subtil andning. Etikett dyker upp på hover. */}
+      {/* === KLICKBARA OBJEKT MED PAPPERSETIKETTER === */}
 
-      <BreathingHotspot
+      <TaggedHotspot
         style={{ left: "57%", top: "10%", width: "34%", height: "65%" }}
+        labelStyle={{ left: "50%", top: "78%" }}
+        labelRotation={-2}
         onClick={onStartMission}
-        label={completed ? "Maskinen är lagad ✓" : "Maskinen"}
-        glow="primary"
+        label={completed ? "Maskinen ✓" : "Maskinen"}
+        primary
         ariaLabel="Den stora maskinen"
       />
 
-      <BreathingHotspot
+      <TaggedHotspot
         style={{ left: "1%", top: "26%", width: "32%", height: "40%" }}
-        onClick={() =>
-          setDialog(
-            "På verktygsväggen hänger skiftnycklar, tänger och en gammal karta. Konstigt — det ser ut som en karta över stadens kloaker. Vem har ritat den?"
-          )
-        }
+        labelStyle={{ left: "50%", top: "100%" }}
+        labelRotation={2}
+        onClick={() => setDetailView("karta")}
         label="Verktygsväggen"
-        glow="medium"
         ariaLabel="Verktygsväggen"
       />
 
-      <BreathingHotspot
+      <TaggedHotspot
         style={{ left: "10%", top: "4%", width: "22%", height: "20%" }}
-        onClick={() =>
-          setDialog(
-            "Genom fönstret ser du stadens tak. Solen står ovanligt högt för att vara så här tidigt. Något är fel med tiden..."
-          )
-        }
+        labelStyle={{ left: "50%", top: "100%" }}
+        labelRotation={-3}
+        onClick={() => setDetailView("fonster")}
         label="Fönstret"
-        glow="soft"
         ariaLabel="Fönstret"
       />
 
       {!gearFound && (
-        <BreathingHotspot
+        <TaggedHotspot
           style={{ left: "78%", top: "80%", width: "8%", height: "12%" }}
+          labelStyle={{ left: "50%", top: "100%" }}
+          labelRotation={3}
           onClick={() => {
             onPickUpItem("puzzle:gear");
             setDialog("Du hittade ett glittrande kugghjul på arbetsbänken! Det glömmer du inte i första taget.");
           }}
           label="Skatt!"
-          glow="treasure"
+          treasure
           ariaLabel="Glittrande kugghjul"
         />
       )}
@@ -388,26 +454,33 @@ function PuzzleWorkshopScene({ completed, foundItems, setDialog, onPickUpItem, o
       </button>
 
       <div className="td-scene-hint">
-        Klicka på maskinen för att börja pusslet
+        Klicka på något som intresserar dig
       </div>
     </div>
   );
 }
 
 // ============================================================
-// BreathingHotspot: en klickbar yta som har en mjuk inre glöd
-// som långsamt växer och avtar — som om objektet "andas"
-// På hover: en handritad papperslapp dyker upp
+// TaggedHotspot — klickbar yta med pappersetikett som hänger
 // ============================================================
-function BreathingHotspot({ style, onClick, label, glow, ariaLabel }) {
+function TaggedHotspot({ style, labelStyle, labelRotation = -2, onClick, label,
+                          primary, treasure, ariaLabel }) {
   return (
     <button
-      className={`td-breathing td-breathing-${glow || "medium"}`}
+      className={`td-tagged ${primary ? "td-tagged-primary" : ""} ${treasure ? "td-tagged-treasure" : ""}`}
       style={style}
       onClick={onClick}
       aria-label={ariaLabel}
     >
-      <span className="td-breathing-label">{label}</span>
+      <span
+        className="td-paper-tag"
+        style={{
+          ...labelStyle,
+          transform: `translateX(-50%) rotate(${labelRotation}deg)`,
+        }}
+      >
+        {label}
+      </span>
     </button>
   );
 }
@@ -464,10 +537,9 @@ function MissionOverlay({ hotspot, grand, onClose, children }) {
 }
 
 // ============================================================
-// PUSSELUPPDRAGET — nu med 3 delsteg
+// PUSSELUPPDRAGET — 3 delsteg
 // ============================================================
 function PuzzleMissionMulti({ alreadyDone, onComplete, onBack }) {
-  // Tre pussel i ordning. Varje steg har: text, val, rätt svar, ledtråd.
   const puzzles = [
     {
       type: "color",
@@ -550,12 +622,10 @@ function PuzzleMissionMulti({ alreadyDone, onComplete, onBack }) {
     if (step < puzzles.length - 1) {
       setStep(step + 1);
     } else {
-      // Sista steget klart
       if (!alreadyDone) onComplete();
     }
   }
 
-  // Sista steget klart? Visa avslutsskärm
   if (allSolved && feedback?.type === "success" && step === puzzles.length - 1) {
     return (
       <div className="td-puzzle-complete">
@@ -621,7 +691,6 @@ function stepIntro(step) {
   return `"Sista pusslet — former!"`;
 }
 
-// Indikator-kugghjul som visar progression
 function GearIndicator({ solved, active }) {
   return (
     <div className={`td-gear-indicator ${solved ? "solved" : ""} ${active ? "active" : ""}`}>
@@ -641,7 +710,6 @@ function GearIndicator({ solved, active }) {
   );
 }
 
-// Visar sekvensen i pusslet
 function PuzzleSequence({ sequence }) {
   return (
     <div className="td-puzzle-sequence">
@@ -655,59 +723,43 @@ function PuzzleSequence({ sequence }) {
   );
 }
 
-// Visar ett enskilt pussel-objekt (färg, storlek, form, eller mystery)
 function PuzzleItem({ item, small }) {
   const sz = small ? 28 : 44;
-
   if (item.kind === "mystery") {
     return (
       <span className="td-puzzle-item td-puzzle-item-mystery"
             style={{ width: sz, height: sz, fontSize: sz * 0.5 }}>?</span>
     );
   }
-
   if (item.kind === "color") {
     const colors = { red: "#d94c3d", blue: "#3a6ea8", green: "#5fa860" };
     return (
       <span className="td-puzzle-item"
-            style={{
-              width: sz, height: sz,
-              background: colors[item.value],
-              borderRadius: "50%",
-            }} />
+            style={{ width: sz, height: sz, background: colors[item.value], borderRadius: "50%" }} />
     );
   }
-
   if (item.kind === "size") {
     const sizeMap = { small: 0.55, medium: 0.8, large: 1.0 };
     const ratio = sizeMap[item.value];
     return (
       <span className="td-puzzle-item-wrap" style={{ width: sz, height: sz }}>
         <span className="td-puzzle-item"
-              style={{
-                width: sz * ratio, height: sz * ratio,
-                background: "#3a6ea8",
-                borderRadius: "50%",
-              }} />
+              style={{ width: sz * ratio, height: sz * ratio, background: "#3a6ea8", borderRadius: "50%" }} />
       </span>
     );
   }
-
   if (item.kind === "shape") {
     return (
-      <span className="td-puzzle-item-shape"
-            style={{ width: sz, height: sz }}>
+      <span className="td-puzzle-item-shape" style={{ width: sz, height: sz }}>
         <ShapeSvg shape={item.value} size={sz} />
       </span>
     );
   }
-
   return null;
 }
 
 function ShapeSvg({ shape, size }) {
-  const stroke = "#3a2a17";
-  const strokeW = 2.5;
+  const stroke = "#3a2a17"; const strokeW = 2.5;
   if (shape === "triangle") {
     return (
       <svg viewBox="0 0 40 40" width={size} height={size}>
@@ -733,7 +785,7 @@ function ShapeSvg({ shape, size }) {
 }
 
 // ============================================================
-// LÄSUPPDRAG (oförändrat tills vidare)
+// LÄSUPPDRAG
 // ============================================================
 function ReadingMission({ alreadyDone, onComplete, onBack }) {
   const [feedback, setFeedback] = useState(null);
@@ -767,7 +819,7 @@ function ReadingMission({ alreadyDone, onComplete, onBack }) {
 }
 
 // ============================================================
-// KLOCKUPPDRAG (oförändrat tills vidare)
+// KLOCKUPPDRAG
 // ============================================================
 function ClockMission({ alreadyDone, onComplete, onBack }) {
   const [feedback, setFeedback] = useState(null);
@@ -1102,11 +1154,7 @@ function Styles() {
         position: absolute;
         pointer-events: none;
       }
-
-      .td-steam {
-        position: absolute;
-        pointer-events: none;
-      }
+      .td-steam { position: absolute; pointer-events: none; }
       .td-steam-puff {
         position: absolute;
         bottom: 0; left: 50%;
@@ -1161,88 +1209,216 @@ function Styles() {
         }
       }
 
-      /* === BREATHING HOTSPOTS — subtila andande klickytor === */
-      .td-breathing {
+      /* === TAGGED HOTSPOTS — pappersetiketter === */
+      .td-tagged {
         position: absolute;
         background: transparent;
         border: none;
         cursor: pointer;
         padding: 0;
         z-index: 3;
-        border-radius: 16px;
-        transition: background 0.3s ease;
+        transition: background 0.2s;
       }
-      /* Inner-glow via box-shadow inset — andas långsamt */
-      .td-breathing::before {
-        content: "";
-        position: absolute;
-        inset: 0;
-        border-radius: inherit;
-        pointer-events: none;
-        animation: tdBreathe 4s ease-in-out infinite;
+      .td-tagged:hover {
+        background: rgba(253, 201, 77, 0.12);
+        border-radius: 8px;
       }
-      @keyframes tdBreathe {
-        0%, 100% { box-shadow: inset 0 0 0 rgba(253, 201, 77, 0); }
-        50% { box-shadow: inset 0 0 40px rgba(253, 201, 77, 0.18); }
-      }
-      .td-breathing-soft::before { animation-duration: 6s; }
-      .td-breathing-soft::before {
-        animation-name: tdBreatheSoft;
-      }
-      @keyframes tdBreatheSoft {
-        0%, 100% { box-shadow: inset 0 0 0 rgba(253, 201, 77, 0); }
-        50% { box-shadow: inset 0 0 30px rgba(253, 201, 77, 0.1); }
-      }
-      .td-breathing-primary::before {
-        animation: tdBreathePrimary 3s ease-in-out infinite;
-      }
-      @keyframes tdBreathePrimary {
-        0%, 100% { box-shadow: inset 0 0 0 rgba(253, 201, 77, 0); }
-        50% { box-shadow: inset 0 0 60px rgba(253, 201, 77, 0.25); }
-      }
-      .td-breathing-treasure::before {
-        animation: tdBreatheTreasure 1.5s ease-in-out infinite;
-      }
-      @keyframes tdBreatheTreasure {
-        0%, 100% { box-shadow: inset 0 0 8px rgba(253, 201, 77, 0.3); }
-        50% { box-shadow: inset 0 0 25px rgba(253, 201, 77, 0.6),
-                          0 0 20px rgba(253, 201, 77, 0.5); }
-      }
-
-      /* Hover-tillstånd */
-      .td-breathing:hover {
-        background: rgba(253, 201, 77, 0.08);
-      }
-      .td-breathing:hover::before {
-        animation-play-state: paused;
-        box-shadow: inset 0 0 40px rgba(253, 201, 77, 0.3);
-      }
-
-      .td-breathing:focus { outline: none; }
-      .td-breathing:focus-visible {
+      .td-tagged:focus { outline: none; }
+      .td-tagged:focus-visible {
         outline: 3px dashed rgba(253, 201, 77, 0.7);
         outline-offset: -3px;
+        border-radius: 8px;
       }
 
-      /* Handritad papperslapp som dyker upp på hover */
-      .td-breathing-label {
+      /* Själva pappersetiketten */
+      .td-paper-tag {
         position: absolute;
-        bottom: 12px; left: 50%;
-        transform: translateX(-50%) rotate(-2deg);
-        background: var(--cream);
+        background: #fdf3d8;
         border: 2.5px solid var(--ink);
-        border-radius: 4px;
         padding: 4px 14px;
-        font-size: 13px; font-weight: bold;
+        font-weight: bold;
+        font-size: 14px;
+        color: var(--ink);
+        font-family: 'Georgia', serif;
         white-space: nowrap;
         box-shadow: 2px 3px 0 var(--ink);
-        opacity: 0;
-        transition: opacity 0.2s, transform 0.2s;
         pointer-events: none;
+        animation: tdTagWiggle 3.5s ease-in-out infinite;
       }
-      .td-breathing:hover .td-breathing-label {
-        opacity: 1;
-        transform: translateX(-50%) rotate(-2deg) translateY(-2px);
+      /* Liten "spik" eller "knapp" som håller upp lappen */
+      .td-paper-tag::before {
+        content: "";
+        position: absolute;
+        top: -10px; left: 50%;
+        margin-left: -1px;
+        width: 2px; height: 10px;
+        background: var(--ink);
+      }
+      .td-paper-tag::after {
+        content: "";
+        position: absolute;
+        top: -14px; left: 50%;
+        margin-left: -5px;
+        width: 10px; height: 10px;
+        background: var(--red);
+        border: 2px solid var(--ink);
+        border-radius: 50%;
+        box-shadow: 1px 1px 0 var(--ink);
+      }
+      @keyframes tdTagWiggle {
+        0%, 100% { filter: brightness(1); }
+        50% { filter: brightness(1.08); }
+      }
+
+      /* Primär lapp (maskinen) — guldfärgad */
+      .td-tagged-primary .td-paper-tag {
+        background: var(--gold);
+        font-size: 15px;
+        padding: 5px 18px;
+      }
+
+      /* Skattlapp — extra glitter */
+      .td-tagged-treasure .td-paper-tag {
+        background: var(--gold);
+        animation: tdTagShimmer 1.5s ease-in-out infinite;
+        font-size: 13px;
+      }
+      @keyframes tdTagShimmer {
+        0%, 100% {
+          filter: brightness(1);
+          box-shadow: 2px 3px 0 var(--ink), 0 0 0 rgba(253, 201, 77, 0);
+        }
+        50% {
+          filter: brightness(1.15);
+          box-shadow: 2px 3px 0 var(--ink), 0 0 18px rgba(253, 201, 77, 0.9);
+        }
+      }
+
+      /* Hover-effekt på lappen */
+      .td-tagged:hover .td-paper-tag {
+        transform: translateX(-50%) rotate(0deg) scale(1.08) !important;
+        animation-play-state: paused;
+      }
+
+      /* === DETALJ-OVERLAY (karta och fönster) === */
+      .td-detail-overlay {
+        position: absolute;
+        inset: 0;
+        background: rgba(40, 30, 18, 0.85);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 50;
+        padding: 20px;
+        animation: tdFadeIn 0.3s ease;
+      }
+      .td-detail-content {
+        background: var(--cream);
+        border: 4px solid var(--ink);
+        border-radius: 12px;
+        padding: 24px;
+        max-width: 600px;
+        width: 100%;
+        max-height: 92vh;
+        overflow-y: auto;
+        text-align: center;
+        box-shadow: 10px 10px 0 var(--ink);
+        animation: tdDetailIn 0.4s ease;
+        transform: rotate(-0.5deg);
+      }
+      @keyframes tdDetailIn {
+        from { opacity: 0; transform: rotate(-0.5deg) scale(0.85); }
+        to { opacity: 1; transform: rotate(-0.5deg) scale(1); }
+      }
+      .td-detail-stamp {
+        display: inline-block;
+        border: 2.5px solid var(--ink);
+        padding: 6px 18px;
+        font-size: 12px; letter-spacing: 2px;
+        text-transform: uppercase;
+        background: var(--paper);
+        font-weight: bold;
+        margin-bottom: 16px;
+        box-shadow: 3px 3px 0 var(--ink);
+        transform: rotate(-2deg);
+      }
+      .td-detail-image-wrap {
+        margin: 12px 0;
+        border: 3px solid var(--ink);
+        border-radius: 4px;
+        overflow: hidden;
+        box-shadow: 4px 4px 0 var(--ink);
+        display: inline-block;
+        max-width: 100%;
+      }
+      .td-detail-image-wrap img {
+        display: block;
+        max-width: 100%;
+        max-height: 50vh;
+        width: auto; height: auto;
+      }
+      .td-detail-caption {
+        font-size: 16px;
+        line-height: 1.55;
+        margin: 16px 0;
+        font-style: italic;
+        color: var(--ink);
+      }
+
+      /* Fönster med öppnande luckor */
+      .td-detail-window .td-window-frame {
+        position: relative;
+        margin: 12px auto;
+        border: 4px solid var(--ink);
+        background: var(--ink);
+        overflow: hidden;
+        box-shadow: 6px 6px 0 var(--ink);
+        max-width: 100%;
+        display: inline-block;
+      }
+      .td-window-view {
+        display: block;
+      }
+      .td-window-view img {
+        display: block;
+        max-width: 100%;
+        max-height: 50vh;
+        width: auto; height: auto;
+      }
+      .td-window-shutter {
+        position: absolute;
+        top: 0; bottom: 0;
+        width: 50%;
+        background:
+          linear-gradient(90deg,
+            #6a4a28 0%, #8a6a48 20%, #6a4a28 40%,
+            #8a6a48 60%, #6a4a28 80%, #4a3018 100%);
+        z-index: 2;
+        border-color: var(--ink);
+      }
+      .td-window-shutter-left {
+        left: 0;
+        border-right: 3px solid var(--ink);
+        transform-origin: left center;
+        animation: tdShutterOpenLeft 1.2s ease-out forwards;
+        animation-delay: 0.3s;
+        transform: rotateY(0deg);
+      }
+      .td-window-shutter-right {
+        right: 0;
+        border-left: 3px solid var(--ink);
+        transform-origin: right center;
+        animation: tdShutterOpenRight 1.2s ease-out forwards;
+        animation-delay: 0.3s;
+        transform: rotateY(0deg);
+      }
+      @keyframes tdShutterOpenLeft {
+        0% { transform: perspective(800px) rotateY(0deg); }
+        100% { transform: perspective(800px) rotateY(-110deg); }
+      }
+      @keyframes tdShutterOpenRight {
+        0% { transform: perspective(800px) rotateY(0deg); }
+        100% { transform: perspective(800px) rotateY(110deg); }
       }
 
       /* === KLONK SOM KARAKTÄRSFIGUR === */
@@ -1354,7 +1530,7 @@ function Styles() {
       }
       .td-coming-soon-card p { margin: 16px 0 24px; font-size: 17px; line-height: 1.5; }
 
-      /* === OVERLAY === */
+      /* === OVERLAY (uppdrag) === */
       .td-overlay {
         position: fixed; inset: 0; z-index: 100;
         background: rgba(40, 30, 18, 0.65);
@@ -1420,7 +1596,6 @@ function Styles() {
 
       .td-clock { display: block; width: 180px; margin: 10px auto 20px; }
 
-      /* === PUSSEL-UI === */
       .td-puzzle-progress {
         display: flex; justify-content: center; gap: 16px;
         margin-bottom: 20px;
@@ -1435,9 +1610,7 @@ function Styles() {
         opacity: 1;
         animation: tdGearSolved 0.6s ease;
       }
-      .td-gear-indicator.solved svg {
-        animation: tdSpin 4s linear infinite;
-      }
+      .td-gear-indicator.solved svg { animation: tdSpin 4s linear infinite; }
       @keyframes tdGearSolved {
         0% { transform: scale(0.5) rotate(0deg); }
         60% { transform: scale(1.25) rotate(60deg); }
@@ -1447,15 +1620,12 @@ function Styles() {
       .td-puzzle-sequence {
         display: flex; justify-content: center; align-items: center;
         gap: 8px; flex-wrap: wrap;
-        margin: 20px 0;
-        padding: 18px;
+        margin: 20px 0; padding: 18px;
         background: var(--paper);
         border-radius: 8px;
         border: 2.5px dashed var(--ink);
       }
-      .td-sequence-arrow {
-        font-size: 16px; color: var(--ink); opacity: 0.5;
-      }
+      .td-sequence-arrow { font-size: 16px; color: var(--ink); opacity: 0.5; }
 
       .td-puzzle-item {
         display: inline-block;
@@ -1471,12 +1641,7 @@ function Styles() {
         font-weight: bold;
         color: var(--ink);
       }
-      .td-puzzle-item-wrap {
-        display: inline-flex;
-        align-items: center; justify-content: center;
-        flex-shrink: 0;
-      }
-      .td-puzzle-item-shape {
+      .td-puzzle-item-wrap, .td-puzzle-item-shape {
         display: inline-flex;
         align-items: center; justify-content: center;
         flex-shrink: 0;
@@ -1491,9 +1656,7 @@ function Styles() {
       .td-feedback-success { background: #c8e6b8; }
       .td-feedback-error { background: #fde2c8; }
 
-      .td-puzzle-complete {
-        text-align: center;
-      }
+      .td-puzzle-complete { text-align: center; }
 
       .td-end-stars { margin: 20px 0; }
       .td-end-stars .td-star { font-size: 44px; margin: 0 4px; }
@@ -1516,7 +1679,10 @@ function Styles() {
         .td-character-figure { height: 55%; left: 28%; }
         .td-character-bubble { width: 26px; height: 26px; font-size: 16px; }
         .td-scene-hint { font-size: 11px; }
-        .td-breathing-label { font-size: 11px; padding: 3px 10px; }
+        .td-paper-tag { font-size: 12px; padding: 3px 10px; }
+        .td-tagged-primary .td-paper-tag { font-size: 13px; }
+        .td-detail-content { padding: 18px; }
+        .td-detail-caption { font-size: 14px; }
         .td-gear-indicator { width: 36px; height: 36px; }
         .td-puzzle-progress { gap: 10px; }
       }
