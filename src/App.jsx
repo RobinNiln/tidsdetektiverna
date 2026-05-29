@@ -1,8 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 
 // ============================================================
-// TIDSDETEKTIVERNA — v8
-// Smidigare klickytor: hela området lyser upp på hover
+// TIDSDETEKTIVERNA — v9 med easter eggs
+// 1) Klonks tre snabba klick → personlighetsrepliker
+// 2) Hemlig lucka i golvet → dyker upp slumpvis
+// 3) Röd ventil på maskinen → testkör maskinen
 // ============================================================
 
 const ASSETS = {
@@ -38,6 +40,18 @@ const HOTSPOTS = {
     x: 41, y: 33, w: 10, h: 18,
   },
 };
+
+// Klonks repliker när man klickar snabbt flera gånger
+const KLONK_RAPID_DIALOGS = [
+  // Klick 1 (vanlig)
+  "Bra dag för att skruva! Tack att du kom. Min maskin har glömt sina mönster. Kan du hjälpa den minnas?",
+  // Klick 2 (verkstadsmästaren märker)
+  "Oj, du verkar ha bråttom! Var det något särskilt?",
+  // Klick 3 (lite irriterad men varm)
+  "Du gillar verkligen att klicka, va? Mustaschen min börjar bli förvirrad.",
+  // Klick 4+ (uppgivet humoristisk)
+  "Okej, jag fattar att du vill att jag ska dansa. Men jag kan inte. Mustaschen blir tung.",
+];
 
 // ============================================================
 // HUVUDKOMPONENT
@@ -360,39 +374,134 @@ function DetailOverlay({ type, onClose }) {
 function PuzzleWorkshopScene({ completed, foundItems, setDialog, onPickUpItem,
                                 onStartMission, setDetailView }) {
   const gearFound = foundItems.includes("puzzle:gear");
+  const trapdoorFound = foundItems.includes("puzzle:trapdoor");
+
+  // === EASTER EGG 1: Klonks rapid-klick ===
+  const klonkClickCount = useRef(0);
+  const klonkClickTimer = useRef(null);
+
+  function handleKlonkClick() {
+    // Nollställ tidigare timer
+    if (klonkClickTimer.current) clearTimeout(klonkClickTimer.current);
+
+    const idx = Math.min(klonkClickCount.current, KLONK_RAPID_DIALOGS.length - 1);
+    setDialog(KLONK_RAPID_DIALOGS[idx]);
+    klonkClickCount.current += 1;
+
+    // Räknaren nollställs efter 3 sekunders inaktivitet
+    klonkClickTimer.current = setTimeout(() => {
+      klonkClickCount.current = 0;
+    }, 3000);
+  }
+
+  // === EASTER EGG 2: Hemlig lucka ===
+  // En slumpvis position på golvet, dyker upp i 2 sek var 30-60 sek
+  const [trapdoorVisible, setTrapdoorVisible] = useState(false);
+  const [trapdoorPos, setTrapdoorPos] = useState({ x: 50, y: 85 });
+
+  useEffect(() => {
+    if (trapdoorFound) return;
+
+    function spawnTrapdoor() {
+      // Slumpa position på golvet (ungefär y 78-92%, x 25-65% — undvik möbler)
+      const x = 28 + Math.random() * 35;
+      const y = 80 + Math.random() * 10;
+      setTrapdoorPos({ x, y });
+      setTrapdoorVisible(true);
+
+      // Försvinner efter 2,5 sek
+      setTimeout(() => setTrapdoorVisible(false), 2500);
+    }
+
+    // Första spawn efter 15 sek (så barnet hinner upptäcka resten)
+    const initial = setTimeout(spawnTrapdoor, 15000);
+    // Sedan var 30 sek
+    const interval = setInterval(spawnTrapdoor, 30000);
+
+    return () => {
+      clearTimeout(initial);
+      clearInterval(interval);
+    };
+  }, [trapdoorFound]);
+
+  function catchTrapdoor() {
+    onPickUpItem("puzzle:trapdoor");
+    setTrapdoorVisible(false);
+    setDialog(
+      "Du hittade en hemlig lucka i golvet! Inuti finns en burk pepparkakor, ett gammalt mynt, och en lapp: 'Gå inte ner i kloakerna utan kompass.' Vad i hela friden..."
+    );
+  }
+
+  // === EASTER EGG 3: Röd ventil (testkör maskinen) ===
+  const [machineRunning, setMachineRunning] = useState(false);
+  const [valveClickedOnce, setValveClickedOnce] = useState(false);
+
+  function handleValveClick() {
+    if (machineRunning) return; // Förhindra dubbel-klick under körning
+
+    setMachineRunning(true);
+    setDialog(
+      valveClickedOnce
+        ? "RAGGADAGG-DUNK-DUNK! Maskinen skramlar bara. Vi måste lösa pusslet på riktigt."
+        : "WHIRR-DUNK-WHIRR! Aha! Du hittade testventilen. Men utan rätt mönster kommer maskinen bara att skramla. Vi behöver lösa pusslet på riktigt."
+    );
+    setValveClickedOnce(true);
+
+    // Stäng av efter 3 sek
+    setTimeout(() => setMachineRunning(false), 3000);
+  }
 
   return (
     <div className="td-scene-image" style={{ backgroundImage: `url(${ASSETS.puzzleWorkshop})` }}>
 
       {/* === ANIMERADE OVERLAYS PÅ MASKINEN === */}
+      {/* När maskinen "körs" snurrar kugghjulen snabbare */}
       <svg className="td-anim-overlay" viewBox="0 0 100 100"
            style={{ left: "67%", top: "30%", width: "5%", height: "9%" }}>
         <circle cx="50" cy="50" r="42" fill="rgba(253, 201, 77, 0.18)"
-                style={{ transformOrigin: "50% 50%", animation: "tdSpin 8s linear infinite" }} />
+                style={{
+                  transformOrigin: "50% 50%",
+                  animation: `tdSpin ${machineRunning ? "0.8s" : "8s"} linear infinite`
+                }} />
       </svg>
       <svg className="td-anim-overlay" viewBox="0 0 100 100"
            style={{ left: "75%", top: "32%", width: "4%", height: "7%" }}>
         <circle cx="50" cy="50" r="42" fill="rgba(253, 201, 77, 0.15)"
-                style={{ transformOrigin: "50% 50%", animation: "tdSpinReverse 12s linear infinite" }} />
+                style={{
+                  transformOrigin: "50% 50%",
+                  animation: `tdSpinReverse ${machineRunning ? "1.2s" : "12s"} linear infinite`
+                }} />
       </svg>
 
+      {/* Ångpuffar — fler och snabbare när maskinen körs */}
       <div className="td-steam"
            style={{ left: "76%", top: "8%", width: "5%", height: "10%" }}>
-        <span className="td-steam-puff td-steam-puff-1" />
-        <span className="td-steam-puff td-steam-puff-2" />
-        <span className="td-steam-puff td-steam-puff-3" />
+        <span className="td-steam-puff td-steam-puff-1"
+              style={{ animationDuration: machineRunning ? "1s" : "3s" }} />
+        <span className="td-steam-puff td-steam-puff-2"
+              style={{ animationDuration: machineRunning ? "1s" : "3s" }} />
+        <span className="td-steam-puff td-steam-puff-3"
+              style={{ animationDuration: machineRunning ? "1s" : "3s" }} />
       </div>
 
       <div className="td-lamp-flicker"
            style={{ left: "42%", top: "23%", width: "8%", height: "10%" }} />
 
-      <div className="td-puzzle-grid"
+      {/* Pussel-rutorna blinkar snabbt och i alla färger när maskinen körs */}
+      <div className={`td-puzzle-grid ${machineRunning ? "td-puzzle-grid-running" : ""}`}
            style={{ left: "63.5%", top: "44%", width: "8%", height: "13%" }}>
         <span style={{ animationDelay: "0s" }} />
         <span style={{ animationDelay: "0.4s" }} />
         <span style={{ animationDelay: "0.8s" }} />
         <span style={{ animationDelay: "1.2s" }} />
       </div>
+
+      {/* === ROADAGG-TEXT när maskinen körs === */}
+      {machineRunning && (
+        <div className="td-machine-running-text" style={{ left: "70%", top: "62%" }}>
+          RAGGADAGG!
+        </div>
+      )}
 
       {/* === KLICKBARA OBJEKT === */}
 
@@ -404,6 +513,17 @@ function PuzzleWorkshopScene({ completed, foundItems, setDialog, onPickUpItem,
         label={completed ? "Maskinen ✓" : "Maskinen"}
         primary
         ariaLabel="Den stora maskinen"
+      />
+
+      {/* EASTER EGG 3: Röd ventil — placerad ovanpå den stora maskinen */}
+      <TaggedHotspot
+        style={{ left: "55%", top: "47%", width: "5%", height: "7%" }}
+        tagPosition={{ left: "50%", top: "115%" }}
+        tagRotation={4}
+        onClick={handleValveClick}
+        label="Ventilen"
+        valve
+        ariaLabel="Röd ventil — testkör maskinen"
       />
 
       <TaggedHotspot
@@ -439,13 +559,20 @@ function PuzzleWorkshopScene({ completed, foundItems, setDialog, onPickUpItem,
         />
       )}
 
+      {/* EASTER EGG 2: Hemlig lucka som dyker upp slumpvis */}
+      {trapdoorVisible && (
+        <button
+          className="td-trapdoor"
+          style={{ left: `${trapdoorPos.x}%`, top: `${trapdoorPos.y}%` }}
+          onClick={catchTrapdoor}
+          aria-label="Hemlig lucka"
+        />
+      )}
+
+      {/* Klonk — med rapid-klick easter egg */}
       <button
         className="td-character-figure"
-        onClick={() =>
-          setDialog(
-            "Bra dag för att skruva! Tack att du kom. Min maskin har glömt sina mönster. Kan du hjälpa den minnas?"
-          )
-        }
+        onClick={handleKlonkClick}
         aria-label="Prata med Herr Klonk"
       >
         <img src={ASSETS.klonkFull} alt="Herr Klonk" />
@@ -460,20 +587,18 @@ function PuzzleWorkshopScene({ completed, foundItems, setDialog, onPickUpItem,
 }
 
 // ============================================================
-// TaggedHotspot — hela området är klickbart, lappen följer med
+// TaggedHotspot
 // ============================================================
 function TaggedHotspot({ style, tagPosition, tagRotation = -2, onClick, label,
-                          primary, treasure, ariaLabel }) {
+                          primary, treasure, valve, ariaLabel }) {
   return (
     <button
-      className={`td-tagged ${primary ? "td-tagged-primary" : ""} ${treasure ? "td-tagged-treasure" : ""}`}
+      className={`td-tagged ${primary ? "td-tagged-primary" : ""} ${treasure ? "td-tagged-treasure" : ""} ${valve ? "td-tagged-valve" : ""}`}
       style={style}
       onClick={onClick}
       aria-label={ariaLabel}
     >
-      {/* Hover-glöd som täcker hela området */}
       <span className="td-tagged-glow" />
-      {/* Pappersetiketten — bara visuell, fångar inga klick */}
       <span
         className="td-paper-tag"
         style={{
@@ -1152,10 +1277,7 @@ function Styles() {
       }
 
       /* === ANIMERADE OVERLAYS PÅ MASKINEN === */
-      .td-anim-overlay {
-        position: absolute;
-        pointer-events: none;
-      }
+      .td-anim-overlay { position: absolute; pointer-events: none; }
       .td-steam { position: absolute; pointer-events: none; }
       .td-steam-puff {
         position: absolute;
@@ -1210,8 +1332,43 @@ function Styles() {
           box-shadow: 0 0 10px rgba(253, 201, 77, 0.7);
         }
       }
+      /* När maskinen körs — alla rutor blinkar i alla färger */
+      .td-puzzle-grid-running span {
+        animation: tdPuzzleBlinkRunning 0.4s ease-in-out infinite !important;
+      }
+      @keyframes tdPuzzleBlinkRunning {
+        0% { background: rgba(217, 76, 61, 0.8); box-shadow: 0 0 14px rgba(217, 76, 61, 0.9); }
+        33% { background: rgba(58, 110, 168, 0.8); box-shadow: 0 0 14px rgba(58, 110, 168, 0.9); }
+        66% { background: rgba(95, 168, 96, 0.8); box-shadow: 0 0 14px rgba(95, 168, 96, 0.9); }
+        100% { background: rgba(253, 201, 77, 0.8); box-shadow: 0 0 14px rgba(253, 201, 77, 0.9); }
+      }
 
-      /* === TAGGED HOTSPOTS — hela området är en knapp === */
+      /* RAGGADAGG-text när maskinen körs */
+      .td-machine-running-text {
+        position: absolute;
+        background: var(--gold);
+        border: 3px solid var(--ink);
+        padding: 6px 16px;
+        font-weight: 900;
+        font-size: 22px;
+        color: var(--red);
+        font-family: 'Georgia', serif;
+        box-shadow: 4px 4px 0 var(--ink);
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        z-index: 6;
+        pointer-events: none;
+        animation: tdMachineShake 0.15s ease-in-out infinite;
+        transform: rotate(-3deg);
+      }
+      @keyframes tdMachineShake {
+        0%, 100% { transform: rotate(-3deg) translate(0, 0); }
+        25% { transform: rotate(-2deg) translate(-2px, 1px); }
+        50% { transform: rotate(-4deg) translate(2px, -1px); }
+        75% { transform: rotate(-2deg) translate(-1px, 2px); }
+      }
+
+      /* === TAGGED HOTSPOTS === */
       .td-tagged {
         position: absolute;
         background: transparent;
@@ -1220,10 +1377,8 @@ function Styles() {
         padding: 0;
         z-index: 3;
         border-radius: 12px;
-        /* Mjuk transition på allt */
         transition: transform 0.25s ease;
       }
-      /* Glöd-lagret som täcker hela ytan */
       .td-tagged-glow {
         position: absolute;
         inset: 0;
@@ -1237,10 +1392,7 @@ function Styles() {
         transition: background 0.3s ease;
         pointer-events: none;
       }
-      /* Hover: hela området lyser upp mjukt */
-      .td-tagged:hover {
-        transform: scale(1.015);
-      }
+      .td-tagged:hover { transform: scale(1.015); }
       .td-tagged:hover .td-tagged-glow {
         background: radial-gradient(
           ellipse at center,
@@ -1255,7 +1407,6 @@ function Styles() {
         outline-offset: -3px;
       }
 
-      /* Pappersetiketten — bara visuell, fångar inga klick */
       .td-paper-tag {
         position: absolute;
         background: #fdf3d8;
@@ -1272,18 +1423,14 @@ function Styles() {
         transition: transform 0.25s ease, filter 0.25s ease;
       }
       .td-paper-tag::before {
-        content: "";
-        position: absolute;
-        top: -10px; left: 50%;
-        margin-left: -1px;
+        content: ""; position: absolute;
+        top: -10px; left: 50%; margin-left: -1px;
         width: 2px; height: 10px;
         background: var(--ink);
       }
       .td-paper-tag::after {
-        content: "";
-        position: absolute;
-        top: -14px; left: 50%;
-        margin-left: -5px;
+        content: ""; position: absolute;
+        top: -14px; left: 50%; margin-left: -5px;
         width: 10px; height: 10px;
         background: var(--red);
         border: 2px solid var(--ink);
@@ -1295,7 +1442,6 @@ function Styles() {
         50% { filter: brightness(1.08); }
       }
 
-      /* Primär lapp (maskinen) — guldfärgad */
       .td-tagged-primary .td-paper-tag {
         background: var(--gold);
         font-size: 15px;
@@ -1310,7 +1456,6 @@ function Styles() {
         );
       }
 
-      /* Skattlapp */
       .td-tagged-treasure .td-paper-tag {
         background: var(--gold);
         animation: tdTagShimmer 1.5s ease-in-out infinite;
@@ -1326,7 +1471,6 @@ function Styles() {
           box-shadow: 2px 3px 0 var(--ink), 0 0 18px rgba(253, 201, 77, 0.9);
         }
       }
-      /* Skatten har en konstant mjuk glöd */
       .td-tagged-treasure .td-tagged-glow {
         background: radial-gradient(
           ellipse at center,
@@ -1351,11 +1495,189 @@ function Styles() {
         opacity: 1;
       }
 
-      /* Hover-effekt på lappen själv */
+      /* Ventilen — röd pulserande glöd */
+      .td-tagged-valve .td-paper-tag {
+        background: var(--red);
+        color: var(--cream);
+        font-size: 13px;
+      }
+      .td-tagged-valve .td-paper-tag::after {
+        background: var(--gold);
+      }
+      .td-tagged-valve .td-tagged-glow {
+        background: radial-gradient(
+          ellipse at center,
+          rgba(217, 76, 61, 0.25) 0%,
+          rgba(217, 76, 61, 0.08) 60%,
+          rgba(217, 76, 61, 0) 100%
+        );
+        animation: tdValvePulse 2s ease-in-out infinite;
+      }
+      @keyframes tdValvePulse {
+        0%, 100% { opacity: 0.5; }
+        50% { opacity: 0.95; }
+      }
+      .td-tagged-valve:hover .td-tagged-glow {
+        background: radial-gradient(
+          ellipse at center,
+          rgba(217, 76, 61, 0.55) 0%,
+          rgba(217, 76, 61, 0.25) 50%,
+          rgba(217, 76, 61, 0.05) 100%
+        );
+        animation: none;
+        opacity: 1;
+      }
+
       .td-tagged:hover .td-paper-tag {
         animation-play-state: paused;
         filter: brightness(1.12);
       }
+
+      /* === HEMLIG LUCKA === */
+      .td-trapdoor {
+        position: absolute;
+        width: 28px; height: 28px;
+        background: radial-gradient(circle,
+          rgba(253, 201, 77, 0.9) 0%,
+          rgba(253, 201, 77, 0.4) 40%,
+          rgba(253, 201, 77, 0) 80%);
+        border: 2px solid var(--ink);
+        border-radius: 50%;
+        cursor: pointer;
+        padding: 0;
+        z-index: 5;
+        transform: translate(-50%, -50%);
+        animation: tdTrapdoorAppear 0.4s ease, tdTrapdoorPulse 0.8s ease-in-out infinite 0.4s;
+        box-shadow:
+          0 0 20px rgba(253, 201, 77, 0.9),
+          0 0 40px rgba(253, 201, 77, 0.5),
+          2px 2px 0 var(--ink);
+      }
+      @keyframes tdTrapdoorAppear {
+        from { opacity: 0; transform: translate(-50%, -50%) scale(0.3); }
+        to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+      }
+      @keyframes tdTrapdoorPulse {
+        0%, 100% { transform: translate(-50%, -50%) scale(1); }
+        50% { transform: translate(-50%, -50%) scale(1.2); }
+      }
+      .td-trapdoor:hover {
+        background: radial-gradient(circle,
+          rgba(253, 201, 77, 1) 0%,
+          rgba(253, 201, 77, 0.6) 40%,
+          rgba(253, 201, 77, 0) 80%);
+      }
+
+      /* === KLONK SOM KARAKTÄRSFIGUR === */
+      .td-character-figure {
+        position: absolute;
+        bottom: 0;
+        left: 32%;
+        height: 70%;
+        width: auto;
+        background: transparent;
+        border: none;
+        padding: 0;
+        cursor: pointer;
+        z-index: 4;
+        transition: filter 0.25s ease, transform 0.25s ease;
+        animation: tdCharSway 4s ease-in-out infinite;
+        transform-origin: bottom center;
+        filter: drop-shadow(4px 6px 8px rgba(0, 0, 0, 0.4));
+      }
+      .td-character-figure img {
+        height: 100%;
+        width: auto;
+        display: block;
+        pointer-events: none;
+      }
+      @keyframes tdCharSway {
+        0%, 100% { transform: rotate(-0.5deg); }
+        50% { transform: rotate(0.5deg); }
+      }
+      .td-character-figure:hover {
+        animation-play-state: paused;
+        transform: rotate(0deg) scale(1.03);
+        filter: drop-shadow(4px 6px 8px rgba(0, 0, 0, 0.4))
+                drop-shadow(0 0 18px rgba(253, 201, 77, 0.8));
+      }
+      .td-character-bubble {
+        position: absolute;
+        top: 8%; right: -6%;
+        width: 34px; height: 34px;
+        background: var(--gold);
+        border: 2.5px solid var(--ink);
+        border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 20px; font-weight: 900; color: var(--ink);
+        box-shadow: 2px 2px 0 var(--ink);
+        animation: tdBubbleFloat 2.4s ease-in-out infinite;
+      }
+      @keyframes tdBubbleFloat {
+        0%, 100% { transform: translateY(0); opacity: 0.9; }
+        50% { transform: translateY(-4px); opacity: 1; }
+      }
+
+      .td-scene-hint {
+        position: absolute;
+        bottom: 12px; left: 50%; transform: translateX(-50%);
+        background: rgba(40, 30, 18, 0.7);
+        color: var(--cream);
+        padding: 6px 18px;
+        border-radius: 20px;
+        font-style: italic; font-size: 13px;
+        pointer-events: none; white-space: nowrap;
+        z-index: 5;
+      }
+
+      .td-dialog-bubble {
+        position: absolute;
+        bottom: 30px; left: 50%; transform: translateX(-50%);
+        background: var(--cream);
+        border: 3px solid var(--ink); border-radius: 12px;
+        padding: 18px 24px;
+        box-shadow: 6px 6px 0 var(--ink);
+        max-width: 600px; width: calc(100% - 40px);
+        cursor: pointer; z-index: 10;
+        animation: tdBubbleIn 0.25s ease;
+      }
+      .td-dialog-bubble::before {
+        content: ""; position: absolute; top: -18px; left: 30px;
+        width: 0; height: 0;
+        border-left: 12px solid transparent;
+        border-right: 12px solid transparent;
+        border-bottom: 18px solid var(--ink);
+      }
+      .td-dialog-bubble::after {
+        content: ""; position: absolute; top: -13px; left: 33px;
+        width: 0; height: 0;
+        border-left: 9px solid transparent;
+        border-right: 9px solid transparent;
+        border-bottom: 14px solid var(--cream);
+      }
+      @keyframes tdBubbleIn {
+        from { opacity: 0; transform: translateX(-50%) translateY(20px); }
+        to { opacity: 1; transform: translateX(-50%) translateY(0); }
+      }
+      .td-dialog-bubble p { margin: 0; font-size: 18px; line-height: 1.5; }
+      .td-dialog-tip {
+        margin-top: 8px; font-size: 12px;
+        text-transform: uppercase; letter-spacing: 1px;
+        opacity: 0.6; text-align: right;
+      }
+
+      .td-coming-soon {
+        display: flex; align-items: center; justify-content: center;
+        padding: 20px; height: 100%;
+      }
+      .td-coming-soon-card {
+        background: var(--cream);
+        border: 4px solid var(--ink); border-radius: 12px;
+        padding: 32px; max-width: 480px; text-align: center;
+        box-shadow: 10px 10px 0 var(--ink);
+        transform: rotate(-1deg);
+      }
+      .td-coming-soon-card p { margin: 16px 0 24px; font-size: 17px; line-height: 1.5; }
 
       /* === DETALJ-OVERLAY === */
       .td-detail-overlay {
@@ -1474,117 +1796,6 @@ function Styles() {
         0% { transform: perspective(800px) rotateY(0deg); }
         100% { transform: perspective(800px) rotateY(110deg); }
       }
-
-      /* === KLONK SOM KARAKTÄRSFIGUR === */
-      .td-character-figure {
-        position: absolute;
-        bottom: 0;
-        left: 32%;
-        height: 70%;
-        width: auto;
-        background: transparent;
-        border: none;
-        padding: 0;
-        cursor: pointer;
-        z-index: 4;
-        transition: filter 0.25s ease, transform 0.25s ease;
-        animation: tdCharSway 4s ease-in-out infinite;
-        transform-origin: bottom center;
-        filter: drop-shadow(4px 6px 8px rgba(0, 0, 0, 0.4));
-      }
-      .td-character-figure img {
-        height: 100%;
-        width: auto;
-        display: block;
-        pointer-events: none;
-      }
-      @keyframes tdCharSway {
-        0%, 100% { transform: rotate(-0.5deg); }
-        50% { transform: rotate(0.5deg); }
-      }
-      .td-character-figure:hover {
-        animation-play-state: paused;
-        transform: rotate(0deg) scale(1.03);
-        filter: drop-shadow(4px 6px 8px rgba(0, 0, 0, 0.4))
-                drop-shadow(0 0 18px rgba(253, 201, 77, 0.8));
-      }
-      .td-character-bubble {
-        position: absolute;
-        top: 8%; right: -6%;
-        width: 34px; height: 34px;
-        background: var(--gold);
-        border: 2.5px solid var(--ink);
-        border-radius: 50%;
-        display: flex; align-items: center; justify-content: center;
-        font-size: 20px; font-weight: 900; color: var(--ink);
-        box-shadow: 2px 2px 0 var(--ink);
-        animation: tdBubbleFloat 2.4s ease-in-out infinite;
-      }
-      @keyframes tdBubbleFloat {
-        0%, 100% { transform: translateY(0); opacity: 0.9; }
-        50% { transform: translateY(-4px); opacity: 1; }
-      }
-
-      .td-scene-hint {
-        position: absolute;
-        bottom: 12px; left: 50%; transform: translateX(-50%);
-        background: rgba(40, 30, 18, 0.7);
-        color: var(--cream);
-        padding: 6px 18px;
-        border-radius: 20px;
-        font-style: italic; font-size: 13px;
-        pointer-events: none; white-space: nowrap;
-        z-index: 5;
-      }
-
-      .td-dialog-bubble {
-        position: absolute;
-        bottom: 30px; left: 50%; transform: translateX(-50%);
-        background: var(--cream);
-        border: 3px solid var(--ink); border-radius: 12px;
-        padding: 18px 24px;
-        box-shadow: 6px 6px 0 var(--ink);
-        max-width: 600px; width: calc(100% - 40px);
-        cursor: pointer; z-index: 10;
-        animation: tdBubbleIn 0.25s ease;
-      }
-      .td-dialog-bubble::before {
-        content: ""; position: absolute; top: -18px; left: 30px;
-        width: 0; height: 0;
-        border-left: 12px solid transparent;
-        border-right: 12px solid transparent;
-        border-bottom: 18px solid var(--ink);
-      }
-      .td-dialog-bubble::after {
-        content: ""; position: absolute; top: -13px; left: 33px;
-        width: 0; height: 0;
-        border-left: 9px solid transparent;
-        border-right: 9px solid transparent;
-        border-bottom: 14px solid var(--cream);
-      }
-      @keyframes tdBubbleIn {
-        from { opacity: 0; transform: translateX(-50%) translateY(20px); }
-        to { opacity: 1; transform: translateX(-50%) translateY(0); }
-      }
-      .td-dialog-bubble p { margin: 0; font-size: 18px; line-height: 1.5; }
-      .td-dialog-tip {
-        margin-top: 8px; font-size: 12px;
-        text-transform: uppercase; letter-spacing: 1px;
-        opacity: 0.6; text-align: right;
-      }
-
-      .td-coming-soon {
-        display: flex; align-items: center; justify-content: center;
-        padding: 20px; height: 100%;
-      }
-      .td-coming-soon-card {
-        background: var(--cream);
-        border: 4px solid var(--ink); border-radius: 12px;
-        padding: 32px; max-width: 480px; text-align: center;
-        box-shadow: 10px 10px 0 var(--ink);
-        transform: rotate(-1deg);
-      }
-      .td-coming-soon-card p { margin: 16px 0 24px; font-size: 17px; line-height: 1.5; }
 
       /* === OVERLAY === */
       .td-overlay {
@@ -1741,6 +1952,8 @@ function Styles() {
         .td-detail-caption { font-size: 14px; }
         .td-gear-indicator { width: 36px; height: 36px; }
         .td-puzzle-progress { gap: 10px; }
+        .td-machine-running-text { font-size: 16px; padding: 4px 12px; }
+        .td-trapdoor { width: 22px; height: 22px; }
       }
     `}</style>
   );
