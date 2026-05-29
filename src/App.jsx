@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 
 // ============================================================
-// TIDSDETEKTIVERNA — v7
-// Pappersetiketter på klickbara objekt + zoom-in på karta och fönster
+// TIDSDETEKTIVERNA — v8
+// Smidigare klickytor: hela området lyser upp på hover
 // ============================================================
 
 const ASSETS = {
@@ -51,7 +51,7 @@ export default function App() {
   const [hovered, setHovered] = useState(null);
   const [foundItems, setFoundItems] = useState([]);
   const [interiorDialog, setInteriorDialog] = useState(null);
-  const [detailView, setDetailView] = useState(null); // "karta" | "fonster" | null
+  const [detailView, setDetailView] = useState(null);
 
   const stars = Object.values(completed).filter(Boolean).length;
   const allDone = stars === 3;
@@ -302,7 +302,7 @@ function InteriorView({ locationKey, completed, foundItems, dialog, setDialog,
 }
 
 // ============================================================
-// DETALJ-OVERLAY: zoomar in på karta eller fönster
+// DETALJ-OVERLAY
 // ============================================================
 function DetailOverlay({ type, onClose }) {
   if (type === "karta") {
@@ -331,7 +331,6 @@ function DetailOverlay({ type, onClose }) {
       <div className="td-detail-overlay" onClick={onClose}>
         <div className="td-detail-content td-detail-window" onClick={(e) => e.stopPropagation()}>
           <div className="td-detail-stamp">UTSIKTEN</div>
-          {/* Fönsterluckor som öppnas */}
           <div className="td-window-frame">
             <div className="td-window-shutter td-window-shutter-left" />
             <div className="td-window-shutter td-window-shutter-right" />
@@ -395,12 +394,12 @@ function PuzzleWorkshopScene({ completed, foundItems, setDialog, onPickUpItem,
         <span style={{ animationDelay: "1.2s" }} />
       </div>
 
-      {/* === KLICKBARA OBJEKT MED PAPPERSETIKETTER === */}
+      {/* === KLICKBARA OBJEKT === */}
 
       <TaggedHotspot
         style={{ left: "57%", top: "10%", width: "34%", height: "65%" }}
-        labelStyle={{ left: "50%", top: "78%" }}
-        labelRotation={-2}
+        tagPosition={{ left: "50%", top: "78%" }}
+        tagRotation={-2}
         onClick={onStartMission}
         label={completed ? "Maskinen ✓" : "Maskinen"}
         primary
@@ -409,8 +408,8 @@ function PuzzleWorkshopScene({ completed, foundItems, setDialog, onPickUpItem,
 
       <TaggedHotspot
         style={{ left: "1%", top: "26%", width: "32%", height: "40%" }}
-        labelStyle={{ left: "50%", top: "100%" }}
-        labelRotation={2}
+        tagPosition={{ left: "50%", top: "100%" }}
+        tagRotation={2}
         onClick={() => setDetailView("karta")}
         label="Verktygsväggen"
         ariaLabel="Verktygsväggen"
@@ -418,8 +417,8 @@ function PuzzleWorkshopScene({ completed, foundItems, setDialog, onPickUpItem,
 
       <TaggedHotspot
         style={{ left: "10%", top: "4%", width: "22%", height: "20%" }}
-        labelStyle={{ left: "50%", top: "100%" }}
-        labelRotation={-3}
+        tagPosition={{ left: "50%", top: "100%" }}
+        tagRotation={-3}
         onClick={() => setDetailView("fonster")}
         label="Fönstret"
         ariaLabel="Fönstret"
@@ -427,9 +426,9 @@ function PuzzleWorkshopScene({ completed, foundItems, setDialog, onPickUpItem,
 
       {!gearFound && (
         <TaggedHotspot
-          style={{ left: "78%", top: "80%", width: "8%", height: "12%" }}
-          labelStyle={{ left: "50%", top: "100%" }}
-          labelRotation={3}
+          style={{ left: "76%", top: "78%", width: "12%", height: "16%" }}
+          tagPosition={{ left: "50%", top: "100%" }}
+          tagRotation={3}
           onClick={() => {
             onPickUpItem("puzzle:gear");
             setDialog("Du hittade ett glittrande kugghjul på arbetsbänken! Det glömmer du inte i första taget.");
@@ -461,9 +460,9 @@ function PuzzleWorkshopScene({ completed, foundItems, setDialog, onPickUpItem,
 }
 
 // ============================================================
-// TaggedHotspot — klickbar yta med pappersetikett som hänger
+// TaggedHotspot — hela området är klickbart, lappen följer med
 // ============================================================
-function TaggedHotspot({ style, labelStyle, labelRotation = -2, onClick, label,
+function TaggedHotspot({ style, tagPosition, tagRotation = -2, onClick, label,
                           primary, treasure, ariaLabel }) {
   return (
     <button
@@ -472,11 +471,14 @@ function TaggedHotspot({ style, labelStyle, labelRotation = -2, onClick, label,
       onClick={onClick}
       aria-label={ariaLabel}
     >
+      {/* Hover-glöd som täcker hela området */}
+      <span className="td-tagged-glow" />
+      {/* Pappersetiketten — bara visuell, fångar inga klick */}
       <span
         className="td-paper-tag"
         style={{
-          ...labelStyle,
-          transform: `translateX(-50%) rotate(${labelRotation}deg)`,
+          ...tagPosition,
+          transform: `translateX(-50%) rotate(${tagRotation}deg)`,
         }}
       >
         {label}
@@ -1209,7 +1211,7 @@ function Styles() {
         }
       }
 
-      /* === TAGGED HOTSPOTS — pappersetiketter === */
+      /* === TAGGED HOTSPOTS — hela området är en knapp === */
       .td-tagged {
         position: absolute;
         background: transparent;
@@ -1217,20 +1219,43 @@ function Styles() {
         cursor: pointer;
         padding: 0;
         z-index: 3;
-        transition: background 0.2s;
+        border-radius: 12px;
+        /* Mjuk transition på allt */
+        transition: transform 0.25s ease;
       }
+      /* Glöd-lagret som täcker hela ytan */
+      .td-tagged-glow {
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+        background: radial-gradient(
+          ellipse at center,
+          rgba(253, 201, 77, 0) 0%,
+          rgba(253, 201, 77, 0) 50%,
+          rgba(253, 201, 77, 0) 100%
+        );
+        transition: background 0.3s ease;
+        pointer-events: none;
+      }
+      /* Hover: hela området lyser upp mjukt */
       .td-tagged:hover {
-        background: rgba(253, 201, 77, 0.12);
-        border-radius: 8px;
+        transform: scale(1.015);
+      }
+      .td-tagged:hover .td-tagged-glow {
+        background: radial-gradient(
+          ellipse at center,
+          rgba(253, 201, 77, 0.35) 0%,
+          rgba(253, 201, 77, 0.18) 50%,
+          rgba(253, 201, 77, 0.02) 100%
+        );
       }
       .td-tagged:focus { outline: none; }
       .td-tagged:focus-visible {
         outline: 3px dashed rgba(253, 201, 77, 0.7);
         outline-offset: -3px;
-        border-radius: 8px;
       }
 
-      /* Själva pappersetiketten */
+      /* Pappersetiketten — bara visuell, fångar inga klick */
       .td-paper-tag {
         position: absolute;
         background: #fdf3d8;
@@ -1244,8 +1269,8 @@ function Styles() {
         box-shadow: 2px 3px 0 var(--ink);
         pointer-events: none;
         animation: tdTagWiggle 3.5s ease-in-out infinite;
+        transition: transform 0.25s ease, filter 0.25s ease;
       }
-      /* Liten "spik" eller "knapp" som håller upp lappen */
       .td-paper-tag::before {
         content: "";
         position: absolute;
@@ -1276,8 +1301,16 @@ function Styles() {
         font-size: 15px;
         padding: 5px 18px;
       }
+      .td-tagged-primary:hover .td-tagged-glow {
+        background: radial-gradient(
+          ellipse at center,
+          rgba(253, 201, 77, 0.5) 0%,
+          rgba(253, 201, 77, 0.22) 50%,
+          rgba(253, 201, 77, 0.04) 100%
+        );
+      }
 
-      /* Skattlapp — extra glitter */
+      /* Skattlapp */
       .td-tagged-treasure .td-paper-tag {
         background: var(--gold);
         animation: tdTagShimmer 1.5s ease-in-out infinite;
@@ -1293,14 +1326,38 @@ function Styles() {
           box-shadow: 2px 3px 0 var(--ink), 0 0 18px rgba(253, 201, 77, 0.9);
         }
       }
-
-      /* Hover-effekt på lappen */
-      .td-tagged:hover .td-paper-tag {
-        transform: translateX(-50%) rotate(0deg) scale(1.08) !important;
-        animation-play-state: paused;
+      /* Skatten har en konstant mjuk glöd */
+      .td-tagged-treasure .td-tagged-glow {
+        background: radial-gradient(
+          ellipse at center,
+          rgba(253, 201, 77, 0.25) 0%,
+          rgba(253, 201, 77, 0.08) 60%,
+          rgba(253, 201, 77, 0) 100%
+        );
+        animation: tdTreasureGlow 2s ease-in-out infinite;
+      }
+      @keyframes tdTreasureGlow {
+        0%, 100% { opacity: 0.7; }
+        50% { opacity: 1; }
+      }
+      .td-tagged-treasure:hover .td-tagged-glow {
+        background: radial-gradient(
+          ellipse at center,
+          rgba(253, 201, 77, 0.55) 0%,
+          rgba(253, 201, 77, 0.25) 50%,
+          rgba(253, 201, 77, 0.05) 100%
+        );
+        animation: none;
+        opacity: 1;
       }
 
-      /* === DETALJ-OVERLAY (karta och fönster) === */
+      /* Hover-effekt på lappen själv */
+      .td-tagged:hover .td-paper-tag {
+        animation-play-state: paused;
+        filter: brightness(1.12);
+      }
+
+      /* === DETALJ-OVERLAY === */
       .td-detail-overlay {
         position: absolute;
         inset: 0;
@@ -1365,7 +1422,6 @@ function Styles() {
         color: var(--ink);
       }
 
-      /* Fönster med öppnande luckor */
       .td-detail-window .td-window-frame {
         position: relative;
         margin: 12px auto;
@@ -1376,9 +1432,7 @@ function Styles() {
         max-width: 100%;
         display: inline-block;
       }
-      .td-window-view {
-        display: block;
-      }
+      .td-window-view { display: block; }
       .td-window-view img {
         display: block;
         max-width: 100%;
@@ -1433,7 +1487,7 @@ function Styles() {
         padding: 0;
         cursor: pointer;
         z-index: 4;
-        transition: filter 0.2s;
+        transition: filter 0.25s ease, transform 0.25s ease;
         animation: tdCharSway 4s ease-in-out infinite;
         transform-origin: bottom center;
         filter: drop-shadow(4px 6px 8px rgba(0, 0, 0, 0.4));
@@ -1449,8 +1503,10 @@ function Styles() {
         50% { transform: rotate(0.5deg); }
       }
       .td-character-figure:hover {
+        animation-play-state: paused;
+        transform: rotate(0deg) scale(1.03);
         filter: drop-shadow(4px 6px 8px rgba(0, 0, 0, 0.4))
-                drop-shadow(0 0 14px rgba(253, 201, 77, 0.7));
+                drop-shadow(0 0 18px rgba(253, 201, 77, 0.8));
       }
       .td-character-bubble {
         position: absolute;
@@ -1530,7 +1586,7 @@ function Styles() {
       }
       .td-coming-soon-card p { margin: 16px 0 24px; font-size: 17px; line-height: 1.5; }
 
-      /* === OVERLAY (uppdrag) === */
+      /* === OVERLAY === */
       .td-overlay {
         position: fixed; inset: 0; z-index: 100;
         background: rgba(40, 30, 18, 0.65);
