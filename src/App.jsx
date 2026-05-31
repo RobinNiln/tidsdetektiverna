@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
 
 // ============================================================
-// TIDSDETEKTIVERNA — v12
-// Levande karta + handritade hover-markeringar
+// TIDSDETEKTIVERNA — v13
+// + Spotlight hover på kartan
+// + Förstoringsglas-läge
+// + Gömd SVG-katt
 // ============================================================
 
 const ASSETS = {
@@ -16,29 +18,36 @@ const ASSETS = {
   fonsterDetalj: "/tidsdetektiverna/fonster_detalj.jpg",
 };
 
-// Justerade hotspot-positioner baserat på den riktiga kartan
+// Hotspot-koordinater + ankarpunkt för spotlight-cirkeln (centrum)
 const HOTSPOTS = {
   reading: {
     key: "reading", title: "Bokgränden", short: "Läs ledtråden",
     character: "mira", characterName: "Mira Murr",
     x: 16, y: 45, w: 24, h: 38,
+    cx: 28, cy: 64, // centrum för spotlighten
   },
   clock: {
     key: "clock", title: "Klocktornet", short: "Lös tiden",
     character: "tickelton", characterName: "Professor Tickelton",
     x: 56, y: 32, w: 16, h: 50,
+    cx: 64, cy: 57,
   },
   puzzle: {
     key: "puzzle", title: "Pusselverkstaden", short: "Hitta mönstret",
     character: "klonk", characterName: "Herr Klonk",
     x: 78, y: 42, w: 20, h: 40,
+    cx: 88, cy: 62,
   },
   timemachine: {
     key: "timemachine", title: "Tidsmaskinen", short: "Öppna porten",
     character: null,
     x: 41, y: 22, w: 22, h: 28,
+    cx: 52, cy: 36,
   },
 };
+
+// Den gömda kattens position på kartan (centrum)
+const HIDDEN_CAT = { x: 42, y: 25 };
 
 const KLONK_RAPID_DIALOGS = [
   "Bra dag för att skruva! Tack att du kom. Min maskin har glömt sina mönster. Kan du hjälpa den minnas?",
@@ -307,16 +316,78 @@ function CharacterPortrait({ src, name }) {
 }
 
 // ============================================================
-// KARTAN — nu med levande element
+// KARTAN — Spotlight + Förstoringsglas + Gömd katt
 // ============================================================
 function MapView({ completed, stars, allDone, hovered, setHovered, onPick, onReset }) {
   const visibleHotspots = ["reading", "clock", "puzzle"];
+  const mapRef = useRef(null);
+
+  // === Förstoringsglas-läge ===
+  const [magnifierOn, setMagnifierOn] = useState(false);
+  const [mouseProc, setMouseProc] = useState({ x: 50, y: 50 }); // procent
+  const [insideMap, setInsideMap] = useState(false);
+
+  function handleMouseMove(e) {
+    if (!magnifierOn || !mapRef.current) return;
+    const rect = mapRef.current.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    setMouseProc({ x, y });
+  }
+
+  // Hitta vilken spotlight-cirkel som ska visas (den hovrade hotspotens cx/cy)
+  let spotlight = null;
+  if (hovered) {
+    const h = HOTSPOTS[hovered];
+    spotlight = { x: h.cx, y: h.cy };
+  }
+
   return (
     <div className="td-map-wrap td-fade-in">
-      <div className="td-map" style={{ backgroundImage: `url(${ASSETS.map})` }}>
+      <div
+        ref={mapRef}
+        className={`td-map ${magnifierOn ? "td-map-magnifier-on" : ""}`}
+        style={{ backgroundImage: `url(${ASSETS.map})` }}
+        onMouseMove={handleMouseMove}
+        onMouseEnter={() => setInsideMap(true)}
+        onMouseLeave={() => setInsideMap(false)}
+      >
 
-        {/* === LEVANDE BAKGRUNDSANIMATIONER === */}
         <MapAtmosphere />
+
+        {/* === SPOTLIGHT-LAGER (dimmar resten av kartan) === */}
+        <div
+          className={`td-spotlight ${spotlight ? "td-spotlight-active" : ""}`}
+          style={
+            spotlight
+              ? {
+                  background: `radial-gradient(
+                    circle at ${spotlight.x}% ${spotlight.y}%,
+                    transparent 0%,
+                    transparent 12%,
+                    rgba(30, 20, 10, 0.55) 22%,
+                    rgba(30, 20, 10, 0.72) 100%
+                  )`,
+                }
+              : undefined
+          }
+        />
+
+        {/* === FÖRSTORINGSGLAS-KNAPPEN === */}
+        <button
+          className={`td-magnifier-toggle ${magnifierOn ? "td-magnifier-toggle-on" : ""}`}
+          onClick={() => setMagnifierOn(v => !v)}
+          aria-label="Slå på/av förstoringsglas"
+          aria-pressed={magnifierOn}
+        >
+          <span className="td-magnifier-icon">🔍</span>
+          <span className="td-magnifier-label">
+            {magnifierOn ? "Stäng glaset" : "Förstoringsglas"}
+          </span>
+        </button>
+
+        {/* === GÖMD SVG-KATT === */}
+        <HiddenCat x={HIDDEN_CAT.x} y={HIDDEN_CAT.y} />
 
         <div className="td-hud">
           <div className="td-hud-banner">
@@ -338,8 +409,6 @@ function MapView({ completed, stars, allDone, hovered, setHovered, onPick, onRes
               onMouseEnter={() => setHovered(key)}
               onMouseLeave={() => setHovered(null)}
               aria-label={h.title}>
-              {/* Handritad gul markering */}
-              <HandDrawnMark active={isHovered || done} done={done} />
               {done && <span className="td-hotspot-star">★</span>}
             </button>
           );
@@ -356,11 +425,18 @@ function MapView({ completed, stars, allDone, hovered, setHovered, onPick, onRes
           onMouseLeave={() => setHovered(null)}
           aria-label="Tidsmaskinen"
           disabled={!allDone}>
-          {allDone && <HandDrawnMark active={true} done={false} finale={true} />}
         </button>
 
         {hovered && (
           <HoverLabel hotspot={HOTSPOTS[hovered]} done={completed[hovered]} allDone={allDone} />
+        )}
+
+        {/* === FÖRSTORINGSGLASETS LINS === */}
+        {magnifierOn && insideMap && (
+          <MagnifierLens
+            mouseProc={mouseProc}
+            backgroundImage={ASSETS.map}
+          />
         )}
       </div>
     </div>
@@ -368,53 +444,87 @@ function MapView({ completed, stars, allDone, hovered, setHovered, onPick, onRes
 }
 
 // ============================================================
-// HandDrawnMark — gul handritad ring runt platsen
+// MagnifierLens — visar zoomad del av kartan vid muspekaren
 // ============================================================
-function HandDrawnMark({ active, done, finale }) {
-  if (!active && !done) return null;
-  const stroke = done ? "#5fa860" : (finale ? "#fdc94d" : "#fdc94d");
+function MagnifierLens({ mouseProc, backgroundImage }) {
+  const LENS_SIZE_PX = 180; // diameter
+  const ZOOM = 2.4;
+
+  // Hur långt ned/upp/höger/vänster ska den underliggande bilden förskjutas
+  // för att visa rätt zoomad region
+  const bgPosX = mouseProc.x;
+  const bgPosY = mouseProc.y;
+
   return (
-    <svg className={`td-hand-mark ${active ? "td-hand-mark-active" : ""} ${done ? "td-hand-mark-done" : ""} ${finale ? "td-hand-mark-finale" : ""}`}
-         viewBox="0 0 100 100"
-         preserveAspectRatio="none"
-         aria-hidden="true">
-      {/* Handritad oregelbunden cirkel — ritad med två lager för "tuschpenne"-effekt */}
-      <path
-        d="M 50 8
-           C 70 8, 88 22, 92 45
-           C 95 65, 82 88, 60 92
-           C 38 95, 12 82, 8 58
-           C 5 35, 22 12, 50 8
-           Z"
-        fill="none"
-        stroke={stroke}
-        strokeWidth="2.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        opacity="0.9"
-      />
-      {/* Andra skissaktig linje för "två-streck"-effekt */}
-      <path
-        d="M 50 11
-           C 68 12, 85 25, 89 46
-           C 92 63, 80 86, 60 89
-           C 40 92, 15 80, 11 58
-           C 8 38, 25 14, 50 11"
-        fill="none"
-        stroke={stroke}
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        opacity="0.5"
-        strokeDasharray="3 2"
-      />
-    </svg>
+    <div
+      className="td-magnifier-lens"
+      style={{
+        left: `${mouseProc.x}%`,
+        top: `${mouseProc.y}%`,
+        width: `${LENS_SIZE_PX}px`,
+        height: `${LENS_SIZE_PX}px`,
+        backgroundImage: `url(${backgroundImage})`,
+        backgroundSize: `${ZOOM * 100}% auto`,
+        backgroundPosition: `${bgPosX}% ${bgPosY}%`,
+        backgroundRepeat: "no-repeat",
+      }}
+    />
+  );
+}
+
+// ============================================================
+// HiddenCat — liten svart SVG-katt som bara syns under glaset
+// ============================================================
+function HiddenCat({ x, y }) {
+  // Katten ritas som svart silhuett i kartans stil
+  // Storlek: ca 2.4% av kartans bredd → måste zoomas för att synas tydligt
+  return (
+    <div
+      className="td-hidden-cat"
+      style={{ left: `${x}%`, top: `${y}%` }}
+      aria-hidden="true"
+    >
+      <svg viewBox="0 0 40 40" width="100%" height="100%">
+        {/* Kroppen — sittande katt */}
+        <path
+          d="M 12 32
+             C 10 32, 9 30, 9 27
+             L 9 22
+             C 9 19, 11 16, 14 16
+             L 26 16
+             C 29 16, 31 19, 31 22
+             L 31 27
+             C 31 30, 30 32, 28 32
+             Z"
+          fill="#1a0f06"
+          stroke="#000"
+          strokeWidth="0.4"
+        />
+        {/* Huvudet */}
+        <ellipse cx="20" cy="14" rx="7" ry="6.5"
+                 fill="#1a0f06" stroke="#000" strokeWidth="0.4" />
+        {/* Vänster öra */}
+        <path d="M 14 9 L 12 4 L 17 8 Z"
+              fill="#1a0f06" stroke="#000" strokeWidth="0.4"
+              strokeLinejoin="round" />
+        {/* Höger öra */}
+        <path d="M 26 9 L 28 4 L 23 8 Z"
+              fill="#1a0f06" stroke="#000" strokeWidth="0.4"
+              strokeLinejoin="round" />
+        {/* Svans som sticker upp */}
+        <path d="M 30 28 C 33 26, 35 23, 34 19 C 33.5 17, 33 17, 32 18"
+              fill="none" stroke="#1a0f06" strokeWidth="2.5"
+              strokeLinecap="round" />
+        {/* Gula ögon — pyttesmå prickar som lyser */}
+        <circle cx="17.5" cy="13.5" r="0.9" fill="#fdc94d" />
+        <circle cx="22.5" cy="13.5" r="0.9" fill="#fdc94d" />
+      </svg>
+    </div>
   );
 }
 
 // ============================================================
 // MapAtmosphere — subtila levande element på kartan
-// (Fågel, luftskepp och löv kommer senare som riktiga bilder)
 // ============================================================
 function MapAtmosphere() {
   return (
@@ -558,9 +668,6 @@ function DetailOverlay({ type, onClose }) {
   return null;
 }
 
-// ============================================================
-// PUSSELVERKSTADENS SCEN
-// ============================================================
 function PuzzleWorkshopScene({ completed, foundItems, setDialog, onPickUpItem,
                                 onStartMission, setDetailView }) {
   const gearFound = foundItems.includes("puzzle:gear");
@@ -1174,9 +1281,6 @@ function Feedback({ feedback, done, onBack }) {
   );
 }
 
-// ============================================================
-// CSS
-// ============================================================
 function Styles() {
   return (
     <style>{`
@@ -1274,6 +1378,91 @@ function Styles() {
         background-color: #1a1208;
         overflow: hidden;
       }
+      /* När förstoringsglas är på — göm vanlig markör */
+      .td-map-magnifier-on { cursor: none; }
+      .td-map-magnifier-on .td-hotspot { cursor: none; }
+
+      /* === SPOTLIGHT (C) — dimmar resten av kartan === */
+      .td-spotlight {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.35s ease, background 0.35s ease;
+        z-index: 3;
+      }
+      .td-spotlight-active { opacity: 1; }
+
+      /* === FÖRSTORINGSGLAS — knappen === */
+      .td-magnifier-toggle {
+        position: absolute;
+        top: 16px; right: 16px;
+        background: var(--cream);
+        border: 3px solid var(--ink);
+        border-radius: 30px;
+        padding: 8px 16px;
+        font-family: 'Georgia', serif;
+        font-weight: bold;
+        font-size: 14px;
+        color: var(--ink);
+        cursor: pointer;
+        box-shadow: 4px 4px 0 var(--ink);
+        z-index: 11;
+        display: flex; align-items: center; gap: 8px;
+        transition: transform 0.1s, box-shadow 0.1s, background 0.2s;
+      }
+      .td-magnifier-toggle:hover {
+        transform: translate(-2px, -2px);
+        box-shadow: 6px 6px 0 var(--ink);
+      }
+      .td-magnifier-toggle:active {
+        transform: translate(2px, 2px);
+        box-shadow: 1px 1px 0 var(--ink);
+      }
+      .td-magnifier-toggle-on {
+        background: var(--gold);
+      }
+      .td-magnifier-icon { font-size: 18px; }
+      .td-magnifier-label { letter-spacing: 0.5px; }
+
+      /* === FÖRSTORINGSGLAS — själva linsen som följer musen === */
+      .td-magnifier-lens {
+        position: absolute;
+        transform: translate(-50%, -50%);
+        border-radius: 50%;
+        border: 4px solid var(--ink);
+        box-shadow:
+          0 0 0 2px var(--gold),
+          0 0 20px rgba(0, 0, 0, 0.6),
+          inset 0 0 40px rgba(0, 0, 0, 0.15);
+        pointer-events: none;
+        z-index: 20;
+        background-color: var(--paper);
+      }
+      /* Liten "handtag" på förstoringsglaset */
+      .td-magnifier-lens::after {
+        content: "";
+        position: absolute;
+        right: -8px; bottom: -8px;
+        width: 30px; height: 30px;
+        background: var(--ink);
+        border-radius: 50%;
+        transform: rotate(45deg) translateX(18px);
+        box-shadow: 2px 2px 4px rgba(0,0,0,0.4);
+        border: 2px solid var(--ink);
+      }
+
+      /* === GÖMD KATT === */
+      .td-hidden-cat {
+        position: absolute;
+        transform: translate(-50%, -50%);
+        width: 2.5%; /* mycket liten — måste zoomas för att synas */
+        aspect-ratio: 1 / 1;
+        pointer-events: none;
+        z-index: 2;
+        opacity: 0.92;
+      }
+
       .td-hud {
         position: absolute; bottom: 16px; left: 50%;
         transform: translateX(-50%); z-index: 10;
@@ -1297,7 +1486,6 @@ function Styles() {
         100% { transform: scale(1); }
       }
 
-      /* === KARTANS HOTSPOTS — nu utan rektangel === */
       .td-hotspot {
         position: absolute;
         background: transparent;
@@ -1306,9 +1494,6 @@ function Styles() {
         padding: 0;
         transition: transform 0.25s ease;
         z-index: 4;
-      }
-      .td-hotspot:hover, .td-hotspot-hover {
-        transform: scale(1.03);
       }
       .td-hotspot:focus { outline: none; }
       .td-hotspot:focus-visible {
@@ -1324,7 +1509,6 @@ function Styles() {
         z-index: 6;
       }
       .td-hotspot-done {
-        /* Konstant gyllene strålglans när platsen är klar */
         filter: drop-shadow(0 0 20px rgba(253, 201, 77, 0.5));
         animation: tdDoneGlow 3s ease-in-out infinite;
       }
@@ -1332,11 +1516,7 @@ function Styles() {
         0%, 100% { filter: drop-shadow(0 0 18px rgba(253, 201, 77, 0.4)); }
         50% { filter: drop-shadow(0 0 28px rgba(253, 201, 77, 0.7)); }
       }
-      .td-hotspot-finale-locked {
-        cursor: not-allowed;
-        opacity: 0.5;
-      }
-      .td-hotspot-finale-locked:hover { transform: none; }
+      .td-hotspot-finale-locked { cursor: not-allowed; opacity: 0.5; }
       .td-hotspot-finale-active {
         animation: tdFinaleGlow 1.4s ease-in-out infinite;
       }
@@ -1345,49 +1525,8 @@ function Styles() {
         50% { filter: drop-shadow(0 0 40px rgba(253, 201, 77, 1)) drop-shadow(0 0 60px rgba(253, 201, 77, 0.7)); }
       }
 
-      /* === HANDRITAD GUL MARKERING === */
-      .td-hand-mark {
-        position: absolute;
-        inset: 0;
-        width: 100%;
-        height: 100%;
-        pointer-events: none;
-        opacity: 0;
-        transition: opacity 0.25s ease;
-        z-index: 5;
-        filter: drop-shadow(0 0 4px rgba(253, 201, 77, 0.6))
-                drop-shadow(2px 2px 0 rgba(58, 42, 23, 0.3));
-      }
-      .td-hand-mark-active {
-        opacity: 1;
-        animation: tdHandMarkDraw 0.6s ease-out, tdHandMarkWobble 4s ease-in-out 0.6s infinite;
-      }
-      @keyframes tdHandMarkDraw {
-        from {
-          opacity: 0;
-          transform: scale(0.92) rotate(-3deg);
-        }
-        to {
-          opacity: 1;
-          transform: scale(1) rotate(0deg);
-        }
-      }
-      @keyframes tdHandMarkWobble {
-        0%, 100% { transform: rotate(-0.5deg) scale(1); }
-        50% { transform: rotate(0.5deg) scale(1.005); }
-      }
-      .td-hand-mark-done {
-        opacity: 0.75;
-        animation: tdHandMarkWobble 6s ease-in-out infinite;
-      }
-      .td-hand-mark-finale {
-        animation: tdHandMarkDraw 0.6s ease-out, tdHandMarkWobble 2s ease-in-out 0.6s infinite;
-        filter: drop-shadow(0 0 8px rgba(253, 201, 77, 0.9))
-                drop-shadow(0 0 16px rgba(253, 201, 77, 0.5));
-      }
-
       .td-hover-card {
-        position: absolute; z-index: 5;
+        position: absolute; z-index: 12;
         background: var(--cream); border: 3px solid var(--ink);
         border-radius: 8px; padding: 10px;
         box-shadow: 4px 4px 0 var(--ink);
@@ -1413,14 +1552,7 @@ function Styles() {
       .td-hover-status.ok { color: var(--green); opacity: 1; font-weight: bold; }
 
       /* === LEVANDE KARTELEMENT === */
-
-      /* Skorstensrök */
-      .td-map-smoke {
-        position: absolute;
-        width: 30px; height: 60px;
-        pointer-events: none;
-        z-index: 2;
-      }
+      .td-map-smoke { position: absolute; width: 30px; height: 60px; pointer-events: none; z-index: 2; }
       .td-map-smoke-puff {
         position: absolute;
         bottom: 0; left: 50%;
@@ -1443,12 +1575,11 @@ function Styles() {
         animation-duration: 4s;
       }
 
-      /* Fyrens blink */
       .td-map-lighthouse {
         position: absolute;
         width: 24px; height: 24px;
         pointer-events: none;
-        z-index: 3;
+        z-index: 2;
         background: radial-gradient(circle, rgba(253, 201, 77, 0.95) 0%, rgba(253, 201, 77, 0.4) 30%, rgba(253, 201, 77, 0) 70%);
         border-radius: 50%;
         animation: tdLighthouseBlink 4s ease-in-out infinite;
@@ -1461,54 +1592,6 @@ function Styles() {
         55% { opacity: 0; }
       }
 
-      /* Luftskeppet driver långsamt */
-      .td-map-airship {
-        position: absolute;
-        left: -120px;
-        pointer-events: none;
-        z-index: 2;
-        animation: tdAirshipDrift 90s linear infinite;
-        filter: drop-shadow(2px 3px 4px rgba(0, 0, 0, 0.3));
-      }
-      @keyframes tdAirshipDrift {
-        0% { left: -120px; transform: translateY(0); }
-        50% { transform: translateY(-8px); }
-        100% { left: 110%; transform: translateY(0); }
-      }
-
-      /* Vanliga fåglar i grupp */
-      .td-map-birds {
-        position: absolute;
-        left: -80px;
-        pointer-events: none;
-        z-index: 2;
-        animation: tdBirdsFly 45s linear infinite;
-        opacity: 0.7;
-      }
-      @keyframes tdBirdsFly {
-        0% { left: -80px; transform: translateY(0); }
-        25% { transform: translateY(-6px); }
-        50% { transform: translateY(2px); }
-        75% { transform: translateY(-4px); }
-        100% { left: 110%; transform: translateY(0); }
-      }
-
-      /* Konstig fågel som flyger BAKLÄNGES (tiden är trasig!) */
-      .td-map-bird-reverse {
-        position: absolute;
-        right: -40px;
-        pointer-events: none;
-        z-index: 2;
-        animation: tdBirdReverse 30s linear infinite;
-        opacity: 0.8;
-      }
-      @keyframes tdBirdReverse {
-        0% { right: -40px; transform: scaleX(-1) translateY(0); }
-        50% { transform: scaleX(-1) translateY(8px); }
-        100% { right: 110%; transform: scaleX(-1) translateY(0); }
-      }
-
-      /* Vattenglitter */
       .td-water-shimmer {
         position: absolute;
         width: 4px; height: 4px;
@@ -1524,28 +1607,7 @@ function Styles() {
         50% { opacity: 1; transform: scale(1.2); }
       }
 
-      /* Löv som faller UPPÅT (tiden är ur lag) */
-      .td-falling-leaf {
-        position: absolute;
-        bottom: -20px;
-        pointer-events: none;
-        z-index: 3;
-        animation: tdLeafFallsUp 15s ease-in-out infinite;
-        opacity: 0.85;
-      }
-      @keyframes tdLeafFallsUp {
-        0% { bottom: -20px; transform: rotate(0deg) translateX(0); opacity: 0; }
-        10% { opacity: 0.85; }
-        25% { transform: rotate(45deg) translateX(15px); }
-        50% { transform: rotate(180deg) translateX(-10px); }
-        75% { transform: rotate(270deg) translateX(20px); }
-        90% { opacity: 0.85; }
-        100% { bottom: 110%; transform: rotate(360deg) translateX(0); opacity: 0; }
-      }
-      .td-falling-leaf-2 {
-        animation-duration: 18s;
-      }
-
+      /* === INTERIÖR-VY === */
       .td-interior {
         position: fixed; inset: 0; background: #1a1208;
         display: flex; flex-direction: column;
@@ -2273,6 +2335,8 @@ function Styles() {
         .td-gear-indicator { width: 30px; height: 30px; }
         .td-puzzle-progress { gap: 6px; }
         .td-trapdoor { width: 22px; height: 22px; }
+        .td-magnifier-toggle { font-size: 12px; padding: 6px 12px; }
+        .td-magnifier-icon { font-size: 14px; }
       }
     `}</style>
   );
