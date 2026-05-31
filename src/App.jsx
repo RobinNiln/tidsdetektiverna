@@ -621,8 +621,9 @@ function PuzzleWorkshopScene({ completed, foundItems, setDialog, onPickUpItem,
       )}
       <div className={`td-lamp-flicker ${machineRunning ? "td-lamp-overdrive" : ""}`}
            style={{ left: "42%", top: "23%", width: "8%", height: "10%" }} />
+      {/* Färgrutnätet — ligger exakt ovanpå det inbyggda färgrutnätet i bilden */}
       <div className={`td-puzzle-grid ${machineRunning ? "td-puzzle-grid-running" : ""}`}
-           style={{ left: "63.5%", top: "44%", width: "8%", height: "13%" }}>
+           style={{ left: "63%", top: "46%", width: "5%", height: "11%" }}>
         <span style={{ animationDelay: "0s" }} />
         <span style={{ animationDelay: "0.4s" }} />
         <span style={{ animationDelay: "0.8s" }} />
@@ -1462,14 +1463,14 @@ function Styles() {
       }
       .td-puzzle-grid span {
         background: rgba(255, 255, 255, 0);
-        border-radius: 4px;
-        animation: tdPuzzleBlink 2.4s ease-in-out infinite;
+        border-radius: 2px;
+        animation: tdPuzzleBlink 3s ease-in-out infinite;
       }
       @keyframes tdPuzzleBlink {
         0%, 100% { background: rgba(255, 255, 255, 0); box-shadow: none; }
         50% {
-          background: rgba(253, 201, 77, 0.45);
-          box-shadow: 0 0 10px rgba(253, 201, 77, 0.7);
+          background: rgba(253, 201, 77, 0.25);
+          box-shadow: 0 0 6px rgba(253, 201, 77, 0.4);
         }
       }
       .td-puzzle-grid-running span {
