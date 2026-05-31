@@ -16,6 +16,13 @@ const ASSETS = {
   puzzleWorkshop: "/tidsdetektiverna/pusselverkstaden.jpg",
   kartaDetalj: "/tidsdetektiverna/karta_detalj.jpg",
   fonsterDetalj: "/tidsdetektiverna/fonster_detalj.jpg",
+  // Kartanimationer
+  ballong: "/tidsdetektiverna/ballong.png",
+  bird: "/tidsdetektiverna/bird.png",
+  bird2: "/tidsdetektiverna/bird2.png",
+  leaf1: "/tidsdetektiverna/leaf1.png",
+  leaf2: "/tidsdetektiverna/Leaf2.png",
+  leaf3: "/tidsdetektiverna/leaf3.png",
 };
 
 // Hotspot-koordinater + ankarpunkt för spotlight-cirkeln (centrum)
@@ -524,7 +531,7 @@ function HiddenCat({ x, y }) {
 }
 
 // ============================================================
-// MapAtmosphere — subtila levande element på kartan
+// MapAtmosphere — levande element på kartan
 // ============================================================
 function MapAtmosphere() {
   return (
@@ -554,6 +561,56 @@ function MapAtmosphere() {
       <div className="td-water-shimmer" style={{ left: "7%", top: "62%", animationDelay: "0.7s" }} />
       <div className="td-water-shimmer" style={{ left: "2%", top: "70%", animationDelay: "1.3s" }} />
       <div className="td-water-shimmer" style={{ left: "5%", top: "75%", animationDelay: "2s" }} />
+
+      {/* Luftskeppet driver långsamt över himlen */}
+      <img
+        src={ASSETS.ballong}
+        alt=""
+        aria-hidden="true"
+        className="td-map-airship"
+        style={{ top: "8%" }}
+      />
+
+      {/* Vanlig fågelflock — flyger lugnt från vänster */}
+      <img
+        src={ASSETS.bird}
+        alt=""
+        aria-hidden="true"
+        className="td-map-birds"
+        style={{ top: "13%" }}
+      />
+
+      {/* Klockfågeln — flyger BAKLÄNGES (tiden är ur lag!) */}
+      <img
+        src={ASSETS.bird2}
+        alt=""
+        aria-hidden="true"
+        className="td-map-bird-reverse"
+        style={{ top: "19%" }}
+      />
+
+      {/* Löv som faller UPPÅT */}
+      <img
+        src={ASSETS.leaf1}
+        alt=""
+        aria-hidden="true"
+        className="td-falling-leaf td-leaf-1"
+        style={{ left: "25%" }}
+      />
+      <img
+        src={ASSETS.leaf2}
+        alt=""
+        aria-hidden="true"
+        className="td-falling-leaf td-leaf-2"
+        style={{ left: "55%" }}
+      />
+      <img
+        src={ASSETS.leaf3}
+        alt=""
+        aria-hidden="true"
+        className="td-falling-leaf td-leaf-3"
+        style={{ left: "80%" }}
+      />
     </>
   );
 }
@@ -1605,6 +1662,118 @@ function Styles() {
       @keyframes tdWaterShimmer {
         0%, 100% { opacity: 0; transform: scale(0.5); }
         50% { opacity: 1; transform: scale(1.2); }
+      }
+
+      /* === LUFTSKEPPET === */
+      .td-map-airship {
+        position: absolute;
+        width: 14%;
+        height: auto;
+        pointer-events: none;
+        z-index: 2;
+        left: -16%;
+        animation: tdAirshipDrift 90s linear infinite;
+        filter: drop-shadow(3px 4px 4px rgba(0, 0, 0, 0.25));
+      }
+      @keyframes tdAirshipDrift {
+        0% { left: -16%; transform: translateY(0); }
+        25% { transform: translateY(-6px); }
+        50% { transform: translateY(4px); }
+        75% { transform: translateY(-4px); }
+        100% { left: 110%; transform: translateY(0); }
+      }
+
+      /* === FÅGELFLOCKEN (vanliga svarta fåglar) === */
+      .td-map-birds {
+        position: absolute;
+        width: 10%;
+        height: auto;
+        pointer-events: none;
+        z-index: 2;
+        left: -12%;
+        opacity: 0.85;
+        animation: tdBirdsFly 45s linear infinite;
+      }
+      @keyframes tdBirdsFly {
+        0% { left: -12%; transform: translateY(0); }
+        25% { transform: translateY(-8px); }
+        50% { transform: translateY(4px); }
+        75% { transform: translateY(-5px); }
+        100% { left: 110%; transform: translateY(0); }
+      }
+
+      /* === KLOCKFÅGELN (röd, flyger baklänges) === */
+      .td-map-bird-reverse {
+        position: absolute;
+        width: 5%;
+        height: auto;
+        pointer-events: none;
+        z-index: 2;
+        right: -8%;
+        opacity: 0.9;
+        animation: tdBirdReverse 35s linear infinite;
+        filter: drop-shadow(0 0 6px rgba(217, 76, 61, 0.5));
+      }
+      @keyframes tdBirdReverse {
+        0% { right: -8%; transform: scaleX(-1) translateY(0); }
+        30% { transform: scaleX(-1) translateY(10px); }
+        60% { transform: scaleX(-1) translateY(-6px); }
+        100% { right: 110%; transform: scaleX(-1) translateY(0); }
+      }
+
+      /* === LÖV SOM FALLER UPPÅT === */
+      .td-falling-leaf {
+        position: absolute;
+        width: 2.5%;
+        height: auto;
+        pointer-events: none;
+        z-index: 3;
+        bottom: -5%;
+        opacity: 0;
+        animation-iteration-count: infinite;
+        animation-timing-function: ease-in-out;
+      }
+      .td-leaf-1 {
+        animation-name: tdLeafFallsUp;
+        animation-duration: 14s;
+        animation-delay: 0s;
+      }
+      .td-leaf-2 {
+        animation-name: tdLeafFallsUp2;
+        animation-duration: 18s;
+        animation-delay: 5s;
+      }
+      .td-leaf-3 {
+        animation-name: tdLeafFallsUp3;
+        animation-duration: 16s;
+        animation-delay: 10s;
+      }
+      @keyframes tdLeafFallsUp {
+        0% { bottom: -5%; transform: rotate(0deg) translateX(0); opacity: 0; }
+        8% { opacity: 0.95; }
+        25% { transform: rotate(60deg) translateX(20px); }
+        50% { transform: rotate(180deg) translateX(-15px); }
+        75% { transform: rotate(280deg) translateX(25px); }
+        92% { opacity: 0.95; }
+        100% { bottom: 105%; transform: rotate(360deg) translateX(0); opacity: 0; }
+      }
+      @keyframes tdLeafFallsUp2 {
+        0% { bottom: -5%; transform: rotate(0deg) translateX(0); opacity: 0; }
+        8% { opacity: 0.95; }
+        30% { transform: rotate(-70deg) translateX(-25px); }
+        55% { transform: rotate(-180deg) translateX(20px); }
+        80% { transform: rotate(-300deg) translateX(-18px); }
+        92% { opacity: 0.95; }
+        100% { bottom: 105%; transform: rotate(-360deg) translateX(0); opacity: 0; }
+      }
+      @keyframes tdLeafFallsUp3 {
+        0% { bottom: -5%; transform: rotate(0deg) translateX(0); opacity: 0; }
+        8% { opacity: 0.9; }
+        20% { transform: rotate(40deg) translateX(-15px); }
+        45% { transform: rotate(150deg) translateX(25px); }
+        70% { transform: rotate(240deg) translateX(-20px); }
+        92% { opacity: 0.9; }
+        100% { bottom: 105%; transform: rotate(360deg) translateX(0); opacity: 0; }
       }
 
       /* === INTERIÖR-VY === */
