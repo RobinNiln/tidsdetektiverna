@@ -1,10 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 
 // ============================================================
-// TIDSDETEKTIVERNA — v9 med easter eggs
-// 1) Klonks tre snabba klick → personlighetsrepliker
-// 2) Hemlig lucka i golvet → dyker upp slumpvis
-// 3) Röd ventil på maskinen → testkör maskinen
+// TIDSDETEKTIVERNA — v10 med dramatisk ventil-sekvens
 // ============================================================
 
 const ASSETS = {
@@ -19,37 +16,24 @@ const ASSETS = {
 };
 
 const HOTSPOTS = {
-  reading: {
-    key: "reading", title: "Bokgränden", short: "Läs ledtråden",
+  reading: { key: "reading", title: "Bokgränden", short: "Läs ledtråden",
     character: "mira", characterName: "Mira Murr",
-    x: 22, y: 70, w: 14, h: 22,
-  },
-  clock: {
-    key: "clock", title: "Klocktornet", short: "Lös tiden",
+    x: 22, y: 70, w: 14, h: 22 },
+  clock: { key: "clock", title: "Klocktornet", short: "Lös tiden",
     character: "tickelton", characterName: "Professor Tickelton",
-    x: 56, y: 50, w: 10, h: 38,
-  },
-  puzzle: {
-    key: "puzzle", title: "Pusselverkstaden", short: "Hitta mönstret",
+    x: 56, y: 50, w: 10, h: 38 },
+  puzzle: { key: "puzzle", title: "Pusselverkstaden", short: "Hitta mönstret",
     character: "klonk", characterName: "Herr Klonk",
-    x: 78, y: 60, w: 16, h: 25,
-  },
-  timemachine: {
-    key: "timemachine", title: "Tidsmaskinen", short: "Öppna porten",
+    x: 78, y: 60, w: 16, h: 25 },
+  timemachine: { key: "timemachine", title: "Tidsmaskinen", short: "Öppna porten",
     character: null,
-    x: 41, y: 33, w: 10, h: 18,
-  },
+    x: 41, y: 33, w: 10, h: 18 },
 };
 
-// Klonks repliker när man klickar snabbt flera gånger
 const KLONK_RAPID_DIALOGS = [
-  // Klick 1 (vanlig)
   "Bra dag för att skruva! Tack att du kom. Min maskin har glömt sina mönster. Kan du hjälpa den minnas?",
-  // Klick 2 (verkstadsmästaren märker)
   "Oj, du verkar ha bråttom! Var det något särskilt?",
-  // Klick 3 (lite irriterad men varm)
   "Du gillar verkligen att klicka, va? Mustaschen min börjar bli förvirrad.",
-  // Klick 4+ (uppgivet humoristisk)
   "Okej, jag fattar att du vill att jag ska dansa. Men jag kan inte. Mustaschen blir tung.",
 ];
 
@@ -121,20 +105,17 @@ export default function App() {
       {view === "mission" && activeLocation && (
         <MissionOverlay hotspot={HOTSPOTS[activeLocation]} onClose={backToInterior}>
           {activeLocation === "reading" && (
-            <ReadingMission
-              alreadyDone={completed.reading}
+            <ReadingMission alreadyDone={completed.reading}
               onComplete={() => completeMission("reading")}
               onBack={backToInterior} />
           )}
           {activeLocation === "clock" && (
-            <ClockMission
-              alreadyDone={completed.clock}
+            <ClockMission alreadyDone={completed.clock}
               onComplete={() => completeMission("clock")}
               onBack={backToInterior} />
           )}
           {activeLocation === "puzzle" && (
-            <PuzzleMissionMulti
-              alreadyDone={completed.puzzle}
+            <PuzzleMissionMulti alreadyDone={completed.puzzle}
               onComplete={() => completeMission("puzzle")}
               onBack={backToInterior} />
           )}
@@ -379,45 +360,33 @@ function PuzzleWorkshopScene({ completed, foundItems, setDialog, onPickUpItem,
   // === EASTER EGG 1: Klonks rapid-klick ===
   const klonkClickCount = useRef(0);
   const klonkClickTimer = useRef(null);
+  const [klonkSurprised, setKlonkSurprised] = useState(false);
 
   function handleKlonkClick() {
-    // Nollställ tidigare timer
     if (klonkClickTimer.current) clearTimeout(klonkClickTimer.current);
-
     const idx = Math.min(klonkClickCount.current, KLONK_RAPID_DIALOGS.length - 1);
     setDialog(KLONK_RAPID_DIALOGS[idx]);
     klonkClickCount.current += 1;
-
-    // Räknaren nollställs efter 3 sekunders inaktivitet
     klonkClickTimer.current = setTimeout(() => {
       klonkClickCount.current = 0;
     }, 3000);
   }
 
   // === EASTER EGG 2: Hemlig lucka ===
-  // En slumpvis position på golvet, dyker upp i 2 sek var 30-60 sek
   const [trapdoorVisible, setTrapdoorVisible] = useState(false);
   const [trapdoorPos, setTrapdoorPos] = useState({ x: 50, y: 85 });
 
   useEffect(() => {
     if (trapdoorFound) return;
-
     function spawnTrapdoor() {
-      // Slumpa position på golvet (ungefär y 78-92%, x 25-65% — undvik möbler)
       const x = 28 + Math.random() * 35;
       const y = 80 + Math.random() * 10;
       setTrapdoorPos({ x, y });
       setTrapdoorVisible(true);
-
-      // Försvinner efter 2,5 sek
       setTimeout(() => setTrapdoorVisible(false), 2500);
     }
-
-    // Första spawn efter 15 sek (så barnet hinner upptäcka resten)
     const initial = setTimeout(spawnTrapdoor, 15000);
-    // Sedan var 30 sek
     const interval = setInterval(spawnTrapdoor, 30000);
-
     return () => {
       clearTimeout(initial);
       clearInterval(interval);
@@ -432,36 +401,59 @@ function PuzzleWorkshopScene({ completed, foundItems, setDialog, onPickUpItem,
     );
   }
 
-  // === EASTER EGG 3: Röd ventil (testkör maskinen) ===
-  const [machineRunning, setMachineRunning] = useState(false);
+  // === EASTER EGG 3: Ventil — fullständig sekvens i faser ===
+  // Faser:
+  //  "idle"     : ventilen kan tryckas
+  //  "twisting" : ventilen vrids (0.5s)
+  //  "running"  : maskinen vaknar med full kraft (2s)
+  //  "cooling"  : maskinen lugnar ner sig, ventilen är "utbränd" (5s)
+  const [valvePhase, setValvePhase] = useState("idle");
   const [valveClickedOnce, setValveClickedOnce] = useState(false);
 
   function handleValveClick() {
-    if (machineRunning) return; // Förhindra dubbel-klick under körning
+    if (valvePhase !== "idle") return; // förhindra spam
 
-    setMachineRunning(true);
-    setDialog(
-      valveClickedOnce
-        ? "RAGGADAGG-DUNK-DUNK! Maskinen skramlar bara. Vi måste lösa pusslet på riktigt."
-        : "WHIRR-DUNK-WHIRR! Aha! Du hittade testventilen. Men utan rätt mönster kommer maskinen bara att skramla. Vi behöver lösa pusslet på riktigt."
-    );
-    setValveClickedOnce(true);
+    // Fas 1: Vrid ventilen (0.5s)
+    setValvePhase("twisting");
+    setKlonkSurprised(true);
 
-    // Stäng av efter 3 sek
-    setTimeout(() => setMachineRunning(false), 3000);
+    setTimeout(() => {
+      // Fas 2: Maskinen vaknar (2s)
+      setValvePhase("running");
+    }, 500);
+
+    setTimeout(() => {
+      // Fas 3: Lugna ner + Klonks dialog
+      setValvePhase("cooling");
+      setKlonkSurprised(false);
+      setDialog(
+        valveClickedOnce
+          ? "PUFF... PUFF... \"Skramlar bara,\" suckar Klonk. \"Maskinen behöver rätt mönster för att fungera på riktigt — inte bara en knapp.\""
+          : "PUFF... PUFF... Klonk stryker bort en oljedroppe från glasögonen. \"Oj, det är testventilen! Jag glömde nästan att den fanns. Men utan rätt mönster bara skramlar maskinen. Vi behöver lösa pusslet på riktigt.\""
+      );
+      setValveClickedOnce(true);
+    }, 2500); // 0.5 + 2 = 2.5
+
+    setTimeout(() => {
+      // Fas 4: Tillbaka till idle (efter cooldown)
+      setValvePhase("idle");
+    }, 7500); // 2.5 + 5 = 7.5
   }
 
+  const machineRunning = valvePhase === "running";
+  const machineShaking = valvePhase === "running";
+
   return (
-    <div className="td-scene-image" style={{ backgroundImage: `url(${ASSETS.puzzleWorkshop})` }}>
+    <div className={`td-scene-image ${machineShaking ? "td-scene-shake" : ""}`}
+         style={{ backgroundImage: `url(${ASSETS.puzzleWorkshop})` }}>
 
       {/* === ANIMERADE OVERLAYS PÅ MASKINEN === */}
-      {/* När maskinen "körs" snurrar kugghjulen snabbare */}
       <svg className="td-anim-overlay" viewBox="0 0 100 100"
            style={{ left: "67%", top: "30%", width: "5%", height: "9%" }}>
         <circle cx="50" cy="50" r="42" fill="rgba(253, 201, 77, 0.18)"
                 style={{
                   transformOrigin: "50% 50%",
-                  animation: `tdSpin ${machineRunning ? "0.8s" : "8s"} linear infinite`
+                  animation: `tdSpin ${machineRunning ? "0.5s" : "8s"} linear infinite`
                 }} />
       </svg>
       <svg className="td-anim-overlay" viewBox="0 0 100 100"
@@ -469,7 +461,7 @@ function PuzzleWorkshopScene({ completed, foundItems, setDialog, onPickUpItem,
         <circle cx="50" cy="50" r="42" fill="rgba(253, 201, 77, 0.15)"
                 style={{
                   transformOrigin: "50% 50%",
-                  animation: `tdSpinReverse ${machineRunning ? "1.2s" : "12s"} linear infinite`
+                  animation: `tdSpinReverse ${machineRunning ? "0.7s" : "12s"} linear infinite`
                 }} />
       </svg>
 
@@ -477,17 +469,35 @@ function PuzzleWorkshopScene({ completed, foundItems, setDialog, onPickUpItem,
       <div className="td-steam"
            style={{ left: "76%", top: "8%", width: "5%", height: "10%" }}>
         <span className="td-steam-puff td-steam-puff-1"
-              style={{ animationDuration: machineRunning ? "1s" : "3s" }} />
+              style={{ animationDuration: machineRunning ? "0.8s" : "3s" }} />
         <span className="td-steam-puff td-steam-puff-2"
-              style={{ animationDuration: machineRunning ? "1s" : "3s" }} />
+              style={{ animationDuration: machineRunning ? "0.8s" : "3s" }} />
         <span className="td-steam-puff td-steam-puff-3"
-              style={{ animationDuration: machineRunning ? "1s" : "3s" }} />
+              style={{ animationDuration: machineRunning ? "0.8s" : "3s" }} />
       </div>
 
-      <div className="td-lamp-flicker"
+      {/* Extra ångpuffar som dyker upp BARA när maskinen körs */}
+      {machineRunning && (
+        <>
+          <div className="td-extra-steam" style={{ left: "60%", top: "30%" }}>
+            <span className="td-burst-puff" />
+          </div>
+          <div className="td-extra-steam" style={{ left: "85%", top: "40%" }}>
+            <span className="td-burst-puff" style={{ animationDelay: "0.3s" }} />
+          </div>
+          <div className="td-extra-steam" style={{ left: "73%", top: "55%" }}>
+            <span className="td-burst-puff" style={{ animationDelay: "0.6s" }} />
+          </div>
+          <div className="td-extra-steam" style={{ left: "62%", top: "65%" }}>
+            <span className="td-burst-puff" style={{ animationDelay: "0.9s" }} />
+          </div>
+        </>
+      )}
+
+      {/* Lampan flimrar starkare när maskinen körs */}
+      <div className={`td-lamp-flicker ${machineRunning ? "td-lamp-overdrive" : ""}`}
            style={{ left: "42%", top: "23%", width: "8%", height: "10%" }} />
 
-      {/* Pussel-rutorna blinkar snabbt och i alla färger när maskinen körs */}
       <div className={`td-puzzle-grid ${machineRunning ? "td-puzzle-grid-running" : ""}`}
            style={{ left: "63.5%", top: "44%", width: "8%", height: "13%" }}>
         <span style={{ animationDelay: "0s" }} />
@@ -496,10 +506,10 @@ function PuzzleWorkshopScene({ completed, foundItems, setDialog, onPickUpItem,
         <span style={{ animationDelay: "1.2s" }} />
       </div>
 
-      {/* === ROADAGG-TEXT när maskinen körs === */}
+      {/* STORT RAGGADAGG i mitten av scenen när maskinen körs */}
       {machineRunning && (
-        <div className="td-machine-running-text" style={{ left: "70%", top: "62%" }}>
-          RAGGADAGG!
+        <div className="td-machine-running-text-big">
+          RAGGA-DAGG!
         </div>
       )}
 
@@ -515,16 +525,33 @@ function PuzzleWorkshopScene({ completed, foundItems, setDialog, onPickUpItem,
         ariaLabel="Den stora maskinen"
       />
 
-      {/* EASTER EGG 3: Röd ventil — placerad ovanpå den stora maskinen */}
-      <TaggedHotspot
+      {/* Ventilen — vrids visuellt under sekvensen */}
+      <button
+        className={`td-tagged td-tagged-valve td-valve-${valvePhase}`}
         style={{ left: "55%", top: "47%", width: "5%", height: "7%" }}
-        tagPosition={{ left: "50%", top: "115%" }}
-        tagRotation={4}
         onClick={handleValveClick}
-        label="Ventilen"
-        valve
-        ariaLabel="Röd ventil — testkör maskinen"
-      />
+        aria-label="Röd ventil — testkör maskinen"
+        disabled={valvePhase !== "idle"}
+      >
+        <span className="td-tagged-glow" />
+        {/* Liten visuell representation av en ratt som vrids */}
+        <span className="td-valve-knob">
+          <svg viewBox="0 0 40 40">
+            <circle cx="20" cy="20" r="14" fill="rgba(217, 76, 61, 0.4)"
+                    stroke="rgba(58, 42, 23, 0.6)" strokeWidth="2" />
+            <line x1="20" y1="8" x2="20" y2="32"
+                  stroke="rgba(58, 42, 23, 0.8)" strokeWidth="3" />
+            <line x1="8" y1="20" x2="32" y2="20"
+                  stroke="rgba(58, 42, 23, 0.8)" strokeWidth="3" />
+            <circle cx="20" cy="20" r="3" fill="rgba(58, 42, 23, 0.9)" />
+          </svg>
+        </span>
+        <span className="td-paper-tag"
+              style={{ left: "50%", top: "115%",
+                       transform: "translateX(-50%) rotate(4deg)" }}>
+          {valvePhase === "cooling" ? "...puh..." : "Ventilen"}
+        </span>
+      </button>
 
       <TaggedHotspot
         style={{ left: "1%", top: "26%", width: "32%", height: "40%" }}
@@ -559,7 +586,6 @@ function PuzzleWorkshopScene({ completed, foundItems, setDialog, onPickUpItem,
         />
       )}
 
-      {/* EASTER EGG 2: Hemlig lucka som dyker upp slumpvis */}
       {trapdoorVisible && (
         <button
           className="td-trapdoor"
@@ -569,14 +595,16 @@ function PuzzleWorkshopScene({ completed, foundItems, setDialog, onPickUpItem,
         />
       )}
 
-      {/* Klonk — med rapid-klick easter egg */}
+      {/* Klonk — med extra "hoppa till"-effekt när maskinen vaknar */}
       <button
-        className="td-character-figure"
+        className={`td-character-figure ${klonkSurprised ? "td-character-surprised" : ""}`}
         onClick={handleKlonkClick}
         aria-label="Prata med Herr Klonk"
       >
         <img src={ASSETS.klonkFull} alt="Herr Klonk" />
-        <span className="td-character-bubble">!</span>
+        <span className={`td-character-bubble ${klonkSurprised ? "td-character-bubble-surprised" : ""}`}>
+          {klonkSurprised ? "!!" : "!"}
+        </span>
       </button>
 
       <div className="td-scene-hint">
@@ -590,10 +618,10 @@ function PuzzleWorkshopScene({ completed, foundItems, setDialog, onPickUpItem,
 // TaggedHotspot
 // ============================================================
 function TaggedHotspot({ style, tagPosition, tagRotation = -2, onClick, label,
-                          primary, treasure, valve, ariaLabel }) {
+                          primary, treasure, ariaLabel }) {
   return (
     <button
-      className={`td-tagged ${primary ? "td-tagged-primary" : ""} ${treasure ? "td-tagged-treasure" : ""} ${valve ? "td-tagged-valve" : ""}`}
+      className={`td-tagged ${primary ? "td-tagged-primary" : ""} ${treasure ? "td-tagged-treasure" : ""}`}
       style={style}
       onClick={onClick}
       aria-label={ariaLabel}
@@ -912,7 +940,7 @@ function ShapeSvg({ shape, size }) {
 }
 
 // ============================================================
-// LÄSUPPDRAG
+// LÄS- och KLOCK-uppdrag (oförändrade)
 // ============================================================
 function ReadingMission({ alreadyDone, onComplete, onBack }) {
   const [feedback, setFeedback] = useState(null);
@@ -945,9 +973,6 @@ function ReadingMission({ alreadyDone, onComplete, onBack }) {
   );
 }
 
-// ============================================================
-// KLOCKUPPDRAG
-// ============================================================
 function ClockMission({ alreadyDone, onComplete, onBack }) {
   const [feedback, setFeedback] = useState(null);
   const choices = [
@@ -1276,7 +1301,17 @@ function Styles() {
         background-color: #1a1208;
       }
 
-      /* === ANIMERADE OVERLAYS PÅ MASKINEN === */
+      /* === SKÄRMSKAKNING när maskinen körs === */
+      .td-scene-shake {
+        animation: tdSceneShake 0.1s ease-in-out infinite;
+      }
+      @keyframes tdSceneShake {
+        0%, 100% { transform: translate(0, 0); }
+        25% { transform: translate(-2px, 1px); }
+        50% { transform: translate(2px, -1px); }
+        75% { transform: translate(-1px, 2px); }
+      }
+
       .td-anim-overlay { position: absolute; pointer-events: none; }
       .td-steam { position: absolute; pointer-events: none; }
       .td-steam-puff {
@@ -1297,6 +1332,26 @@ function Styles() {
         100% { transform: translate(-50%, -120px) scale(1.8); opacity: 0; }
       }
 
+      /* Extra ångpuffar som dyker upp ÖVERALLT när maskinen körs */
+      .td-extra-steam {
+        position: absolute;
+        width: 40px; height: 40px;
+        pointer-events: none;
+        z-index: 5;
+      }
+      .td-burst-puff {
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(circle, rgba(255, 255, 255, 0.85) 0%, rgba(255, 255, 255, 0) 70%);
+        border-radius: 50%;
+        animation: tdBurstPuff 1.5s ease-out infinite;
+      }
+      @keyframes tdBurstPuff {
+        0% { transform: scale(0.2); opacity: 0; }
+        15% { opacity: 0.9; }
+        100% { transform: scale(2.5); opacity: 0; }
+      }
+
       .td-lamp-flicker {
         position: absolute;
         pointer-events: none;
@@ -1310,6 +1365,15 @@ function Styles() {
         25% { opacity: 0.4; transform: scale(0.95); }
         28% { opacity: 0.9; transform: scale(1.02); }
         60% { opacity: 0.85; }
+      }
+      /* När maskinen kör — lampan flimrar mycket starkare */
+      .td-lamp-overdrive {
+        background: radial-gradient(circle, rgba(253, 201, 77, 0.8) 0%, rgba(253, 201, 77, 0) 70%) !important;
+        animation: tdLampOverdrive 0.15s ease-in-out infinite !important;
+      }
+      @keyframes tdLampOverdrive {
+        0%, 100% { opacity: 1; transform: scale(1.2); }
+        50% { opacity: 0.4; transform: scale(0.9); }
       }
 
       .td-puzzle-grid {
@@ -1332,40 +1396,45 @@ function Styles() {
           box-shadow: 0 0 10px rgba(253, 201, 77, 0.7);
         }
       }
-      /* När maskinen körs — alla rutor blinkar i alla färger */
       .td-puzzle-grid-running span {
-        animation: tdPuzzleBlinkRunning 0.4s ease-in-out infinite !important;
+        animation: tdPuzzleBlinkRunning 0.3s ease-in-out infinite !important;
       }
       @keyframes tdPuzzleBlinkRunning {
-        0% { background: rgba(217, 76, 61, 0.8); box-shadow: 0 0 14px rgba(217, 76, 61, 0.9); }
-        33% { background: rgba(58, 110, 168, 0.8); box-shadow: 0 0 14px rgba(58, 110, 168, 0.9); }
-        66% { background: rgba(95, 168, 96, 0.8); box-shadow: 0 0 14px rgba(95, 168, 96, 0.9); }
-        100% { background: rgba(253, 201, 77, 0.8); box-shadow: 0 0 14px rgba(253, 201, 77, 0.9); }
+        0% { background: rgba(217, 76, 61, 0.9); box-shadow: 0 0 16px rgba(217, 76, 61, 1); }
+        33% { background: rgba(58, 110, 168, 0.9); box-shadow: 0 0 16px rgba(58, 110, 168, 1); }
+        66% { background: rgba(95, 168, 96, 0.9); box-shadow: 0 0 16px rgba(95, 168, 96, 1); }
+        100% { background: rgba(253, 201, 77, 0.9); box-shadow: 0 0 16px rgba(253, 201, 77, 1); }
       }
 
-      /* RAGGADAGG-text när maskinen körs */
-      .td-machine-running-text {
+      /* STORT RAGGADAGG i mitten av scenen */
+      .td-machine-running-text-big {
         position: absolute;
+        top: 35%; left: 50%;
+        transform: translate(-50%, -50%);
         background: var(--gold);
-        border: 3px solid var(--ink);
-        padding: 6px 16px;
+        border: 5px solid var(--ink);
+        padding: 16px 36px;
         font-weight: 900;
-        font-size: 22px;
+        font-size: clamp(36px, 6vw, 64px);
         color: var(--red);
         font-family: 'Georgia', serif;
-        box-shadow: 4px 4px 0 var(--ink);
+        box-shadow: 8px 8px 0 var(--ink);
         text-transform: uppercase;
-        letter-spacing: 2px;
-        z-index: 6;
+        letter-spacing: 4px;
+        z-index: 8;
         pointer-events: none;
-        animation: tdMachineShake 0.15s ease-in-out infinite;
-        transform: rotate(-3deg);
+        animation: tdBigTextShake 0.15s ease-in-out infinite, tdBigTextIn 0.3s ease-out;
+        text-shadow: 2px 2px 0 var(--ink);
       }
-      @keyframes tdMachineShake {
-        0%, 100% { transform: rotate(-3deg) translate(0, 0); }
-        25% { transform: rotate(-2deg) translate(-2px, 1px); }
-        50% { transform: rotate(-4deg) translate(2px, -1px); }
-        75% { transform: rotate(-2deg) translate(-1px, 2px); }
+      @keyframes tdBigTextIn {
+        from { transform: translate(-50%, -50%) scale(0.3) rotate(-15deg); opacity: 0; }
+        to { transform: translate(-50%, -50%) scale(1) rotate(-3deg); opacity: 1; }
+      }
+      @keyframes tdBigTextShake {
+        0%, 100% { transform: translate(-50%, -50%) rotate(-3deg); }
+        25% { transform: translate(calc(-50% - 4px), calc(-50% + 2px)) rotate(-1deg); }
+        50% { transform: translate(calc(-50% + 4px), calc(-50% - 2px)) rotate(-5deg); }
+        75% { transform: translate(calc(-50% - 2px), calc(-50% + 4px)) rotate(-2deg); }
       }
 
       /* === TAGGED HOTSPOTS === */
@@ -1495,7 +1564,7 @@ function Styles() {
         opacity: 1;
       }
 
-      /* Ventilen — röd pulserande glöd */
+      /* === VENTILEN — fyra faser === */
       .td-tagged-valve .td-paper-tag {
         background: var(--red);
         color: var(--cream);
@@ -1507,25 +1576,97 @@ function Styles() {
       .td-tagged-valve .td-tagged-glow {
         background: radial-gradient(
           ellipse at center,
-          rgba(217, 76, 61, 0.25) 0%,
-          rgba(217, 76, 61, 0.08) 60%,
+          rgba(217, 76, 61, 0.3) 0%,
+          rgba(217, 76, 61, 0.1) 60%,
           rgba(217, 76, 61, 0) 100%
         );
         animation: tdValvePulse 2s ease-in-out infinite;
       }
       @keyframes tdValvePulse {
         0%, 100% { opacity: 0.5; }
-        50% { opacity: 0.95; }
+        50% { opacity: 1; }
       }
+
       .td-tagged-valve:hover .td-tagged-glow {
         background: radial-gradient(
           ellipse at center,
-          rgba(217, 76, 61, 0.55) 0%,
+          rgba(217, 76, 61, 0.6) 0%,
           rgba(217, 76, 61, 0.25) 50%,
           rgba(217, 76, 61, 0.05) 100%
         );
         animation: none;
         opacity: 1;
+      }
+
+      /* Själva ratten (knob) */
+      .td-valve-knob {
+        position: absolute;
+        inset: 10%;
+        pointer-events: none;
+        transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+      }
+      .td-valve-knob svg {
+        width: 100%; height: 100%;
+      }
+
+      /* Fas: twisting — ventilen vrids 90° */
+      .td-valve-twisting .td-valve-knob {
+        transform: rotate(90deg);
+      }
+      .td-valve-twisting .td-tagged-glow {
+        background: radial-gradient(
+          ellipse at center,
+          rgba(217, 76, 61, 0.8) 0%,
+          rgba(217, 76, 61, 0.3) 50%,
+          rgba(217, 76, 61, 0.05) 100%
+        ) !important;
+        animation: none !important;
+        opacity: 1 !important;
+      }
+
+      /* Fas: running — ventilen är vriden och glöder rött */
+      .td-valve-running .td-valve-knob {
+        transform: rotate(90deg);
+      }
+      .td-valve-running .td-tagged-glow {
+        background: radial-gradient(
+          ellipse at center,
+          rgba(217, 76, 61, 1) 0%,
+          rgba(253, 201, 77, 0.6) 40%,
+          rgba(217, 76, 61, 0.1) 100%
+        ) !important;
+        animation: tdValveBurning 0.2s ease-in-out infinite !important;
+        opacity: 1 !important;
+      }
+      @keyframes tdValveBurning {
+        0%, 100% { filter: brightness(1.3); }
+        50% { filter: brightness(1.7); }
+      }
+
+      /* Fas: cooling — ventilen är utbränd, grå */
+      .td-valve-cooling {
+        cursor: not-allowed;
+        opacity: 0.5;
+      }
+      .td-valve-cooling .td-valve-knob {
+        transform: rotate(45deg);
+        filter: grayscale(80%);
+      }
+      .td-valve-cooling .td-tagged-glow {
+        background: radial-gradient(
+          ellipse at center,
+          rgba(120, 120, 120, 0.3) 0%,
+          rgba(120, 120, 120, 0.1) 60%,
+          rgba(120, 120, 120, 0) 100%
+        ) !important;
+        animation: none !important;
+      }
+      .td-valve-cooling .td-paper-tag {
+        background: #888 !important;
+        color: var(--cream);
+      }
+      .td-valve-cooling .td-paper-tag::after {
+        background: #555 !important;
       }
 
       .td-tagged:hover .td-paper-tag {
@@ -1568,7 +1709,7 @@ function Styles() {
           rgba(253, 201, 77, 0) 80%);
       }
 
-      /* === KLONK SOM KARAKTÄRSFIGUR === */
+      /* === KLONK === */
       .td-character-figure {
         position: absolute;
         bottom: 0;
@@ -1595,6 +1736,14 @@ function Styles() {
         0%, 100% { transform: rotate(-0.5deg); }
         50% { transform: rotate(0.5deg); }
       }
+      /* När Klonk blir överraskad — hoppar till */
+      .td-character-surprised {
+        animation: tdCharSurprised 0.4s ease-in-out infinite !important;
+      }
+      @keyframes tdCharSurprised {
+        0%, 100% { transform: translateY(0) rotate(-2deg); }
+        50% { transform: translateY(-8px) rotate(2deg); }
+      }
       .td-character-figure:hover {
         animation-play-state: paused;
         transform: rotate(0deg) scale(1.03);
@@ -1616,6 +1765,18 @@ function Styles() {
       @keyframes tdBubbleFloat {
         0%, 100% { transform: translateY(0); opacity: 0.9; }
         50% { transform: translateY(-4px); opacity: 1; }
+      }
+      /* När Klonk är överraskad blir bubblan röd med "!!" */
+      .td-character-bubble-surprised {
+        background: var(--red) !important;
+        color: var(--cream) !important;
+        font-size: 18px !important;
+        animation: tdBubbleSurprised 0.2s ease-in-out infinite !important;
+        width: 40px !important; height: 40px !important;
+      }
+      @keyframes tdBubbleSurprised {
+        0%, 100% { transform: scale(1) rotate(-5deg); }
+        50% { transform: scale(1.2) rotate(5deg); }
       }
 
       .td-scene-hint {
@@ -1952,7 +2113,6 @@ function Styles() {
         .td-detail-caption { font-size: 14px; }
         .td-gear-indicator { width: 36px; height: 36px; }
         .td-puzzle-progress { gap: 10px; }
-        .td-machine-running-text { font-size: 16px; padding: 4px 12px; }
         .td-trapdoor { width: 22px; height: 22px; }
       }
     `}</style>
