@@ -413,7 +413,8 @@ function HandDrawnMark({ active, done, finale }) {
 }
 
 // ============================================================
-// MapAtmosphere — alla levande element på kartan
+// MapAtmosphere — subtila levande element på kartan
+// (Fågel, luftskepp och löv kommer senare som riktiga bilder)
 // ============================================================
 function MapAtmosphere() {
   return (
@@ -438,73 +439,11 @@ function MapAtmosphere() {
       <div className="td-map-lighthouse"
            style={{ left: "3.5%", top: "22%" }} />
 
-      {/* Luftskeppet som driver långsamt */}
-      <div className="td-map-airship"
-           style={{ top: "8%" }}>
-        <svg viewBox="0 0 80 30" width="100" height="30">
-          {/* Luftskeppskropp */}
-          <ellipse cx="40" cy="14" rx="32" ry="9"
-                   fill="#d94c3d" stroke="#3a2a17" strokeWidth="1.5" />
-          <ellipse cx="40" cy="14" rx="32" ry="9"
-                   fill="none" stroke="#3a2a17" strokeWidth="0.8"
-                   strokeDasharray="2 2" opacity="0.4" />
-          {/* Gondol */}
-          <rect x="32" y="22" width="16" height="5"
-                fill="#8a6a48" stroke="#3a2a17" strokeWidth="1" />
-          {/* Linjer */}
-          <line x1="34" y1="22" x2="32" y2="20"
-                stroke="#3a2a17" strokeWidth="0.6" />
-          <line x1="46" y1="22" x2="48" y2="20"
-                stroke="#3a2a17" strokeWidth="0.6" />
-        </svg>
-      </div>
-
-      {/* Fåglar som flyger normalt — i grupp */}
-      <div className="td-map-birds"
-           style={{ top: "12%", animationDuration: "45s" }}>
-        <svg viewBox="0 0 60 20" width="60" height="20">
-          <path d="M 5 10 Q 8 6, 11 10 Q 14 6, 17 10"
-                fill="none" stroke="#3a2a17" strokeWidth="1.5" strokeLinecap="round" />
-          <path d="M 25 14 Q 28 10, 31 14 Q 34 10, 37 14"
-                fill="none" stroke="#3a2a17" strokeWidth="1.3" strokeLinecap="round" />
-          <path d="M 42 8 Q 45 4, 48 8 Q 51 4, 54 8"
-                fill="none" stroke="#3a2a17" strokeWidth="1.2" strokeLinecap="round" />
-        </svg>
-      </div>
-
-      {/* EN konstig fågel som flyger BAKLÄNGES — tidsproblem! */}
-      <div className="td-map-bird-reverse"
-           style={{ top: "18%" }}>
-        <svg viewBox="0 0 30 20" width="30" height="20">
-          <path d="M 5 10 Q 8 6, 11 10 Q 14 6, 17 10"
-                fill="none" stroke="#c0392b" strokeWidth="2" strokeLinecap="round" />
-        </svg>
-      </div>
-
-      {/* Vattenglitter — små studsande prickar på vattnet */}
+      {/* Vattenglitter */}
       <div className="td-water-shimmer" style={{ left: "3%", top: "55%" }} />
       <div className="td-water-shimmer" style={{ left: "7%", top: "62%", animationDelay: "0.7s" }} />
       <div className="td-water-shimmer" style={{ left: "2%", top: "70%", animationDelay: "1.3s" }} />
       <div className="td-water-shimmer" style={{ left: "5%", top: "75%", animationDelay: "2s" }} />
-
-      {/* Konstigt löv som faller UPPÅT — tidens lagar är trasiga */}
-      <div className="td-falling-leaf"
-           style={{ left: "30%" }}>
-        <svg viewBox="0 0 20 20" width="16" height="16">
-          <path d="M 10 2 C 14 4, 16 10, 14 16 C 12 18, 8 18, 6 16 C 4 10, 6 4, 10 2 Z"
-                fill="#c08040" stroke="#3a2a17" strokeWidth="0.8" />
-          <line x1="10" y1="4" x2="10" y2="14"
-                stroke="#3a2a17" strokeWidth="0.6" opacity="0.6" />
-        </svg>
-      </div>
-
-      <div className="td-falling-leaf td-falling-leaf-2"
-           style={{ left: "70%", animationDelay: "8s" }}>
-        <svg viewBox="0 0 20 20" width="14" height="14">
-          <path d="M 10 2 C 14 4, 16 10, 14 16 C 12 18, 8 18, 6 16 C 4 10, 6 4, 10 2 Z"
-                fill="#a86028" stroke="#3a2a17" strokeWidth="0.8" />
-        </svg>
-      </div>
     </>
   );
 }
@@ -1329,11 +1268,14 @@ function Styles() {
       }
       .td-map {
         position: relative; width: 100%; height: 100%;
-        background-size: cover; background-position: center; background-repeat: no-repeat;
+        background-size: contain;
+        background-position: center;
+        background-repeat: no-repeat;
+        background-color: #1a1208;
         overflow: hidden;
       }
       .td-hud {
-        position: absolute; top: 12px; left: 50%;
+        position: absolute; bottom: 16px; left: 50%;
         transform: translateX(-50%); z-index: 10;
         display: flex; gap: 12px; align-items: center;
       }
