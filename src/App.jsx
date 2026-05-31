@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 
 // ============================================================
-// TIDSDETEKTIVERNA — v10 med dramatisk ventil-sekvens
+// TIDSDETEKTIVERNA — v11
+// Maskinen: 7-stegs pussel med slumpad frågepool
 // ============================================================
 
 const ASSETS = {
@@ -38,6 +39,213 @@ const KLONK_RAPID_DIALOGS = [
 ];
 
 // ============================================================
+// FRÅGEPOOL FÖR MASKIN-PUSSLET
+// Varje nivå är en lista av varianter. Vid spelstart väljs en
+// slumpad variant från varje nivå.
+// ============================================================
+const PUZZLE_POOL = {
+  // NIVÅ 1: Färg två-takt
+  level1: [
+    {
+      text: "Vilken färg fortsätter mönstret?",
+      sequence: ["color:red", "color:blue", "color:red", "color:blue", "mystery"],
+      answer: "color:red",
+      choices: ["color:red", "color:blue", "color:green"],
+      hint: "Färgerna turas om — röd, blå, röd, blå...",
+    },
+    {
+      text: "Vilken färg fortsätter mönstret?",
+      sequence: ["color:yellow", "color:green", "color:yellow", "color:green", "mystery"],
+      answer: "color:yellow",
+      choices: ["color:yellow", "color:green", "color:red"],
+      hint: "Gul, grön, gul, grön...",
+    },
+    {
+      text: "Vilken färg fortsätter mönstret?",
+      sequence: ["color:red", "color:yellow", "color:red", "color:yellow", "mystery"],
+      answer: "color:red",
+      choices: ["color:red", "color:yellow", "color:blue"],
+      hint: "Röd och gul växlar.",
+    },
+  ],
+
+  // NIVÅ 2: Färg tre-takt
+  level2: [
+    {
+      text: "Vilken färg fortsätter mönstret?",
+      sequence: ["color:red", "color:blue", "color:green", "color:red", "color:blue", "mystery"],
+      answer: "color:green",
+      choices: ["color:green", "color:red", "color:blue"],
+      hint: "Tre färger turas om: röd, blå, grön, röd, blå...",
+    },
+    {
+      text: "Vilken färg fortsätter mönstret?",
+      sequence: ["color:yellow", "color:red", "color:blue", "color:yellow", "color:red", "mystery"],
+      answer: "color:blue",
+      choices: ["color:blue", "color:yellow", "color:red"],
+      hint: "Gul, röd, blå... och så börjar det om.",
+    },
+    {
+      text: "Vilken färg fortsätter mönstret?",
+      sequence: ["color:green", "color:yellow", "color:red", "color:green", "color:yellow", "mystery"],
+      answer: "color:red",
+      choices: ["color:red", "color:green", "color:yellow"],
+      hint: "Grön, gul, röd — sedan börjar det om.",
+    },
+  ],
+
+  // NIVÅ 3: Storlek
+  level3: [
+    {
+      text: "Vilken storlek fortsätter mönstret?",
+      sequence: ["size:small", "size:medium", "size:large", "size:small", "size:medium", "mystery"],
+      answer: "size:large",
+      choices: ["size:large", "size:medium", "size:small"],
+      hint: "Liten, mellan, stor — sedan börjar det om.",
+    },
+    {
+      text: "Vilken storlek fortsätter mönstret?",
+      sequence: ["size:large", "size:medium", "size:small", "size:large", "size:medium", "mystery"],
+      answer: "size:small",
+      choices: ["size:small", "size:medium", "size:large"],
+      hint: "Stor, mellan, liten — den krymper varje gång.",
+    },
+  ],
+
+  // NIVÅ 4: Form två-takt
+  level4: [
+    {
+      text: "Vilken form fortsätter mönstret?",
+      sequence: ["shape:triangle", "shape:circle", "shape:triangle", "shape:circle", "shape:triangle", "mystery"],
+      answer: "shape:circle",
+      choices: ["shape:circle", "shape:triangle", "shape:square"],
+      hint: "Trianglar och cirklar turas om.",
+    },
+    {
+      text: "Vilken form fortsätter mönstret?",
+      sequence: ["shape:circle", "shape:square", "shape:circle", "shape:square", "shape:circle", "mystery"],
+      answer: "shape:square",
+      choices: ["shape:square", "shape:circle", "shape:triangle"],
+      hint: "Cirklar och fyrkanter turas om.",
+    },
+    {
+      text: "Vilken form fortsätter mönstret?",
+      sequence: ["shape:square", "shape:triangle", "shape:square", "shape:triangle", "shape:square", "mystery"],
+      answer: "shape:triangle",
+      choices: ["shape:triangle", "shape:square", "shape:circle"],
+      hint: "Fyrkanter och trianglar turas om.",
+    },
+  ],
+
+  // NIVÅ 5: Antal (räkning)
+  level5: [
+    {
+      text: "Hur många prickar kommer härnäst?",
+      sequence: ["dots:1", "dots:2", "dots:3", "mystery"],
+      answer: "dots:4",
+      choices: ["dots:4", "dots:3", "dots:5"],
+      hint: "Det blir en prick mer varje gång — 1, 2, 3, sedan...",
+    },
+    {
+      text: "Hur många prickar kommer härnäst?",
+      sequence: ["dots:2", "dots:4", "dots:6", "mystery"],
+      answer: "dots:8",
+      choices: ["dots:8", "dots:7", "dots:6"],
+      hint: "Det blir två prickar mer varje gång — 2, 4, 6...",
+    },
+    {
+      text: "Hur många prickar kommer härnäst?",
+      sequence: ["dots:1", "dots:3", "dots:5", "mystery"],
+      answer: "dots:7",
+      choices: ["dots:7", "dots:6", "dots:8"],
+      hint: "Två fler varje gång — 1, 3, 5...",
+    },
+  ],
+
+  // NIVÅ 6: Kombinerat (färg + form)
+  level6: [
+    {
+      text: "Vilken figur fortsätter mönstret?",
+      sequence: ["cs:red-triangle", "cs:blue-circle", "cs:red-triangle", "cs:blue-circle", "cs:red-triangle", "mystery"],
+      answer: "cs:blue-circle",
+      choices: ["cs:blue-circle", "cs:red-triangle", "cs:blue-triangle"],
+      hint: "En röd triangel och en blå cirkel turas om.",
+    },
+    {
+      text: "Vilken figur fortsätter mönstret?",
+      sequence: ["cs:yellow-square", "cs:green-circle", "cs:yellow-square", "cs:green-circle", "cs:yellow-square", "mystery"],
+      answer: "cs:green-circle",
+      choices: ["cs:green-circle", "cs:yellow-square", "cs:green-square"],
+      hint: "Gul fyrkant och grön cirkel turas om.",
+    },
+    {
+      text: "Vilken figur fortsätter mönstret?",
+      sequence: ["cs:red-circle", "cs:blue-triangle", "cs:red-circle", "cs:blue-triangle", "cs:red-circle", "mystery"],
+      answer: "cs:blue-triangle",
+      choices: ["cs:blue-triangle", "cs:red-circle", "cs:red-triangle"],
+      hint: "Röd cirkel och blå triangel turas om.",
+    },
+  ],
+
+  // NIVÅ 7: Spegling — mönstret går fram och tillbaka
+  level7: [
+    {
+      text: "Mönstret går fram och tillbaka. Vad kommer härnäst?",
+      sequence: ["color:red", "color:blue", "color:green", "color:green", "color:blue", "mystery"],
+      answer: "color:red",
+      choices: ["color:red", "color:green", "color:blue"],
+      hint: "Mönstret går till mitten och tillbaka: röd, blå, grön, grön, blå... och nu?",
+    },
+    {
+      text: "Mönstret går fram och tillbaka. Vad kommer härnäst?",
+      sequence: ["size:small", "size:medium", "size:large", "size:large", "size:medium", "mystery"],
+      answer: "size:small",
+      choices: ["size:small", "size:medium", "size:large"],
+      hint: "Storlekarna växer och krymper sedan tillbaka: liten, mellan, stor, stor, mellan...",
+    },
+  ],
+};
+
+// Klonks repliker mellan frågor (slumpas)
+const KLONK_PROGRESS_REMARKS = [
+  "Bra! Nästa kugghjul lyser!",
+  "Snyggt! Maskinen surrar lite mer.",
+  "Du är på rätt spår!",
+  "Mustaschen min vibrerar — det är ett bra tecken.",
+  "Aha! Ännu ett kugghjul vaknar.",
+  "Du är duktig på det här!",
+];
+
+// ============================================================
+// HJÄLPFUNKTIONER
+// ============================================================
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function randomFrom(arr) {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
+// Bygger en spelomgång: en slumpad fråga från varje nivå
+function buildPuzzleRound() {
+  const levels = ["level1", "level2", "level3", "level4", "level5", "level6", "level7"];
+  return levels.map((lvl, i) => {
+    const variant = randomFrom(PUZZLE_POOL[lvl]);
+    return {
+      ...variant,
+      choices: shuffle(variant.choices), // slumpa även ordningen på alternativen
+      levelIndex: i,
+    };
+  });
+}
+
+// ============================================================
 // HUVUDKOMPONENT
 // ============================================================
 export default function App() {
@@ -55,13 +263,8 @@ export default function App() {
   const allDone = stars === 3;
 
   function enterLocation(key) {
-    if (key === "timemachine") {
-      if (allDone) setView("end");
-      return;
-    }
-    setActiveLocation(key);
-    setInteriorDialog(null);
-    setDetailView(null);
+    if (key === "timemachine") { if (allDone) setView("end"); return; }
+    setActiveLocation(key); setInteriorDialog(null); setDetailView(null);
     setView("interior");
   }
   function startMission() { setView("mission"); }
@@ -115,7 +318,7 @@ export default function App() {
               onBack={backToInterior} />
           )}
           {activeLocation === "puzzle" && (
-            <PuzzleMissionMulti alreadyDone={completed.puzzle}
+            <MachinePuzzle alreadyDone={completed.puzzle}
               onComplete={() => completeMission("puzzle")}
               onBack={backToInterior} />
           )}
@@ -132,7 +335,8 @@ export default function App() {
 }
 
 // ============================================================
-// STARTSKÄRM
+// STARTSKÄRM, KARTAN, INTERIÖR-VY, DETALJ-OVERLAY etc.
+// (utbyggda komponenter följer — orörda från v10)
 // ============================================================
 function StartScreen({ onStart }) {
   return (
@@ -166,9 +370,6 @@ function CharacterPortrait({ src, name }) {
   );
 }
 
-// ============================================================
-// KARTAN
-// ============================================================
 function MapView({ completed, stars, allDone, hovered, setHovered, onPick, onReset }) {
   const visibleHotspots = ["reading", "clock", "puzzle"];
   return (
@@ -181,7 +382,6 @@ function MapView({ completed, stars, allDone, hovered, setHovered, onPick, onRes
           </div>
           <button className="td-btn td-btn-small td-hud-reset" onClick={onReset}>↺ Börja om</button>
         </div>
-
         {visibleHotspots.map((key) => {
           const h = HOTSPOTS[key];
           const done = completed[key];
@@ -198,7 +398,6 @@ function MapView({ completed, stars, allDone, hovered, setHovered, onPick, onRes
             </button>
           );
         })}
-
         <button
           className={`td-hotspot td-hotspot-finale ${allDone ? "td-hotspot-finale-active" : "td-hotspot-finale-locked"} ${hovered === "timemachine" ? "td-hotspot-hover" : ""}`}
           style={{
@@ -209,7 +408,6 @@ function MapView({ completed, stars, allDone, hovered, setHovered, onPick, onRes
           onMouseEnter={() => allDone && setHovered("timemachine")}
           onMouseLeave={() => setHovered(null)}
           aria-label="Tidsmaskinen" disabled={!allDone} />
-
         {hovered && (
           <HoverLabel hotspot={HOTSPOTS[hovered]} done={completed[hovered]} allDone={allDone} />
         )}
@@ -249,26 +447,20 @@ function StarRow({ filled = 0 }) {
   );
 }
 
-// ============================================================
-// INTERIÖR-VY
-// ============================================================
 function InteriorView({ locationKey, completed, foundItems, dialog, setDialog,
                         onPickUpItem, onStartMission, onBack,
                         detailView, setDetailView }) {
   const hotspot = HOTSPOTS[locationKey];
-
   let scene;
   if (locationKey === "puzzle") {
     scene = (
       <PuzzleWorkshopScene completed={completed} foundItems={foundItems}
         setDialog={setDialog} onPickUpItem={onPickUpItem}
-        onStartMission={onStartMission}
-        setDetailView={setDetailView} />
+        onStartMission={onStartMission} setDetailView={setDetailView} />
     );
   } else {
     scene = <ComingSoonScene title={hotspot.title} onStartMission={onStartMission} />;
   }
-
   return (
     <div className="td-interior td-fade-in">
       <div className="td-interior-topbar">
@@ -276,29 +468,20 @@ function InteriorView({ locationKey, completed, foundItems, dialog, setDialog,
         <div className="td-interior-title-banner"><span>{hotspot.title}</span></div>
         <div style={{ width: "150px" }} />
       </div>
-
       <div className="td-interior-stage">{scene}</div>
-
       {dialog && (
         <div className="td-dialog-bubble" onClick={() => setDialog(null)}>
           <p>{dialog}</p>
           <div className="td-dialog-tip">Klicka för att stänga</div>
         </div>
       )}
-
       {detailView && (
-        <DetailOverlay
-          type={detailView}
-          onClose={() => setDetailView(null)}
-        />
+        <DetailOverlay type={detailView} onClose={() => setDetailView(null)} />
       )}
     </div>
   );
 }
 
-// ============================================================
-// DETALJ-OVERLAY
-// ============================================================
 function DetailOverlay({ type, onClose }) {
   if (type === "karta") {
     return (
@@ -313,14 +496,11 @@ function DetailOverlay({ type, onClose }) {
             en labyrint under hela staden. Två kompassrosor markerar ingångar.
             Vem ritade den här?
           </p>
-          <button className="td-btn td-btn-gold" onClick={onClose}>
-            ✕ Lägg tillbaka
-          </button>
+          <button className="td-btn td-btn-gold" onClick={onClose}>✕ Lägg tillbaka</button>
         </div>
       </div>
     );
   }
-
   if (type === "fonster") {
     return (
       <div className="td-detail-overlay" onClick={onClose}>
@@ -338,26 +518,21 @@ function DetailOverlay({ type, onClose }) {
             ena är säkert klocktornet. Solen står konstigt högt på himlen för
             att vara så här tidigt på dagen...
           </p>
-          <button className="td-btn td-btn-gold" onClick={onClose}>
-            ✕ Stäng fönstret
-          </button>
+          <button className="td-btn td-btn-gold" onClick={onClose}>✕ Stäng fönstret</button>
         </div>
       </div>
     );
   }
-
   return null;
 }
 
 // ============================================================
-// PUSSELVERKSTADENS SCEN
+// PUSSELVERKSTADENS SCEN (oförändrad från v10)
 // ============================================================
 function PuzzleWorkshopScene({ completed, foundItems, setDialog, onPickUpItem,
                                 onStartMission, setDetailView }) {
   const gearFound = foundItems.includes("puzzle:gear");
   const trapdoorFound = foundItems.includes("puzzle:trapdoor");
-
-  // === EASTER EGG 1: Klonks rapid-klick ===
   const klonkClickCount = useRef(0);
   const klonkClickTimer = useRef(null);
   const [klonkSurprised, setKlonkSurprised] = useState(false);
@@ -367,12 +542,9 @@ function PuzzleWorkshopScene({ completed, foundItems, setDialog, onPickUpItem,
     const idx = Math.min(klonkClickCount.current, KLONK_RAPID_DIALOGS.length - 1);
     setDialog(KLONK_RAPID_DIALOGS[idx]);
     klonkClickCount.current += 1;
-    klonkClickTimer.current = setTimeout(() => {
-      klonkClickCount.current = 0;
-    }, 3000);
+    klonkClickTimer.current = setTimeout(() => { klonkClickCount.current = 0; }, 3000);
   }
 
-  // === EASTER EGG 2: Hemlig lucka ===
   const [trapdoorVisible, setTrapdoorVisible] = useState(false);
   const [trapdoorPos, setTrapdoorPos] = useState({ x: 50, y: 85 });
 
@@ -387,43 +559,24 @@ function PuzzleWorkshopScene({ completed, foundItems, setDialog, onPickUpItem,
     }
     const initial = setTimeout(spawnTrapdoor, 15000);
     const interval = setInterval(spawnTrapdoor, 30000);
-    return () => {
-      clearTimeout(initial);
-      clearInterval(interval);
-    };
+    return () => { clearTimeout(initial); clearInterval(interval); };
   }, [trapdoorFound]);
 
   function catchTrapdoor() {
     onPickUpItem("puzzle:trapdoor");
     setTrapdoorVisible(false);
-    setDialog(
-      "Du hittade en hemlig lucka i golvet! Inuti finns en burk pepparkakor, ett gammalt mynt, och en lapp: 'Gå inte ner i kloakerna utan kompass.' Vad i hela friden..."
-    );
+    setDialog("Du hittade en hemlig lucka i golvet! Inuti finns en burk pepparkakor, ett gammalt mynt, och en lapp: 'Gå inte ner i kloakerna utan kompass.' Vad i hela friden...");
   }
 
-  // === EASTER EGG 3: Ventil — fullständig sekvens i faser ===
-  // Faser:
-  //  "idle"     : ventilen kan tryckas
-  //  "twisting" : ventilen vrids (0.5s)
-  //  "running"  : maskinen vaknar med full kraft (2s)
-  //  "cooling"  : maskinen lugnar ner sig, ventilen är "utbränd" (5s)
   const [valvePhase, setValvePhase] = useState("idle");
   const [valveClickedOnce, setValveClickedOnce] = useState(false);
 
   function handleValveClick() {
-    if (valvePhase !== "idle") return; // förhindra spam
-
-    // Fas 1: Vrid ventilen (0.5s)
+    if (valvePhase !== "idle") return;
     setValvePhase("twisting");
     setKlonkSurprised(true);
-
+    setTimeout(() => { setValvePhase("running"); }, 500);
     setTimeout(() => {
-      // Fas 2: Maskinen vaknar (2s)
-      setValvePhase("running");
-    }, 500);
-
-    setTimeout(() => {
-      // Fas 3: Lugna ner + Klonks dialog
       setValvePhase("cooling");
       setKlonkSurprised(false);
       setDialog(
@@ -432,72 +585,42 @@ function PuzzleWorkshopScene({ completed, foundItems, setDialog, onPickUpItem,
           : "PUFF... PUFF... Klonk stryker bort en oljedroppe från glasögonen. \"Oj, det är testventilen! Jag glömde nästan att den fanns. Men utan rätt mönster bara skramlar maskinen. Vi behöver lösa pusslet på riktigt.\""
       );
       setValveClickedOnce(true);
-    }, 2500); // 0.5 + 2 = 2.5
-
-    setTimeout(() => {
-      // Fas 4: Tillbaka till idle (efter cooldown)
-      setValvePhase("idle");
-    }, 7500); // 2.5 + 5 = 7.5
+    }, 2500);
+    setTimeout(() => { setValvePhase("idle"); }, 7500);
   }
 
   const machineRunning = valvePhase === "running";
-  const machineShaking = valvePhase === "running";
 
   return (
-    <div className={`td-scene-image ${machineShaking ? "td-scene-shake" : ""}`}
+    <div className={`td-scene-image ${machineRunning ? "td-scene-shake" : ""}`}
          style={{ backgroundImage: `url(${ASSETS.puzzleWorkshop})` }}>
-
-      {/* === ANIMERADE OVERLAYS PÅ MASKINEN === */}
       <svg className="td-anim-overlay" viewBox="0 0 100 100"
            style={{ left: "67%", top: "30%", width: "5%", height: "9%" }}>
         <circle cx="50" cy="50" r="42" fill="rgba(253, 201, 77, 0.18)"
-                style={{
-                  transformOrigin: "50% 50%",
-                  animation: `tdSpin ${machineRunning ? "0.5s" : "8s"} linear infinite`
-                }} />
+                style={{ transformOrigin: "50% 50%",
+                  animation: `tdSpin ${machineRunning ? "0.5s" : "8s"} linear infinite` }} />
       </svg>
       <svg className="td-anim-overlay" viewBox="0 0 100 100"
            style={{ left: "75%", top: "32%", width: "4%", height: "7%" }}>
         <circle cx="50" cy="50" r="42" fill="rgba(253, 201, 77, 0.15)"
-                style={{
-                  transformOrigin: "50% 50%",
-                  animation: `tdSpinReverse ${machineRunning ? "0.7s" : "12s"} linear infinite`
-                }} />
+                style={{ transformOrigin: "50% 50%",
+                  animation: `tdSpinReverse ${machineRunning ? "0.7s" : "12s"} linear infinite` }} />
       </svg>
-
-      {/* Ångpuffar — fler och snabbare när maskinen körs */}
-      <div className="td-steam"
-           style={{ left: "76%", top: "8%", width: "5%", height: "10%" }}>
-        <span className="td-steam-puff td-steam-puff-1"
-              style={{ animationDuration: machineRunning ? "0.8s" : "3s" }} />
-        <span className="td-steam-puff td-steam-puff-2"
-              style={{ animationDuration: machineRunning ? "0.8s" : "3s" }} />
-        <span className="td-steam-puff td-steam-puff-3"
-              style={{ animationDuration: machineRunning ? "0.8s" : "3s" }} />
+      <div className="td-steam" style={{ left: "76%", top: "8%", width: "5%", height: "10%" }}>
+        <span className="td-steam-puff td-steam-puff-1" style={{ animationDuration: machineRunning ? "0.8s" : "3s" }} />
+        <span className="td-steam-puff td-steam-puff-2" style={{ animationDuration: machineRunning ? "0.8s" : "3s" }} />
+        <span className="td-steam-puff td-steam-puff-3" style={{ animationDuration: machineRunning ? "0.8s" : "3s" }} />
       </div>
-
-      {/* Extra ångpuffar som dyker upp BARA när maskinen körs */}
       {machineRunning && (
         <>
-          <div className="td-extra-steam" style={{ left: "60%", top: "30%" }}>
-            <span className="td-burst-puff" />
-          </div>
-          <div className="td-extra-steam" style={{ left: "85%", top: "40%" }}>
-            <span className="td-burst-puff" style={{ animationDelay: "0.3s" }} />
-          </div>
-          <div className="td-extra-steam" style={{ left: "73%", top: "55%" }}>
-            <span className="td-burst-puff" style={{ animationDelay: "0.6s" }} />
-          </div>
-          <div className="td-extra-steam" style={{ left: "62%", top: "65%" }}>
-            <span className="td-burst-puff" style={{ animationDelay: "0.9s" }} />
-          </div>
+          <div className="td-extra-steam" style={{ left: "60%", top: "30%" }}><span className="td-burst-puff" /></div>
+          <div className="td-extra-steam" style={{ left: "85%", top: "40%" }}><span className="td-burst-puff" style={{ animationDelay: "0.3s" }} /></div>
+          <div className="td-extra-steam" style={{ left: "73%", top: "55%" }}><span className="td-burst-puff" style={{ animationDelay: "0.6s" }} /></div>
+          <div className="td-extra-steam" style={{ left: "62%", top: "65%" }}><span className="td-burst-puff" style={{ animationDelay: "0.9s" }} /></div>
         </>
       )}
-
-      {/* Lampan flimrar starkare när maskinen körs */}
       <div className={`td-lamp-flicker ${machineRunning ? "td-lamp-overdrive" : ""}`}
            style={{ left: "42%", top: "23%", width: "8%", height: "10%" }} />
-
       <div className={`td-puzzle-grid ${machineRunning ? "td-puzzle-grid-running" : ""}`}
            style={{ left: "63.5%", top: "44%", width: "8%", height: "13%" }}>
         <span style={{ animationDelay: "0s" }} />
@@ -505,165 +628,107 @@ function PuzzleWorkshopScene({ completed, foundItems, setDialog, onPickUpItem,
         <span style={{ animationDelay: "0.8s" }} />
         <span style={{ animationDelay: "1.2s" }} />
       </div>
-
-      {/* STORT RAGGADAGG i mitten av scenen när maskinen körs */}
       {machineRunning && (
-        <div className="td-machine-running-text-big">
-          RAGGA-DAGG!
-        </div>
+        <div className="td-machine-running-text-big">RAGGA-DAGG!</div>
       )}
-
-      {/* === KLICKBARA OBJEKT === */}
 
       <TaggedHotspot
         style={{ left: "57%", top: "10%", width: "34%", height: "65%" }}
-        tagPosition={{ left: "50%", top: "78%" }}
-        tagRotation={-2}
+        tagPosition={{ left: "50%", top: "78%" }} tagRotation={-2}
         onClick={onStartMission}
-        label={completed ? "Maskinen ✓" : "Maskinen"}
-        primary
-        ariaLabel="Den stora maskinen"
-      />
+        label={completed ? "Maskinen ✓" : "Maskinen"} primary
+        ariaLabel="Den stora maskinen" />
 
-      {/* Ventilen — vrids visuellt under sekvensen */}
-      <button
-        className={`td-tagged td-tagged-valve td-valve-${valvePhase}`}
+      <button className={`td-tagged td-tagged-valve td-valve-${valvePhase}`}
         style={{ left: "55%", top: "47%", width: "5%", height: "7%" }}
         onClick={handleValveClick}
         aria-label="Röd ventil — testkör maskinen"
-        disabled={valvePhase !== "idle"}
-      >
+        disabled={valvePhase !== "idle"}>
         <span className="td-tagged-glow" />
-        {/* Liten visuell representation av en ratt som vrids */}
         <span className="td-valve-knob">
           <svg viewBox="0 0 40 40">
-            <circle cx="20" cy="20" r="14" fill="rgba(217, 76, 61, 0.4)"
-                    stroke="rgba(58, 42, 23, 0.6)" strokeWidth="2" />
-            <line x1="20" y1="8" x2="20" y2="32"
-                  stroke="rgba(58, 42, 23, 0.8)" strokeWidth="3" />
-            <line x1="8" y1="20" x2="32" y2="20"
-                  stroke="rgba(58, 42, 23, 0.8)" strokeWidth="3" />
+            <circle cx="20" cy="20" r="14" fill="rgba(217, 76, 61, 0.4)" stroke="rgba(58, 42, 23, 0.6)" strokeWidth="2" />
+            <line x1="20" y1="8" x2="20" y2="32" stroke="rgba(58, 42, 23, 0.8)" strokeWidth="3" />
+            <line x1="8" y1="20" x2="32" y2="20" stroke="rgba(58, 42, 23, 0.8)" strokeWidth="3" />
             <circle cx="20" cy="20" r="3" fill="rgba(58, 42, 23, 0.9)" />
           </svg>
         </span>
         <span className="td-paper-tag"
-              style={{ left: "50%", top: "115%",
-                       transform: "translateX(-50%) rotate(4deg)" }}>
+              style={{ left: "50%", top: "115%", transform: "translateX(-50%) rotate(4deg)" }}>
           {valvePhase === "cooling" ? "...puh..." : "Ventilen"}
         </span>
       </button>
 
       <TaggedHotspot
         style={{ left: "1%", top: "26%", width: "32%", height: "40%" }}
-        tagPosition={{ left: "50%", top: "100%" }}
-        tagRotation={2}
-        onClick={() => setDetailView("karta")}
-        label="Verktygsväggen"
-        ariaLabel="Verktygsväggen"
-      />
+        tagPosition={{ left: "50%", top: "100%" }} tagRotation={2}
+        onClick={() => setDetailView("karta")} label="Verktygsväggen"
+        ariaLabel="Verktygsväggen" />
 
       <TaggedHotspot
         style={{ left: "10%", top: "4%", width: "22%", height: "20%" }}
-        tagPosition={{ left: "50%", top: "100%" }}
-        tagRotation={-3}
-        onClick={() => setDetailView("fonster")}
-        label="Fönstret"
-        ariaLabel="Fönstret"
-      />
+        tagPosition={{ left: "50%", top: "100%" }} tagRotation={-3}
+        onClick={() => setDetailView("fonster")} label="Fönstret"
+        ariaLabel="Fönstret" />
 
       {!gearFound && (
         <TaggedHotspot
           style={{ left: "76%", top: "78%", width: "12%", height: "16%" }}
-          tagPosition={{ left: "50%", top: "100%" }}
-          tagRotation={3}
+          tagPosition={{ left: "50%", top: "100%" }} tagRotation={3}
           onClick={() => {
             onPickUpItem("puzzle:gear");
             setDialog("Du hittade ett glittrande kugghjul på arbetsbänken! Det glömmer du inte i första taget.");
           }}
-          label="Skatt!"
-          treasure
-          ariaLabel="Glittrande kugghjul"
-        />
+          label="Skatt!" treasure ariaLabel="Glittrande kugghjul" />
       )}
 
       {trapdoorVisible && (
-        <button
-          className="td-trapdoor"
+        <button className="td-trapdoor"
           style={{ left: `${trapdoorPos.x}%`, top: `${trapdoorPos.y}%` }}
-          onClick={catchTrapdoor}
-          aria-label="Hemlig lucka"
-        />
+          onClick={catchTrapdoor} aria-label="Hemlig lucka" />
       )}
 
-      {/* Klonk — med extra "hoppa till"-effekt när maskinen vaknar */}
-      <button
-        className={`td-character-figure ${klonkSurprised ? "td-character-surprised" : ""}`}
-        onClick={handleKlonkClick}
-        aria-label="Prata med Herr Klonk"
-      >
+      <button className={`td-character-figure ${klonkSurprised ? "td-character-surprised" : ""}`}
+              onClick={handleKlonkClick} aria-label="Prata med Herr Klonk">
         <img src={ASSETS.klonkFull} alt="Herr Klonk" />
         <span className={`td-character-bubble ${klonkSurprised ? "td-character-bubble-surprised" : ""}`}>
           {klonkSurprised ? "!!" : "!"}
         </span>
       </button>
 
-      <div className="td-scene-hint">
-        Klicka på något som intresserar dig
-      </div>
+      <div className="td-scene-hint">Klicka på något som intresserar dig</div>
     </div>
   );
 }
 
-// ============================================================
-// TaggedHotspot
-// ============================================================
 function TaggedHotspot({ style, tagPosition, tagRotation = -2, onClick, label,
                           primary, treasure, ariaLabel }) {
   return (
     <button
       className={`td-tagged ${primary ? "td-tagged-primary" : ""} ${treasure ? "td-tagged-treasure" : ""}`}
-      style={style}
-      onClick={onClick}
-      aria-label={ariaLabel}
-    >
+      style={style} onClick={onClick} aria-label={ariaLabel}>
       <span className="td-tagged-glow" />
-      <span
-        className="td-paper-tag"
-        style={{
-          ...tagPosition,
-          transform: `translateX(-50%) rotate(${tagRotation}deg)`,
-        }}
-      >
+      <span className="td-paper-tag"
+            style={{ ...tagPosition, transform: `translateX(-50%) rotate(${tagRotation}deg)` }}>
         {label}
       </span>
     </button>
   );
 }
 
-// ============================================================
-// Platshållarscen
-// ============================================================
 function ComingSoonScene({ title, onStartMission }) {
   return (
     <div className="td-coming-soon">
       <div className="td-coming-soon-card">
         <div className="td-stamp">På väg...</div>
         <h2 className="td-h2">{title}</h2>
-        <p>
-          Interiören för den här platsen håller på att byggas. Du kan starta
-          uppdraget direkt så länge.
-        </p>
-        <button className="td-btn td-btn-big" onClick={onStartMission}>
-          ▸ Starta uppdraget
-        </button>
+        <p>Interiören för den här platsen håller på att byggas. Du kan starta uppdraget direkt så länge.</p>
+        <button className="td-btn td-btn-big" onClick={onStartMission}>▸ Starta uppdraget</button>
       </div>
     </div>
   );
 }
 
-// ============================================================
-// UPPDRAGS-OVERLAY
-// ============================================================
 function MissionOverlay({ hotspot, grand, onClose, children }) {
   const characterSrc = hotspot?.character ? ASSETS[hotspot.character] : null;
   return (
@@ -692,81 +757,32 @@ function MissionOverlay({ hotspot, grand, onClose, children }) {
 }
 
 // ============================================================
-// PUSSELUPPDRAGET — 3 delsteg
+// MASKIN-PUSSLET — NU 7 STEG MED SLUMPADE FRÅGOR
 // ============================================================
-function PuzzleMissionMulti({ alreadyDone, onComplete, onBack }) {
-  const puzzles = [
-    {
-      type: "color",
-      text: "Vilken färg fortsätter mönstret?",
-      sequence: [
-        { kind: "color", value: "red" },
-        { kind: "color", value: "blue" },
-        { kind: "color", value: "red" },
-        { kind: "color", value: "blue" },
-        { kind: "mystery" },
-      ],
-      choices: [
-        { id: "a", display: { kind: "color", value: "red" }, label: "röd", correct: true },
-        { id: "b", display: { kind: "color", value: "green" }, label: "grön", correct: false },
-        { id: "c", display: { kind: "color", value: "blue" }, label: "blå", correct: false },
-      ],
-      hint: "Färgerna turas om — röd, blå, röd, blå...",
-      success: "Första kugghjulet snurrar!",
-    },
-    {
-      type: "size",
-      text: "Vilken storlek fortsätter mönstret?",
-      sequence: [
-        { kind: "size", value: "small" },
-        { kind: "size", value: "medium" },
-        { kind: "size", value: "large" },
-        { kind: "size", value: "small" },
-        { kind: "size", value: "medium" },
-        { kind: "mystery" },
-      ],
-      choices: [
-        { id: "a", display: { kind: "size", value: "small" }, label: "liten", correct: false },
-        { id: "b", display: { kind: "size", value: "medium" }, label: "mellan", correct: false },
-        { id: "c", display: { kind: "size", value: "large" }, label: "stor", correct: true },
-      ],
-      hint: "Liten, mellan, stor — sedan börjar det om från början.",
-      success: "Andra kugghjulet snurrar!",
-    },
-    {
-      type: "shape",
-      text: "Vilken form fortsätter mönstret?",
-      sequence: [
-        { kind: "shape", value: "triangle" },
-        { kind: "shape", value: "circle" },
-        { kind: "shape", value: "triangle" },
-        { kind: "shape", value: "circle" },
-        { kind: "shape", value: "triangle" },
-        { kind: "mystery" },
-      ],
-      choices: [
-        { id: "a", display: { kind: "shape", value: "square" }, label: "fyrkant", correct: false },
-        { id: "b", display: { kind: "shape", value: "circle" }, label: "cirkel", correct: true },
-        { id: "c", display: { kind: "shape", value: "triangle" }, label: "triangel", correct: false },
-      ],
-      hint: "Trianglar och cirklar turas om.",
-      success: "Tredje kugghjulet snurrar! Maskinen lever igen!",
-    },
-  ];
+function MachinePuzzle({ alreadyDone, onComplete, onBack }) {
+  // Bygg en spelomgång EN GÅNG vid mount — sju slumpade frågor
+  const round = useMemo(() => buildPuzzleRound(), []);
+  const totalSteps = round.length;
 
   const [step, setStep] = useState(0);
   const [feedback, setFeedback] = useState(null);
-  const [solvedSteps, setSolvedSteps] = useState([false, false, false]);
+  const [solvedSteps, setSolvedSteps] = useState(
+    new Array(totalSteps).fill(false)
+  );
 
-  const current = puzzles[step];
+  const current = round[step];
   const allSolved = solvedSteps.every(Boolean);
 
-  function pick(choice) {
-    if (choice.correct) {
+  function pick(choiceId) {
+    if (choiceId === current.answer) {
       const newSolved = [...solvedSteps];
       newSolved[step] = true;
       setSolvedSteps(newSolved);
-      setFeedback({ type: "success", text: current.success });
+      const remark = randomFrom(KLONK_PROGRESS_REMARKS);
+      const finalText = step === totalSteps - 1
+        ? "Sista kugghjulet snurrar! Maskinen lever igen!"
+        : remark;
+      setFeedback({ type: "success", text: finalText });
     } else {
       setFeedback({ type: "error", text: `Inte riktigt. Ledtråd: ${current.hint}` });
     }
@@ -774,25 +790,19 @@ function PuzzleMissionMulti({ alreadyDone, onComplete, onBack }) {
 
   function nextStep() {
     setFeedback(null);
-    if (step < puzzles.length - 1) {
-      setStep(step + 1);
-    } else {
-      if (!alreadyDone) onComplete();
-    }
+    if (step < totalSteps - 1) setStep(step + 1);
+    else if (!alreadyDone) onComplete();
   }
 
-  if (allSolved && feedback?.type === "success" && step === puzzles.length - 1) {
+  // Sista steget klart? Visa avslutsskärm
+  if (allSolved && feedback?.type === "success" && step === totalSteps - 1) {
     return (
       <div className="td-puzzle-complete">
-        <div className="td-puzzle-progress">
-          <GearIndicator solved={true} />
-          <GearIndicator solved={true} />
-          <GearIndicator solved={true} />
-        </div>
+        <GearProgressRow total={totalSteps} solved={totalSteps} active={-1} />
         <p className="td-mission-text">
           <em>"Maskinen lever igen!"</em> Herr Klonk klappar händerna och torkar
-          en oljedroppe från mustaschen. Tre kugghjul snurrar i takt — pusslet är
-          löst.
+          en oljedroppe från mustaschen. Alla {totalSteps} kugghjul snurrar i takt —
+          maskinen är lagad!
         </p>
         <button className="td-btn td-btn-gold td-btn-big" onClick={onBack}>
           ★ Tillbaka till verkstaden
@@ -803,11 +813,11 @@ function PuzzleMissionMulti({ alreadyDone, onComplete, onBack }) {
 
   return (
     <>
-      <div className="td-puzzle-progress">
-        {solvedSteps.map((s, i) => (
-          <GearIndicator key={i} solved={s} active={i === step} />
-        ))}
-      </div>
+      <GearProgressRow total={totalSteps} solved={solvedSteps.filter(Boolean).length} active={step} />
+
+      <p className="td-puzzle-step-label">
+        Pussel {step + 1} av {totalSteps}
+      </p>
 
       <p className="td-mission-text">
         <em>{stepIntro(step)}</em>
@@ -817,11 +827,11 @@ function PuzzleMissionMulti({ alreadyDone, onComplete, onBack }) {
       <PuzzleSequence sequence={current.sequence} />
 
       <div className="td-choices td-choices-row">
-        {current.choices.map((c) => (
-          <button key={c.id} className="td-choice td-choice-visual"
-                  onClick={() => pick(c)}>
-            <PuzzleItem item={c.display} small />
-            <span>{c.label}</span>
+        {current.choices.map((cId) => (
+          <button key={cId} className="td-choice td-choice-visual"
+                  onClick={() => pick(cId)}>
+            <PuzzleItem itemId={cId} small />
+            <span>{labelForItem(cId)}</span>
           </button>
         ))}
       </div>
@@ -831,7 +841,7 @@ function PuzzleMissionMulti({ alreadyDone, onComplete, onBack }) {
           <p>{feedback.text}</p>
           {feedback.type === "success" && (
             <button className="td-btn td-btn-gold" onClick={nextStep}>
-              {step < puzzles.length - 1 ? "→ Nästa pussel" : "★ Avsluta"}
+              {step < totalSteps - 1 ? "→ Nästa pussel" : "★ Avsluta"}
             </button>
           )}
         </div>
@@ -841,9 +851,27 @@ function PuzzleMissionMulti({ alreadyDone, onComplete, onBack }) {
 }
 
 function stepIntro(step) {
-  if (step === 0) return `"Vi börjar enkelt — färger."`;
-  if (step === 1) return `"Bra! Nu storlekar."`;
-  return `"Sista pusslet — former!"`;
+  const intros = [
+    `"Vi börjar enkelt — färger."`,
+    `"Bra! Nu med tre färger."`,
+    `"Storlekar nästa..."`,
+    `"Vad sägs om former?"`,
+    `"Nu räknar vi prickar."`,
+    `"Färger OCH former tillsammans."`,
+    `"Sista pusslet — det här går fram OCH tillbaka."`,
+  ];
+  return intros[step] || `"Pussel ${step + 1}!"`;
+}
+
+// Rad med kugghjul som visar hur långt man har kommit
+function GearProgressRow({ total, solved, active }) {
+  return (
+    <div className="td-puzzle-progress">
+      {[...Array(total)].map((_, i) => (
+        <GearIndicator key={i} solved={i < solved} active={i === active} />
+      ))}
+    </div>
+  );
 }
 
 function GearIndicator({ solved, active }) {
@@ -868,9 +896,9 @@ function GearIndicator({ solved, active }) {
 function PuzzleSequence({ sequence }) {
   return (
     <div className="td-puzzle-sequence">
-      {sequence.map((item, i) => (
+      {sequence.map((itemId, i) => (
         <React.Fragment key={i}>
-          <PuzzleItem item={item} />
+          <PuzzleItem itemId={itemId} />
           {i < sequence.length - 1 && <span className="td-sequence-arrow">→</span>}
         </React.Fragment>
       ))}
@@ -878,69 +906,150 @@ function PuzzleSequence({ sequence }) {
   );
 }
 
-function PuzzleItem({ item, small }) {
-  const sz = small ? 28 : 44;
-  if (item.kind === "mystery") {
+// === Renderar ett enskilt pussel-objekt baserat på dess ID ===
+function PuzzleItem({ itemId, small }) {
+  const sz = small ? 32 : 48;
+  if (itemId === "mystery") {
     return (
       <span className="td-puzzle-item td-puzzle-item-mystery"
             style={{ width: sz, height: sz, fontSize: sz * 0.5 }}>?</span>
     );
   }
-  if (item.kind === "color") {
-    const colors = { red: "#d94c3d", blue: "#3a6ea8", green: "#5fa860" };
+  const [kind, value] = itemId.split(":");
+
+  if (kind === "color") {
+    const colors = {
+      red: "#d94c3d", blue: "#3a6ea8", green: "#5fa860", yellow: "#f0c040",
+    };
     return (
       <span className="td-puzzle-item"
-            style={{ width: sz, height: sz, background: colors[item.value], borderRadius: "50%" }} />
+            style={{ width: sz, height: sz, background: colors[value], borderRadius: "50%" }} />
     );
   }
-  if (item.kind === "size") {
-    const sizeMap = { small: 0.55, medium: 0.8, large: 1.0 };
-    const ratio = sizeMap[item.value];
+  if (kind === "size") {
+    const sizeMap = { small: 0.5, medium: 0.75, large: 1.0 };
+    const ratio = sizeMap[value];
     return (
       <span className="td-puzzle-item-wrap" style={{ width: sz, height: sz }}>
         <span className="td-puzzle-item"
-              style={{ width: sz * ratio, height: sz * ratio, background: "#3a6ea8", borderRadius: "50%" }} />
+              style={{ width: sz * ratio, height: sz * ratio,
+                       background: "#3a6ea8", borderRadius: "50%" }} />
       </span>
     );
   }
-  if (item.kind === "shape") {
+  if (kind === "shape") {
     return (
       <span className="td-puzzle-item-shape" style={{ width: sz, height: sz }}>
-        <ShapeSvg shape={item.value} size={sz} />
+        <ShapeSvg shape={value} size={sz} color="#d94c3d" />
+      </span>
+    );
+  }
+  if (kind === "dots") {
+    return <DotsItem count={parseInt(value, 10)} size={sz} />;
+  }
+  if (kind === "cs") {
+    // cs:color-shape, e.g. cs:red-triangle
+    const [colorName, shapeName] = value.split("-");
+    const colors = {
+      red: "#d94c3d", blue: "#3a6ea8", green: "#5fa860", yellow: "#f0c040",
+    };
+    return (
+      <span className="td-puzzle-item-shape" style={{ width: sz, height: sz }}>
+        <ShapeSvg shape={shapeName} size={sz} color={colors[colorName]} />
       </span>
     );
   }
   return null;
 }
 
-function ShapeSvg({ shape, size }) {
-  const stroke = "#3a2a17"; const strokeW = 2.5;
+function ShapeSvg({ shape, size, color }) {
+  const stroke = "#3a2a17";
+  const strokeW = 2.5;
   if (shape === "triangle") {
     return (
       <svg viewBox="0 0 40 40" width={size} height={size}>
-        <polygon points="20,5 36,35 4,35" fill="#d94c3d" stroke={stroke} strokeWidth={strokeW} strokeLinejoin="round" />
+        <polygon points="20,5 36,35 4,35" fill={color}
+                 stroke={stroke} strokeWidth={strokeW} strokeLinejoin="round" />
       </svg>
     );
   }
   if (shape === "circle") {
     return (
       <svg viewBox="0 0 40 40" width={size} height={size}>
-        <circle cx="20" cy="20" r="16" fill="#5fa860" stroke={stroke} strokeWidth={strokeW} />
+        <circle cx="20" cy="20" r="16" fill={color}
+                stroke={stroke} strokeWidth={strokeW} />
       </svg>
     );
   }
   if (shape === "square") {
     return (
       <svg viewBox="0 0 40 40" width={size} height={size}>
-        <rect x="6" y="6" width="28" height="28" fill="#fdc94d" stroke={stroke} strokeWidth={strokeW} strokeLinejoin="round" />
+        <rect x="6" y="6" width="28" height="28" fill={color}
+              stroke={stroke} strokeWidth={strokeW} strokeLinejoin="round" />
       </svg>
     );
   }
   return null;
 }
 
+// Renderar n prickar inom en cirkel — för räkneuppgifter
+function DotsItem({ count, size }) {
+  // Layouter för 1-8 prickar inom ett rutnät
+  const positions = {
+    1: [[20, 20]],
+    2: [[12, 20], [28, 20]],
+    3: [[20, 10], [12, 28], [28, 28]],
+    4: [[12, 12], [28, 12], [12, 28], [28, 28]],
+    5: [[12, 12], [28, 12], [20, 20], [12, 28], [28, 28]],
+    6: [[10, 12], [20, 12], [30, 12], [10, 28], [20, 28], [30, 28]],
+    7: [[10, 10], [20, 10], [30, 10], [20, 20], [10, 30], [20, 30], [30, 30]],
+    8: [[10, 10], [20, 10], [30, 10], [10, 20], [30, 20], [10, 30], [20, 30], [30, 30]],
+  };
+  const dots = positions[count] || [];
+  return (
+    <span className="td-puzzle-item-shape" style={{ width: size, height: size }}>
+      <svg viewBox="0 0 40 40" width={size} height={size}>
+        <circle cx="20" cy="20" r="18" fill="#fdf3d8"
+                stroke="#3a2a17" strokeWidth="2.5" />
+        {dots.map(([x, y], i) => (
+          <circle key={i} cx={x} cy={y} r="2.5" fill="#3a2a17" />
+        ))}
+      </svg>
+    </span>
+  );
+}
+
+// Returnerar en mänsklig etikett för ett pussel-item-ID
+function labelForItem(itemId) {
+  if (itemId === "mystery") return "?";
+  const [kind, value] = itemId.split(":");
+  if (kind === "color") {
+    const names = { red: "röd", blue: "blå", green: "grön", yellow: "gul" };
+    return names[value] || value;
+  }
+  if (kind === "size") {
+    const names = { small: "liten", medium: "mellan", large: "stor" };
+    return names[value] || value;
+  }
+  if (kind === "shape") {
+    const names = { triangle: "triangel", circle: "cirkel", square: "fyrkant" };
+    return names[value] || value;
+  }
+  if (kind === "dots") {
+    const n = parseInt(value, 10);
+    return `${n} ${n === 1 ? "prick" : "prickar"}`;
+  }
+  if (kind === "cs") {
+    const [colorName, shapeName] = value.split("-");
+    const colors = { red: "röd", blue: "blå", green: "grön", yellow: "gul" };
+    const shapes = { triangle: "triangel", circle: "cirkel", square: "fyrkant" };
+    return `${colors[colorName]} ${shapes[shapeName]}`;
+  }
+  return itemId;
+}
+
 // ============================================================
-// LÄS- och KLOCK-uppdrag (oförändrade)
+// LÄS- och KLOCK-uppdrag (oförändrade — fixar dessa i nästa steg)
 // ============================================================
 function ReadingMission({ alreadyDone, onComplete, onBack }) {
   const [feedback, setFeedback] = useState(null);
@@ -1053,9 +1162,7 @@ function EndScreen({ onReset }) {
         <CharacterPortrait src={ASSETS.mira} name="Mira Murr" />
         <CharacterPortrait src={ASSETS.klonk} name="Herr Klonk" />
       </div>
-      <p className="td-intro">
-        Fantastiskt! Du hittade alla tre stjärnor och lagade stadens första tidsmaskin.
-      </p>
+      <p className="td-intro">Fantastiskt! Du hittade alla tre stjärnor och lagade stadens första tidsmaskin.</p>
       <p className="td-intro td-intro-small">
         Nästa gång kan äventyret fortsätta till <strong>Hamnen</strong>,{" "}
         <strong>Observatoriet</strong> och <strong>Den glömda grottan</strong>.
@@ -1094,10 +1201,8 @@ function Styles() {
 
       .td-app {
         font-family: 'Georgia', 'Bookman Old Style', serif;
-        color: var(--ink);
-        min-height: 100vh;
-        background: #2a1f12;
-        overflow: hidden;
+        color: var(--ink); min-height: 100vh;
+        background: #2a1f12; overflow: hidden;
       }
 
       .td-fade-in { animation: tdFadeIn 0.5s ease; }
@@ -1105,7 +1210,6 @@ function Styles() {
       @keyframes tdSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
       @keyframes tdSpinReverse { from { transform: rotate(0deg); } to { transform: rotate(-360deg); } }
 
-      /* === STARTSKÄRM === */
       .td-start-screen {
         position: fixed; inset: 0;
         background: url(${ASSETS.map}) center/cover no-repeat;
@@ -1153,7 +1257,6 @@ function Styles() {
       .td-portrait-frame img { width: 100%; height: 100%; object-fit: cover; display: block; }
       .td-portrait-name { margin-top: 10px; font-weight: bold; font-size: 14px; color: var(--ink); }
 
-      /* === KNAPPAR === */
       .td-btn {
         background: var(--cream); border: 3px solid var(--ink); color: var(--ink);
         padding: 10px 20px; font-family: inherit; font-size: 16px; font-weight: bold;
@@ -1167,7 +1270,6 @@ function Styles() {
       .td-btn-small { font-size: 13px; padding: 6px 14px; }
       .td-btn-gold { background: var(--gold); }
 
-      /* === KARTAN === */
       .td-map-wrap {
         position: fixed; inset: 0; background: #1a1208;
         display: flex; align-items: center; justify-content: center;
@@ -1187,17 +1289,11 @@ function Styles() {
         box-shadow: 4px 4px 0 var(--ink);
         display: flex; align-items: center; gap: 16px;
       }
-      .td-hud-text {
-        font-weight: bold; font-size: 16px;
-        text-transform: uppercase; letter-spacing: 1.5px;
-      }
+      .td-hud-text { font-weight: bold; font-size: 16px; text-transform: uppercase; letter-spacing: 1.5px; }
       .td-hud-reset { background: var(--paper); }
 
       .td-star-row { display: inline-flex; gap: 4px; }
-      .td-star {
-        font-size: 22px; color: #c0a878;
-        text-shadow: 1px 1px 0 var(--ink); line-height: 1;
-      }
+      .td-star { font-size: 22px; color: #c0a878; text-shadow: 1px 1px 0 var(--ink); line-height: 1; }
       .td-star-filled { color: var(--gold); animation: starPop 0.4s ease; }
       @keyframes starPop {
         0% { transform: scale(0); }
@@ -1268,14 +1364,12 @@ function Styles() {
       .td-hover-status { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.7; }
       .td-hover-status.ok { color: var(--green); opacity: 1; font-weight: bold; }
 
-      /* === INTERIÖR-VY === */
       .td-interior {
         position: fixed; inset: 0; background: #1a1208;
         display: flex; flex-direction: column;
       }
       .td-interior-topbar {
-        background: var(--cream);
-        border-bottom: 3px solid var(--ink);
+        background: var(--cream); border-bottom: 3px solid var(--ink);
         padding: 10px 16px;
         display: flex; align-items: center; justify-content: space-between;
         gap: 16px; z-index: 5;
@@ -1291,20 +1385,12 @@ function Styles() {
         flex: 1; display: flex; align-items: center; justify-content: center;
         overflow: hidden; position: relative; background: #1a1208;
       }
-
       .td-scene-image {
-        position: relative;
-        width: 100%; height: 100%;
-        background-size: cover;
-        background-position: center;
-        background-repeat: no-repeat;
+        position: relative; width: 100%; height: 100%;
+        background-size: cover; background-position: center; background-repeat: no-repeat;
         background-color: #1a1208;
       }
-
-      /* === SKÄRMSKAKNING när maskinen körs === */
-      .td-scene-shake {
-        animation: tdSceneShake 0.1s ease-in-out infinite;
-      }
+      .td-scene-shake { animation: tdSceneShake 0.1s ease-in-out infinite; }
       @keyframes tdSceneShake {
         0%, 100% { transform: translate(0, 0); }
         25% { transform: translate(-2px, 1px); }
@@ -1315,12 +1401,10 @@ function Styles() {
       .td-anim-overlay { position: absolute; pointer-events: none; }
       .td-steam { position: absolute; pointer-events: none; }
       .td-steam-puff {
-        position: absolute;
-        bottom: 0; left: 50%;
+        position: absolute; bottom: 0; left: 50%;
         width: 30px; height: 30px;
         background: radial-gradient(circle, rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0) 70%);
-        border-radius: 50%;
-        opacity: 0;
+        border-radius: 50%; opacity: 0;
         animation: tdSteamRise 3s ease-out infinite;
       }
       .td-steam-puff-1 { animation-delay: 0s; }
@@ -1332,16 +1416,12 @@ function Styles() {
         100% { transform: translate(-50%, -120px) scale(1.8); opacity: 0; }
       }
 
-      /* Extra ångpuffar som dyker upp ÖVERALLT när maskinen körs */
       .td-extra-steam {
-        position: absolute;
-        width: 40px; height: 40px;
-        pointer-events: none;
-        z-index: 5;
+        position: absolute; width: 40px; height: 40px;
+        pointer-events: none; z-index: 5;
       }
       .td-burst-puff {
-        position: absolute;
-        inset: 0;
+        position: absolute; inset: 0;
         background: radial-gradient(circle, rgba(255, 255, 255, 0.85) 0%, rgba(255, 255, 255, 0) 70%);
         border-radius: 50%;
         animation: tdBurstPuff 1.5s ease-out infinite;
@@ -1353,8 +1433,7 @@ function Styles() {
       }
 
       .td-lamp-flicker {
-        position: absolute;
-        pointer-events: none;
+        position: absolute; pointer-events: none;
         background: radial-gradient(circle, rgba(253, 201, 77, 0.3) 0%, rgba(253, 201, 77, 0) 60%);
         border-radius: 50%;
         animation: tdLampFlicker 4s ease-in-out infinite;
@@ -1366,7 +1445,6 @@ function Styles() {
         28% { opacity: 0.9; transform: scale(1.02); }
         60% { opacity: 0.85; }
       }
-      /* När maskinen kör — lampan flimrar mycket starkare */
       .td-lamp-overdrive {
         background: radial-gradient(circle, rgba(253, 201, 77, 0.8) 0%, rgba(253, 201, 77, 0) 70%) !important;
         animation: tdLampOverdrive 0.15s ease-in-out infinite !important;
@@ -1377,12 +1455,10 @@ function Styles() {
       }
 
       .td-puzzle-grid {
-        position: absolute;
-        pointer-events: none;
+        position: absolute; pointer-events: none;
         display: grid;
         grid-template-columns: 1fr 1fr;
-        grid-template-rows: 1fr 1fr;
-        gap: 2%;
+        grid-template-rows: 1fr 1fr; gap: 2%;
       }
       .td-puzzle-grid span {
         background: rgba(255, 255, 255, 0);
@@ -1406,23 +1482,18 @@ function Styles() {
         100% { background: rgba(253, 201, 77, 0.9); box-shadow: 0 0 16px rgba(253, 201, 77, 1); }
       }
 
-      /* STORT RAGGADAGG i mitten av scenen */
       .td-machine-running-text-big {
         position: absolute;
         top: 35%; left: 50%;
         transform: translate(-50%, -50%);
-        background: var(--gold);
-        border: 5px solid var(--ink);
+        background: var(--gold); border: 5px solid var(--ink);
         padding: 16px 36px;
         font-weight: 900;
         font-size: clamp(36px, 6vw, 64px);
-        color: var(--red);
-        font-family: 'Georgia', serif;
+        color: var(--red); font-family: 'Georgia', serif;
         box-shadow: 8px 8px 0 var(--ink);
-        text-transform: uppercase;
-        letter-spacing: 4px;
-        z-index: 8;
-        pointer-events: none;
+        text-transform: uppercase; letter-spacing: 4px;
+        z-index: 8; pointer-events: none;
         animation: tdBigTextShake 0.15s ease-in-out infinite, tdBigTextIn 0.3s ease-out;
         text-shadow: 2px 2px 0 var(--ink);
       }
@@ -1437,21 +1508,13 @@ function Styles() {
         75% { transform: translate(calc(-50% - 2px), calc(-50% + 4px)) rotate(-2deg); }
       }
 
-      /* === TAGGED HOTSPOTS === */
       .td-tagged {
-        position: absolute;
-        background: transparent;
-        border: none;
-        cursor: pointer;
-        padding: 0;
-        z-index: 3;
-        border-radius: 12px;
+        position: absolute; background: transparent; border: none;
+        cursor: pointer; padding: 0; z-index: 3; border-radius: 12px;
         transition: transform 0.25s ease;
       }
       .td-tagged-glow {
-        position: absolute;
-        inset: 0;
-        border-radius: inherit;
+        position: absolute; inset: 0; border-radius: inherit;
         background: radial-gradient(
           ellipse at center,
           rgba(253, 201, 77, 0) 0%,
@@ -1481,10 +1544,8 @@ function Styles() {
         background: #fdf3d8;
         border: 2.5px solid var(--ink);
         padding: 4px 14px;
-        font-weight: bold;
-        font-size: 14px;
-        color: var(--ink);
-        font-family: 'Georgia', serif;
+        font-weight: bold; font-size: 14px;
+        color: var(--ink); font-family: 'Georgia', serif;
         white-space: nowrap;
         box-shadow: 2px 3px 0 var(--ink);
         pointer-events: none;
@@ -1494,8 +1555,7 @@ function Styles() {
       .td-paper-tag::before {
         content: ""; position: absolute;
         top: -10px; left: 50%; margin-left: -1px;
-        width: 2px; height: 10px;
-        background: var(--ink);
+        width: 2px; height: 10px; background: var(--ink);
       }
       .td-paper-tag::after {
         content: ""; position: absolute;
@@ -1512,9 +1572,7 @@ function Styles() {
       }
 
       .td-tagged-primary .td-paper-tag {
-        background: var(--gold);
-        font-size: 15px;
-        padding: 5px 18px;
+        background: var(--gold); font-size: 15px; padding: 5px 18px;
       }
       .td-tagged-primary:hover .td-tagged-glow {
         background: radial-gradient(
@@ -1560,19 +1618,13 @@ function Styles() {
           rgba(253, 201, 77, 0.25) 50%,
           rgba(253, 201, 77, 0.05) 100%
         );
-        animation: none;
-        opacity: 1;
+        animation: none; opacity: 1;
       }
 
-      /* === VENTILEN — fyra faser === */
       .td-tagged-valve .td-paper-tag {
-        background: var(--red);
-        color: var(--cream);
-        font-size: 13px;
+        background: var(--red); color: var(--cream); font-size: 13px;
       }
-      .td-tagged-valve .td-paper-tag::after {
-        background: var(--gold);
-      }
+      .td-tagged-valve .td-paper-tag::after { background: var(--gold); }
       .td-tagged-valve .td-tagged-glow {
         background: radial-gradient(
           ellipse at center,
@@ -1586,7 +1638,6 @@ function Styles() {
         0%, 100% { opacity: 0.5; }
         50% { opacity: 1; }
       }
-
       .td-tagged-valve:hover .td-tagged-glow {
         background: radial-gradient(
           ellipse at center,
@@ -1594,25 +1645,16 @@ function Styles() {
           rgba(217, 76, 61, 0.25) 50%,
           rgba(217, 76, 61, 0.05) 100%
         );
-        animation: none;
-        opacity: 1;
+        animation: none; opacity: 1;
       }
 
-      /* Själva ratten (knob) */
       .td-valve-knob {
-        position: absolute;
-        inset: 10%;
+        position: absolute; inset: 10%;
         pointer-events: none;
         transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
       }
-      .td-valve-knob svg {
-        width: 100%; height: 100%;
-      }
-
-      /* Fas: twisting — ventilen vrids 90° */
-      .td-valve-twisting .td-valve-knob {
-        transform: rotate(90deg);
-      }
+      .td-valve-knob svg { width: 100%; height: 100%; }
+      .td-valve-twisting .td-valve-knob { transform: rotate(90deg); }
       .td-valve-twisting .td-tagged-glow {
         background: radial-gradient(
           ellipse at center,
@@ -1620,14 +1662,9 @@ function Styles() {
           rgba(217, 76, 61, 0.3) 50%,
           rgba(217, 76, 61, 0.05) 100%
         ) !important;
-        animation: none !important;
-        opacity: 1 !important;
+        animation: none !important; opacity: 1 !important;
       }
-
-      /* Fas: running — ventilen är vriden och glöder rött */
-      .td-valve-running .td-valve-knob {
-        transform: rotate(90deg);
-      }
+      .td-valve-running .td-valve-knob { transform: rotate(90deg); }
       .td-valve-running .td-tagged-glow {
         background: radial-gradient(
           ellipse at center,
@@ -1642,15 +1679,9 @@ function Styles() {
         0%, 100% { filter: brightness(1.3); }
         50% { filter: brightness(1.7); }
       }
-
-      /* Fas: cooling — ventilen är utbränd, grå */
-      .td-valve-cooling {
-        cursor: not-allowed;
-        opacity: 0.5;
-      }
+      .td-valve-cooling { cursor: not-allowed; opacity: 0.5; }
       .td-valve-cooling .td-valve-knob {
-        transform: rotate(45deg);
-        filter: grayscale(80%);
+        transform: rotate(45deg); filter: grayscale(80%);
       }
       .td-valve-cooling .td-tagged-glow {
         background: radial-gradient(
@@ -1662,19 +1693,15 @@ function Styles() {
         animation: none !important;
       }
       .td-valve-cooling .td-paper-tag {
-        background: #888 !important;
-        color: var(--cream);
+        background: #888 !important; color: var(--cream);
       }
-      .td-valve-cooling .td-paper-tag::after {
-        background: #555 !important;
-      }
+      .td-valve-cooling .td-paper-tag::after { background: #555 !important; }
 
       .td-tagged:hover .td-paper-tag {
         animation-play-state: paused;
         filter: brightness(1.12);
       }
 
-      /* === HEMLIG LUCKA === */
       .td-trapdoor {
         position: absolute;
         width: 28px; height: 28px;
@@ -1684,9 +1711,7 @@ function Styles() {
           rgba(253, 201, 77, 0) 80%);
         border: 2px solid var(--ink);
         border-radius: 50%;
-        cursor: pointer;
-        padding: 0;
-        z-index: 5;
+        cursor: pointer; padding: 0; z-index: 5;
         transform: translate(-50%, -50%);
         animation: tdTrapdoorAppear 0.4s ease, tdTrapdoorPulse 0.8s ease-in-out infinite 0.4s;
         box-shadow:
@@ -1709,34 +1734,24 @@ function Styles() {
           rgba(253, 201, 77, 0) 80%);
       }
 
-      /* === KLONK === */
       .td-character-figure {
-        position: absolute;
-        bottom: 0;
-        left: 32%;
-        height: 70%;
-        width: auto;
-        background: transparent;
-        border: none;
-        padding: 0;
-        cursor: pointer;
-        z-index: 4;
+        position: absolute; bottom: 0; left: 32%;
+        height: 70%; width: auto;
+        background: transparent; border: none; padding: 0;
+        cursor: pointer; z-index: 4;
         transition: filter 0.25s ease, transform 0.25s ease;
         animation: tdCharSway 4s ease-in-out infinite;
         transform-origin: bottom center;
         filter: drop-shadow(4px 6px 8px rgba(0, 0, 0, 0.4));
       }
       .td-character-figure img {
-        height: 100%;
-        width: auto;
-        display: block;
+        height: 100%; width: auto; display: block;
         pointer-events: none;
       }
       @keyframes tdCharSway {
         0%, 100% { transform: rotate(-0.5deg); }
         50% { transform: rotate(0.5deg); }
       }
-      /* När Klonk blir överraskad — hoppar till */
       .td-character-surprised {
         animation: tdCharSurprised 0.4s ease-in-out infinite !important;
       }
@@ -1751,11 +1766,9 @@ function Styles() {
                 drop-shadow(0 0 18px rgba(253, 201, 77, 0.8));
       }
       .td-character-bubble {
-        position: absolute;
-        top: 8%; right: -6%;
+        position: absolute; top: 8%; right: -6%;
         width: 34px; height: 34px;
-        background: var(--gold);
-        border: 2.5px solid var(--ink);
+        background: var(--gold); border: 2.5px solid var(--ink);
         border-radius: 50%;
         display: flex; align-items: center; justify-content: center;
         font-size: 20px; font-weight: 900; color: var(--ink);
@@ -1766,10 +1779,8 @@ function Styles() {
         0%, 100% { transform: translateY(0); opacity: 0.9; }
         50% { transform: translateY(-4px); opacity: 1; }
       }
-      /* När Klonk är överraskad blir bubblan röd med "!!" */
       .td-character-bubble-surprised {
-        background: var(--red) !important;
-        color: var(--cream) !important;
+        background: var(--red) !important; color: var(--cream) !important;
         font-size: 18px !important;
         animation: tdBubbleSurprised 0.2s ease-in-out infinite !important;
         width: 40px !important; height: 40px !important;
@@ -1780,20 +1791,15 @@ function Styles() {
       }
 
       .td-scene-hint {
-        position: absolute;
-        bottom: 12px; left: 50%; transform: translateX(-50%);
-        background: rgba(40, 30, 18, 0.7);
-        color: var(--cream);
-        padding: 6px 18px;
-        border-radius: 20px;
+        position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%);
+        background: rgba(40, 30, 18, 0.7); color: var(--cream);
+        padding: 6px 18px; border-radius: 20px;
         font-style: italic; font-size: 13px;
-        pointer-events: none; white-space: nowrap;
-        z-index: 5;
+        pointer-events: none; white-space: nowrap; z-index: 5;
       }
 
       .td-dialog-bubble {
-        position: absolute;
-        bottom: 30px; left: 50%; transform: translateX(-50%);
+        position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
         background: var(--cream);
         border: 3px solid var(--ink); border-radius: 12px;
         padding: 18px 24px;
@@ -1840,28 +1846,18 @@ function Styles() {
       }
       .td-coming-soon-card p { margin: 16px 0 24px; font-size: 17px; line-height: 1.5; }
 
-      /* === DETALJ-OVERLAY === */
       .td-detail-overlay {
-        position: absolute;
-        inset: 0;
+        position: absolute; inset: 0;
         background: rgba(40, 30, 18, 0.85);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 50;
-        padding: 20px;
+        display: flex; align-items: center; justify-content: center;
+        z-index: 50; padding: 20px;
         animation: tdFadeIn 0.3s ease;
       }
       .td-detail-content {
         background: var(--cream);
-        border: 4px solid var(--ink);
-        border-radius: 12px;
-        padding: 24px;
-        max-width: 600px;
-        width: 100%;
-        max-height: 92vh;
-        overflow-y: auto;
-        text-align: center;
+        border: 4px solid var(--ink); border-radius: 12px;
+        padding: 24px; max-width: 600px; width: 100%;
+        max-height: 92vh; overflow-y: auto; text-align: center;
         box-shadow: 10px 10px 0 var(--ink);
         animation: tdDetailIn 0.4s ease;
         transform: rotate(-0.5deg);
@@ -1875,75 +1871,54 @@ function Styles() {
         border: 2.5px solid var(--ink);
         padding: 6px 18px;
         font-size: 12px; letter-spacing: 2px;
-        text-transform: uppercase;
-        background: var(--paper);
-        font-weight: bold;
-        margin-bottom: 16px;
+        text-transform: uppercase; background: var(--paper);
+        font-weight: bold; margin-bottom: 16px;
         box-shadow: 3px 3px 0 var(--ink);
         transform: rotate(-2deg);
       }
       .td-detail-image-wrap {
-        margin: 12px 0;
-        border: 3px solid var(--ink);
-        border-radius: 4px;
-        overflow: hidden;
+        margin: 12px 0; border: 3px solid var(--ink);
+        border-radius: 4px; overflow: hidden;
         box-shadow: 4px 4px 0 var(--ink);
-        display: inline-block;
-        max-width: 100%;
+        display: inline-block; max-width: 100%;
       }
       .td-detail-image-wrap img {
-        display: block;
-        max-width: 100%;
-        max-height: 50vh;
+        display: block; max-width: 100%; max-height: 50vh;
         width: auto; height: auto;
       }
       .td-detail-caption {
-        font-size: 16px;
-        line-height: 1.55;
-        margin: 16px 0;
-        font-style: italic;
-        color: var(--ink);
+        font-size: 16px; line-height: 1.55;
+        margin: 16px 0; font-style: italic; color: var(--ink);
       }
 
       .td-detail-window .td-window-frame {
-        position: relative;
-        margin: 12px auto;
-        border: 4px solid var(--ink);
-        background: var(--ink);
+        position: relative; margin: 12px auto;
+        border: 4px solid var(--ink); background: var(--ink);
         overflow: hidden;
         box-shadow: 6px 6px 0 var(--ink);
-        max-width: 100%;
-        display: inline-block;
+        max-width: 100%; display: inline-block;
       }
       .td-window-view { display: block; }
       .td-window-view img {
-        display: block;
-        max-width: 100%;
-        max-height: 50vh;
+        display: block; max-width: 100%; max-height: 50vh;
         width: auto; height: auto;
       }
       .td-window-shutter {
-        position: absolute;
-        top: 0; bottom: 0;
-        width: 50%;
-        background:
-          linear-gradient(90deg,
-            #6a4a28 0%, #8a6a48 20%, #6a4a28 40%,
-            #8a6a48 60%, #6a4a28 80%, #4a3018 100%);
-        z-index: 2;
-        border-color: var(--ink);
+        position: absolute; top: 0; bottom: 0; width: 50%;
+        background: linear-gradient(90deg,
+          #6a4a28 0%, #8a6a48 20%, #6a4a28 40%,
+          #8a6a48 60%, #6a4a28 80%, #4a3018 100%);
+        z-index: 2; border-color: var(--ink);
       }
       .td-window-shutter-left {
-        left: 0;
-        border-right: 3px solid var(--ink);
+        left: 0; border-right: 3px solid var(--ink);
         transform-origin: left center;
         animation: tdShutterOpenLeft 1.2s ease-out forwards;
         animation-delay: 0.3s;
         transform: rotateY(0deg);
       }
       .td-window-shutter-right {
-        right: 0;
-        border-left: 3px solid var(--ink);
+        right: 0; border-left: 3px solid var(--ink);
         transform-origin: right center;
         animation: tdShutterOpenRight 1.2s ease-out forwards;
         animation-delay: 0.3s;
@@ -1958,7 +1933,6 @@ function Styles() {
         100% { transform: perspective(800px) rotateY(110deg); }
       }
 
-      /* === OVERLAY === */
       .td-overlay {
         position: fixed; inset: 0; z-index: 100;
         background: rgba(40, 30, 18, 0.65);
@@ -1969,7 +1943,7 @@ function Styles() {
       .td-overlay-card {
         background: var(--cream);
         border: 4px solid var(--ink); border-radius: 12px;
-        padding: 28px; max-width: 600px; width: 100%;
+        padding: 28px; max-width: 700px; width: 100%;
         max-height: 90vh; overflow-y: auto;
         box-shadow: 10px 10px 0 var(--ink);
         animation: cardDrop 0.25s ease;
@@ -2003,6 +1977,13 @@ function Styles() {
       }
       .td-mission-text em { display: block; color: var(--red); font-size: 17px; margin-bottom: 8px; }
 
+      .td-puzzle-step-label {
+        font-size: 13px; text-align: center;
+        text-transform: uppercase; letter-spacing: 2px;
+        color: var(--ink); opacity: 0.7;
+        margin: 0 0 12px; font-weight: bold;
+      }
+
       .td-choices { display: flex; flex-direction: column; gap: 10px; }
       .td-choices-row { flex-direction: row; justify-content: center; flex-wrap: wrap; }
       .td-choice {
@@ -2025,15 +2006,15 @@ function Styles() {
       .td-clock { display: block; width: 180px; margin: 10px auto 20px; }
 
       .td-puzzle-progress {
-        display: flex; justify-content: center; gap: 16px;
-        margin-bottom: 20px;
+        display: flex; justify-content: center; gap: 10px;
+        margin-bottom: 20px; flex-wrap: wrap;
       }
       .td-gear-indicator {
-        width: 48px; height: 48px;
-        opacity: 0.5;
+        width: 40px; height: 40px;
+        opacity: 0.4;
         transition: opacity 0.3s, transform 0.3s;
       }
-      .td-gear-indicator.active { opacity: 1; }
+      .td-gear-indicator.active { opacity: 1; transform: scale(1.15); }
       .td-gear-indicator.solved {
         opacity: 1;
         animation: tdGearSolved 0.6s ease;
@@ -2049,8 +2030,7 @@ function Styles() {
         display: flex; justify-content: center; align-items: center;
         gap: 8px; flex-wrap: wrap;
         margin: 20px 0; padding: 18px;
-        background: var(--paper);
-        border-radius: 8px;
+        background: var(--paper); border-radius: 8px;
         border: 2.5px dashed var(--ink);
       }
       .td-sequence-arrow { font-size: 16px; color: var(--ink); opacity: 0.5; }
@@ -2061,17 +2041,14 @@ function Styles() {
         flex-shrink: 0;
       }
       .td-puzzle-item-mystery {
-        display: inline-flex;
-        align-items: center; justify-content: center;
+        display: inline-flex; align-items: center; justify-content: center;
         background: var(--cream);
         border: 3px dashed var(--ink);
         border-radius: 50%;
-        font-weight: bold;
-        color: var(--ink);
+        font-weight: bold; color: var(--ink);
       }
       .td-puzzle-item-wrap, .td-puzzle-item-shape {
-        display: inline-flex;
-        align-items: center; justify-content: center;
+        display: inline-flex; align-items: center; justify-content: center;
         flex-shrink: 0;
       }
 
@@ -2111,8 +2088,8 @@ function Styles() {
         .td-tagged-primary .td-paper-tag { font-size: 13px; }
         .td-detail-content { padding: 18px; }
         .td-detail-caption { font-size: 14px; }
-        .td-gear-indicator { width: 36px; height: 36px; }
-        .td-puzzle-progress { gap: 10px; }
+        .td-gear-indicator { width: 30px; height: 30px; }
+        .td-puzzle-progress { gap: 6px; }
         .td-trapdoor { width: 22px; height: 22px; }
       }
     `}</style>
