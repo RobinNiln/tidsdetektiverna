@@ -568,49 +568,10 @@ function MapAtmosphere() {
         alt=""
         aria-hidden="true"
         className="td-map-airship"
-        style={{ top: "8%" }}
       />
 
-      {/* Vanlig fågelflock — flyger lugnt från vänster */}
-      <img
-        src={ASSETS.bird}
-        alt=""
-        aria-hidden="true"
-        className="td-map-birds"
-        style={{ top: "13%" }}
-      />
-
-      {/* Klockfågeln — flyger BAKLÄNGES (tiden är ur lag!) */}
-      <img
-        src={ASSETS.bird2}
-        alt=""
-        aria-hidden="true"
-        className="td-map-bird-reverse"
-        style={{ top: "19%" }}
-      />
-
-      {/* Löv som faller UPPÅT */}
-      <img
-        src={ASSETS.leaf1}
-        alt=""
-        aria-hidden="true"
-        className="td-falling-leaf td-leaf-1"
-        style={{ left: "25%" }}
-      />
-      <img
-        src={ASSETS.leaf2}
-        alt=""
-        aria-hidden="true"
-        className="td-falling-leaf td-leaf-2"
-        style={{ left: "55%" }}
-      />
-      <img
-        src={ASSETS.leaf3}
-        alt=""
-        aria-hidden="true"
-        className="td-falling-leaf td-leaf-3"
-        style={{ left: "80%" }}
-      />
+      {/* Övriga animationer (fågel, klockfågel, löv) kommer när
+          deras PNG-filer har transparent bakgrund */}
     </>
   );
 }
@@ -1667,19 +1628,20 @@ function Styles() {
       /* === LUFTSKEPPET === */
       .td-map-airship {
         position: absolute;
-        width: 14%;
+        top: 4%;
+        width: 11%;
         height: auto;
         pointer-events: none;
         z-index: 2;
-        left: -16%;
-        animation: tdAirshipDrift 90s linear infinite;
+        left: -14%;
+        animation: tdAirshipDrift 75s linear infinite;
         filter: drop-shadow(3px 4px 4px rgba(0, 0, 0, 0.25));
       }
       @keyframes tdAirshipDrift {
-        0% { left: -16%; transform: translateY(0); }
-        25% { transform: translateY(-6px); }
-        50% { transform: translateY(4px); }
-        75% { transform: translateY(-4px); }
+        0% { left: -14%; transform: translateY(0); }
+        25% { transform: translateY(-8px); }
+        50% { transform: translateY(6px); }
+        75% { transform: translateY(-5px); }
         100% { left: 110%; transform: translateY(0); }
       }
 
