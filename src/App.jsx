@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
 
 // ============================================================
-// TIDSDETEKTIVERNA — v11
-// Maskinen: 7-stegs pussel med slumpad frågepool
+// TIDSDETEKTIVERNA — v12
+// Levande karta + handritade hover-markeringar
 // ============================================================
 
 const ASSETS = {
@@ -16,19 +16,28 @@ const ASSETS = {
   fonsterDetalj: "/tidsdetektiverna/fonster_detalj.jpg",
 };
 
+// Justerade hotspot-positioner baserat på den riktiga kartan
 const HOTSPOTS = {
-  reading: { key: "reading", title: "Bokgränden", short: "Läs ledtråden",
+  reading: {
+    key: "reading", title: "Bokgränden", short: "Läs ledtråden",
     character: "mira", characterName: "Mira Murr",
-    x: 22, y: 70, w: 14, h: 22 },
-  clock: { key: "clock", title: "Klocktornet", short: "Lös tiden",
+    x: 16, y: 45, w: 24, h: 38,
+  },
+  clock: {
+    key: "clock", title: "Klocktornet", short: "Lös tiden",
     character: "tickelton", characterName: "Professor Tickelton",
-    x: 56, y: 50, w: 10, h: 38 },
-  puzzle: { key: "puzzle", title: "Pusselverkstaden", short: "Hitta mönstret",
+    x: 56, y: 32, w: 16, h: 50,
+  },
+  puzzle: {
+    key: "puzzle", title: "Pusselverkstaden", short: "Hitta mönstret",
     character: "klonk", characterName: "Herr Klonk",
-    x: 78, y: 60, w: 16, h: 25 },
-  timemachine: { key: "timemachine", title: "Tidsmaskinen", short: "Öppna porten",
+    x: 78, y: 42, w: 20, h: 40,
+  },
+  timemachine: {
+    key: "timemachine", title: "Tidsmaskinen", short: "Öppna porten",
     character: null,
-    x: 41, y: 33, w: 10, h: 18 },
+    x: 41, y: 22, w: 22, h: 28,
+  },
 };
 
 const KLONK_RAPID_DIALOGS = [
@@ -38,175 +47,118 @@ const KLONK_RAPID_DIALOGS = [
   "Okej, jag fattar att du vill att jag ska dansa. Men jag kan inte. Mustaschen blir tung.",
 ];
 
-// ============================================================
-// FRÅGEPOOL FÖR MASKIN-PUSSLET
-// Varje nivå är en lista av varianter. Vid spelstart väljs en
-// slumpad variant från varje nivå.
-// ============================================================
 const PUZZLE_POOL = {
-  // NIVÅ 1: Färg två-takt
   level1: [
-    {
-      text: "Vilken färg fortsätter mönstret?",
+    { text: "Vilken färg fortsätter mönstret?",
       sequence: ["color:red", "color:blue", "color:red", "color:blue", "mystery"],
       answer: "color:red",
       choices: ["color:red", "color:blue", "color:green"],
-      hint: "Färgerna turas om — röd, blå, röd, blå...",
-    },
-    {
-      text: "Vilken färg fortsätter mönstret?",
+      hint: "Färgerna turas om — röd, blå, röd, blå..." },
+    { text: "Vilken färg fortsätter mönstret?",
       sequence: ["color:yellow", "color:green", "color:yellow", "color:green", "mystery"],
       answer: "color:yellow",
       choices: ["color:yellow", "color:green", "color:red"],
-      hint: "Gul, grön, gul, grön...",
-    },
-    {
-      text: "Vilken färg fortsätter mönstret?",
+      hint: "Gul, grön, gul, grön..." },
+    { text: "Vilken färg fortsätter mönstret?",
       sequence: ["color:red", "color:yellow", "color:red", "color:yellow", "mystery"],
       answer: "color:red",
       choices: ["color:red", "color:yellow", "color:blue"],
-      hint: "Röd och gul växlar.",
-    },
+      hint: "Röd och gul växlar." },
   ],
-
-  // NIVÅ 2: Färg tre-takt
   level2: [
-    {
-      text: "Vilken färg fortsätter mönstret?",
+    { text: "Vilken färg fortsätter mönstret?",
       sequence: ["color:red", "color:blue", "color:green", "color:red", "color:blue", "mystery"],
       answer: "color:green",
       choices: ["color:green", "color:red", "color:blue"],
-      hint: "Tre färger turas om: röd, blå, grön, röd, blå...",
-    },
-    {
-      text: "Vilken färg fortsätter mönstret?",
+      hint: "Tre färger turas om: röd, blå, grön, röd, blå..." },
+    { text: "Vilken färg fortsätter mönstret?",
       sequence: ["color:yellow", "color:red", "color:blue", "color:yellow", "color:red", "mystery"],
       answer: "color:blue",
       choices: ["color:blue", "color:yellow", "color:red"],
-      hint: "Gul, röd, blå... och så börjar det om.",
-    },
-    {
-      text: "Vilken färg fortsätter mönstret?",
+      hint: "Gul, röd, blå... och så börjar det om." },
+    { text: "Vilken färg fortsätter mönstret?",
       sequence: ["color:green", "color:yellow", "color:red", "color:green", "color:yellow", "mystery"],
       answer: "color:red",
       choices: ["color:red", "color:green", "color:yellow"],
-      hint: "Grön, gul, röd — sedan börjar det om.",
-    },
+      hint: "Grön, gul, röd — sedan börjar det om." },
   ],
-
-  // NIVÅ 3: Storlek
   level3: [
-    {
-      text: "Vilken storlek fortsätter mönstret?",
+    { text: "Vilken storlek fortsätter mönstret?",
       sequence: ["size:small", "size:medium", "size:large", "size:small", "size:medium", "mystery"],
       answer: "size:large",
       choices: ["size:large", "size:medium", "size:small"],
-      hint: "Liten, mellan, stor — sedan börjar det om.",
-    },
-    {
-      text: "Vilken storlek fortsätter mönstret?",
+      hint: "Liten, mellan, stor — sedan börjar det om." },
+    { text: "Vilken storlek fortsätter mönstret?",
       sequence: ["size:large", "size:medium", "size:small", "size:large", "size:medium", "mystery"],
       answer: "size:small",
       choices: ["size:small", "size:medium", "size:large"],
-      hint: "Stor, mellan, liten — den krymper varje gång.",
-    },
+      hint: "Stor, mellan, liten — den krymper varje gång." },
   ],
-
-  // NIVÅ 4: Form två-takt
   level4: [
-    {
-      text: "Vilken form fortsätter mönstret?",
+    { text: "Vilken form fortsätter mönstret?",
       sequence: ["shape:triangle", "shape:circle", "shape:triangle", "shape:circle", "shape:triangle", "mystery"],
       answer: "shape:circle",
       choices: ["shape:circle", "shape:triangle", "shape:square"],
-      hint: "Trianglar och cirklar turas om.",
-    },
-    {
-      text: "Vilken form fortsätter mönstret?",
+      hint: "Trianglar och cirklar turas om." },
+    { text: "Vilken form fortsätter mönstret?",
       sequence: ["shape:circle", "shape:square", "shape:circle", "shape:square", "shape:circle", "mystery"],
       answer: "shape:square",
       choices: ["shape:square", "shape:circle", "shape:triangle"],
-      hint: "Cirklar och fyrkanter turas om.",
-    },
-    {
-      text: "Vilken form fortsätter mönstret?",
+      hint: "Cirklar och fyrkanter turas om." },
+    { text: "Vilken form fortsätter mönstret?",
       sequence: ["shape:square", "shape:triangle", "shape:square", "shape:triangle", "shape:square", "mystery"],
       answer: "shape:triangle",
       choices: ["shape:triangle", "shape:square", "shape:circle"],
-      hint: "Fyrkanter och trianglar turas om.",
-    },
+      hint: "Fyrkanter och trianglar turas om." },
   ],
-
-  // NIVÅ 5: Antal (räkning)
   level5: [
-    {
-      text: "Hur många prickar kommer härnäst?",
+    { text: "Hur många prickar kommer härnäst?",
       sequence: ["dots:1", "dots:2", "dots:3", "mystery"],
       answer: "dots:4",
       choices: ["dots:4", "dots:3", "dots:5"],
-      hint: "Det blir en prick mer varje gång — 1, 2, 3, sedan...",
-    },
-    {
-      text: "Hur många prickar kommer härnäst?",
+      hint: "Det blir en prick mer varje gång — 1, 2, 3, sedan..." },
+    { text: "Hur många prickar kommer härnäst?",
       sequence: ["dots:2", "dots:4", "dots:6", "mystery"],
       answer: "dots:8",
       choices: ["dots:8", "dots:7", "dots:6"],
-      hint: "Det blir två prickar mer varje gång — 2, 4, 6...",
-    },
-    {
-      text: "Hur många prickar kommer härnäst?",
+      hint: "Det blir två prickar mer varje gång — 2, 4, 6..." },
+    { text: "Hur många prickar kommer härnäst?",
       sequence: ["dots:1", "dots:3", "dots:5", "mystery"],
       answer: "dots:7",
       choices: ["dots:7", "dots:6", "dots:8"],
-      hint: "Två fler varje gång — 1, 3, 5...",
-    },
+      hint: "Två fler varje gång — 1, 3, 5..." },
   ],
-
-  // NIVÅ 6: Kombinerat (färg + form)
   level6: [
-    {
-      text: "Vilken figur fortsätter mönstret?",
+    { text: "Vilken figur fortsätter mönstret?",
       sequence: ["cs:red-triangle", "cs:blue-circle", "cs:red-triangle", "cs:blue-circle", "cs:red-triangle", "mystery"],
       answer: "cs:blue-circle",
       choices: ["cs:blue-circle", "cs:red-triangle", "cs:blue-triangle"],
-      hint: "En röd triangel och en blå cirkel turas om.",
-    },
-    {
-      text: "Vilken figur fortsätter mönstret?",
+      hint: "En röd triangel och en blå cirkel turas om." },
+    { text: "Vilken figur fortsätter mönstret?",
       sequence: ["cs:yellow-square", "cs:green-circle", "cs:yellow-square", "cs:green-circle", "cs:yellow-square", "mystery"],
       answer: "cs:green-circle",
       choices: ["cs:green-circle", "cs:yellow-square", "cs:green-square"],
-      hint: "Gul fyrkant och grön cirkel turas om.",
-    },
-    {
-      text: "Vilken figur fortsätter mönstret?",
+      hint: "Gul fyrkant och grön cirkel turas om." },
+    { text: "Vilken figur fortsätter mönstret?",
       sequence: ["cs:red-circle", "cs:blue-triangle", "cs:red-circle", "cs:blue-triangle", "cs:red-circle", "mystery"],
       answer: "cs:blue-triangle",
       choices: ["cs:blue-triangle", "cs:red-circle", "cs:red-triangle"],
-      hint: "Röd cirkel och blå triangel turas om.",
-    },
+      hint: "Röd cirkel och blå triangel turas om." },
   ],
-
-  // NIVÅ 7: Spegling — mönstret går fram och tillbaka
   level7: [
-    {
-      text: "Mönstret går fram och tillbaka. Vad kommer härnäst?",
+    { text: "Mönstret går fram och tillbaka. Vad kommer härnäst?",
       sequence: ["color:red", "color:blue", "color:green", "color:green", "color:blue", "mystery"],
       answer: "color:red",
       choices: ["color:red", "color:green", "color:blue"],
-      hint: "Mönstret går till mitten och tillbaka: röd, blå, grön, grön, blå... och nu?",
-    },
-    {
-      text: "Mönstret går fram och tillbaka. Vad kommer härnäst?",
+      hint: "Mönstret går till mitten och tillbaka: röd, blå, grön, grön, blå... och nu?" },
+    { text: "Mönstret går fram och tillbaka. Vad kommer härnäst?",
       sequence: ["size:small", "size:medium", "size:large", "size:large", "size:medium", "mystery"],
       answer: "size:small",
       choices: ["size:small", "size:medium", "size:large"],
-      hint: "Storlekarna växer och krymper sedan tillbaka: liten, mellan, stor, stor, mellan...",
-    },
+      hint: "Storlekarna växer och krymper sedan tillbaka: liten, mellan, stor, stor, mellan..." },
   ],
 };
 
-// Klonks repliker mellan frågor (slumpas)
 const KLONK_PROGRESS_REMARKS = [
   "Bra! Nästa kugghjul lyser!",
   "Snyggt! Maskinen surrar lite mer.",
@@ -216,9 +168,6 @@ const KLONK_PROGRESS_REMARKS = [
   "Du är duktig på det här!",
 ];
 
-// ============================================================
-// HJÄLPFUNKTIONER
-// ============================================================
 function shuffle(arr) {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) {
@@ -232,14 +181,13 @@ function randomFrom(arr) {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
-// Bygger en spelomgång: en slumpad fråga från varje nivå
 function buildPuzzleRound() {
   const levels = ["level1", "level2", "level3", "level4", "level5", "level6", "level7"];
   return levels.map((lvl, i) => {
     const variant = randomFrom(PUZZLE_POOL[lvl]);
     return {
       ...variant,
-      choices: shuffle(variant.choices), // slumpa även ordningen på alternativen
+      choices: shuffle(variant.choices),
       levelIndex: i,
     };
   });
@@ -286,15 +234,12 @@ export default function App() {
   return (
     <div className="td-app">
       <Styles />
-
       {view === "start" && <StartScreen onStart={() => setView("map")} />}
-
       {view === "map" && (
         <MapView completed={completed} stars={stars} allDone={allDone}
           hovered={hovered} setHovered={setHovered}
           onPick={enterLocation} onReset={reset} />
       )}
-
       {view === "interior" && activeLocation && (
         <InteriorView locationKey={activeLocation}
           completed={completed[activeLocation]}
@@ -304,27 +249,22 @@ export default function App() {
           onStartMission={startMission} onBack={backToMap}
           detailView={detailView} setDetailView={setDetailView} />
       )}
-
       {view === "mission" && activeLocation && (
         <MissionOverlay hotspot={HOTSPOTS[activeLocation]} onClose={backToInterior}>
           {activeLocation === "reading" && (
             <ReadingMission alreadyDone={completed.reading}
-              onComplete={() => completeMission("reading")}
-              onBack={backToInterior} />
+              onComplete={() => completeMission("reading")} onBack={backToInterior} />
           )}
           {activeLocation === "clock" && (
             <ClockMission alreadyDone={completed.clock}
-              onComplete={() => completeMission("clock")}
-              onBack={backToInterior} />
+              onComplete={() => completeMission("clock")} onBack={backToInterior} />
           )}
           {activeLocation === "puzzle" && (
             <MachinePuzzle alreadyDone={completed.puzzle}
-              onComplete={() => completeMission("puzzle")}
-              onBack={backToInterior} />
+              onComplete={() => completeMission("puzzle")} onBack={backToInterior} />
           )}
         </MissionOverlay>
       )}
-
       {view === "end" && (
         <MissionOverlay grand onClose={() => setView("map")}>
           <EndScreen onReset={reset} />
@@ -334,10 +274,6 @@ export default function App() {
   );
 }
 
-// ============================================================
-// STARTSKÄRM, KARTAN, INTERIÖR-VY, DETALJ-OVERLAY etc.
-// (utbyggda komponenter följer — orörda från v10)
-// ============================================================
 function StartScreen({ onStart }) {
   return (
     <div className="td-start-screen td-fade-in">
@@ -370,11 +306,18 @@ function CharacterPortrait({ src, name }) {
   );
 }
 
+// ============================================================
+// KARTAN — nu med levande element
+// ============================================================
 function MapView({ completed, stars, allDone, hovered, setHovered, onPick, onReset }) {
   const visibleHotspots = ["reading", "clock", "puzzle"];
   return (
     <div className="td-map-wrap td-fade-in">
       <div className="td-map" style={{ backgroundImage: `url(${ASSETS.map})` }}>
+
+        {/* === LEVANDE BAKGRUNDSANIMATIONER === */}
+        <MapAtmosphere />
+
         <div className="td-hud">
           <div className="td-hud-banner">
             <span className="td-hud-text">Välj ditt nästa äventyr</span>
@@ -382,6 +325,7 @@ function MapView({ completed, stars, allDone, hovered, setHovered, onPick, onRes
           </div>
           <button className="td-btn td-btn-small td-hud-reset" onClick={onReset}>↺ Börja om</button>
         </div>
+
         {visibleHotspots.map((key) => {
           const h = HOTSPOTS[key];
           const done = completed[key];
@@ -394,10 +338,13 @@ function MapView({ completed, stars, allDone, hovered, setHovered, onPick, onRes
               onMouseEnter={() => setHovered(key)}
               onMouseLeave={() => setHovered(null)}
               aria-label={h.title}>
+              {/* Handritad gul markering */}
+              <HandDrawnMark active={isHovered || done} done={done} />
               {done && <span className="td-hotspot-star">★</span>}
             </button>
           );
         })}
+
         <button
           className={`td-hotspot td-hotspot-finale ${allDone ? "td-hotspot-finale-active" : "td-hotspot-finale-locked"} ${hovered === "timemachine" ? "td-hotspot-hover" : ""}`}
           style={{
@@ -407,12 +354,158 @@ function MapView({ completed, stars, allDone, hovered, setHovered, onPick, onRes
           onClick={() => onPick("timemachine")}
           onMouseEnter={() => allDone && setHovered("timemachine")}
           onMouseLeave={() => setHovered(null)}
-          aria-label="Tidsmaskinen" disabled={!allDone} />
+          aria-label="Tidsmaskinen"
+          disabled={!allDone}>
+          {allDone && <HandDrawnMark active={true} done={false} finale={true} />}
+        </button>
+
         {hovered && (
           <HoverLabel hotspot={HOTSPOTS[hovered]} done={completed[hovered]} allDone={allDone} />
         )}
       </div>
     </div>
+  );
+}
+
+// ============================================================
+// HandDrawnMark — gul handritad ring runt platsen
+// ============================================================
+function HandDrawnMark({ active, done, finale }) {
+  if (!active && !done) return null;
+  const stroke = done ? "#5fa860" : (finale ? "#fdc94d" : "#fdc94d");
+  return (
+    <svg className={`td-hand-mark ${active ? "td-hand-mark-active" : ""} ${done ? "td-hand-mark-done" : ""} ${finale ? "td-hand-mark-finale" : ""}`}
+         viewBox="0 0 100 100"
+         preserveAspectRatio="none"
+         aria-hidden="true">
+      {/* Handritad oregelbunden cirkel — ritad med två lager för "tuschpenne"-effekt */}
+      <path
+        d="M 50 8
+           C 70 8, 88 22, 92 45
+           C 95 65, 82 88, 60 92
+           C 38 95, 12 82, 8 58
+           C 5 35, 22 12, 50 8
+           Z"
+        fill="none"
+        stroke={stroke}
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        opacity="0.9"
+      />
+      {/* Andra skissaktig linje för "två-streck"-effekt */}
+      <path
+        d="M 50 11
+           C 68 12, 85 25, 89 46
+           C 92 63, 80 86, 60 89
+           C 40 92, 15 80, 11 58
+           C 8 38, 25 14, 50 11"
+        fill="none"
+        stroke={stroke}
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        opacity="0.5"
+        strokeDasharray="3 2"
+      />
+    </svg>
+  );
+}
+
+// ============================================================
+// MapAtmosphere — alla levande element på kartan
+// ============================================================
+function MapAtmosphere() {
+  return (
+    <>
+      {/* Skorstensrök från Klocktornets tåg */}
+      <div className="td-map-smoke td-map-smoke-train"
+           style={{ left: "60%", top: "55%" }}>
+        <span className="td-map-smoke-puff td-map-smoke-1" />
+        <span className="td-map-smoke-puff td-map-smoke-2" />
+        <span className="td-map-smoke-puff td-map-smoke-3" />
+      </div>
+
+      {/* Skorstensrök från Pusselverkstaden */}
+      <div className="td-map-smoke td-map-smoke-workshop"
+           style={{ left: "87%", top: "40%" }}>
+        <span className="td-map-smoke-puff td-map-smoke-1" />
+        <span className="td-map-smoke-puff td-map-smoke-2" />
+        <span className="td-map-smoke-puff td-map-smoke-3" />
+      </div>
+
+      {/* Fyrens blink uppe vid Hamnen */}
+      <div className="td-map-lighthouse"
+           style={{ left: "3.5%", top: "22%" }} />
+
+      {/* Luftskeppet som driver långsamt */}
+      <div className="td-map-airship"
+           style={{ top: "8%" }}>
+        <svg viewBox="0 0 80 30" width="100" height="30">
+          {/* Luftskeppskropp */}
+          <ellipse cx="40" cy="14" rx="32" ry="9"
+                   fill="#d94c3d" stroke="#3a2a17" strokeWidth="1.5" />
+          <ellipse cx="40" cy="14" rx="32" ry="9"
+                   fill="none" stroke="#3a2a17" strokeWidth="0.8"
+                   strokeDasharray="2 2" opacity="0.4" />
+          {/* Gondol */}
+          <rect x="32" y="22" width="16" height="5"
+                fill="#8a6a48" stroke="#3a2a17" strokeWidth="1" />
+          {/* Linjer */}
+          <line x1="34" y1="22" x2="32" y2="20"
+                stroke="#3a2a17" strokeWidth="0.6" />
+          <line x1="46" y1="22" x2="48" y2="20"
+                stroke="#3a2a17" strokeWidth="0.6" />
+        </svg>
+      </div>
+
+      {/* Fåglar som flyger normalt — i grupp */}
+      <div className="td-map-birds"
+           style={{ top: "12%", animationDuration: "45s" }}>
+        <svg viewBox="0 0 60 20" width="60" height="20">
+          <path d="M 5 10 Q 8 6, 11 10 Q 14 6, 17 10"
+                fill="none" stroke="#3a2a17" strokeWidth="1.5" strokeLinecap="round" />
+          <path d="M 25 14 Q 28 10, 31 14 Q 34 10, 37 14"
+                fill="none" stroke="#3a2a17" strokeWidth="1.3" strokeLinecap="round" />
+          <path d="M 42 8 Q 45 4, 48 8 Q 51 4, 54 8"
+                fill="none" stroke="#3a2a17" strokeWidth="1.2" strokeLinecap="round" />
+        </svg>
+      </div>
+
+      {/* EN konstig fågel som flyger BAKLÄNGES — tidsproblem! */}
+      <div className="td-map-bird-reverse"
+           style={{ top: "18%" }}>
+        <svg viewBox="0 0 30 20" width="30" height="20">
+          <path d="M 5 10 Q 8 6, 11 10 Q 14 6, 17 10"
+                fill="none" stroke="#c0392b" strokeWidth="2" strokeLinecap="round" />
+        </svg>
+      </div>
+
+      {/* Vattenglitter — små studsande prickar på vattnet */}
+      <div className="td-water-shimmer" style={{ left: "3%", top: "55%" }} />
+      <div className="td-water-shimmer" style={{ left: "7%", top: "62%", animationDelay: "0.7s" }} />
+      <div className="td-water-shimmer" style={{ left: "2%", top: "70%", animationDelay: "1.3s" }} />
+      <div className="td-water-shimmer" style={{ left: "5%", top: "75%", animationDelay: "2s" }} />
+
+      {/* Konstigt löv som faller UPPÅT — tidens lagar är trasiga */}
+      <div className="td-falling-leaf"
+           style={{ left: "30%" }}>
+        <svg viewBox="0 0 20 20" width="16" height="16">
+          <path d="M 10 2 C 14 4, 16 10, 14 16 C 12 18, 8 18, 6 16 C 4 10, 6 4, 10 2 Z"
+                fill="#c08040" stroke="#3a2a17" strokeWidth="0.8" />
+          <line x1="10" y1="4" x2="10" y2="14"
+                stroke="#3a2a17" strokeWidth="0.6" opacity="0.6" />
+        </svg>
+      </div>
+
+      <div className="td-falling-leaf td-falling-leaf-2"
+           style={{ left: "70%", animationDelay: "8s" }}>
+        <svg viewBox="0 0 20 20" width="14" height="14">
+          <path d="M 10 2 C 14 4, 16 10, 14 16 C 12 18, 8 18, 6 16 C 4 10, 6 4, 10 2 Z"
+                fill="#a86028" stroke="#3a2a17" strokeWidth="0.8" />
+        </svg>
+      </div>
+    </>
   );
 }
 
@@ -527,7 +620,7 @@ function DetailOverlay({ type, onClose }) {
 }
 
 // ============================================================
-// PUSSELVERKSTADENS SCEN (oförändrad från v10)
+// PUSSELVERKSTADENS SCEN
 // ============================================================
 function PuzzleWorkshopScene({ completed, foundItems, setDialog, onPickUpItem,
                                 onStartMission, setDetailView }) {
@@ -621,7 +714,6 @@ function PuzzleWorkshopScene({ completed, foundItems, setDialog, onPickUpItem,
       )}
       <div className={`td-lamp-flicker ${machineRunning ? "td-lamp-overdrive" : ""}`}
            style={{ left: "42%", top: "23%", width: "8%", height: "10%" }} />
-      {/* Färgrutnätet — ligger exakt ovanpå det inbyggda färgrutnätet i bilden */}
       <div className={`td-puzzle-grid ${machineRunning ? "td-puzzle-grid-running" : ""}`}
            style={{ left: "63%", top: "46%", width: "5%", height: "11%" }}>
         <span style={{ animationDelay: "0s" }} />
@@ -632,14 +724,12 @@ function PuzzleWorkshopScene({ completed, foundItems, setDialog, onPickUpItem,
       {machineRunning && (
         <div className="td-machine-running-text-big">RAGGA-DAGG!</div>
       )}
-
       <TaggedHotspot
         style={{ left: "57%", top: "10%", width: "34%", height: "65%" }}
         tagPosition={{ left: "50%", top: "78%" }} tagRotation={-2}
         onClick={onStartMission}
         label={completed ? "Maskinen ✓" : "Maskinen"} primary
         ariaLabel="Den stora maskinen" />
-
       <button className={`td-tagged td-tagged-valve td-valve-${valvePhase}`}
         style={{ left: "55%", top: "47%", width: "5%", height: "7%" }}
         onClick={handleValveClick}
@@ -659,19 +749,16 @@ function PuzzleWorkshopScene({ completed, foundItems, setDialog, onPickUpItem,
           {valvePhase === "cooling" ? "...puh..." : "Ventilen"}
         </span>
       </button>
-
       <TaggedHotspot
         style={{ left: "1%", top: "26%", width: "32%", height: "40%" }}
         tagPosition={{ left: "50%", top: "100%" }} tagRotation={2}
         onClick={() => setDetailView("karta")} label="Verktygsväggen"
         ariaLabel="Verktygsväggen" />
-
       <TaggedHotspot
         style={{ left: "10%", top: "4%", width: "22%", height: "20%" }}
         tagPosition={{ left: "50%", top: "100%" }} tagRotation={-3}
         onClick={() => setDetailView("fonster")} label="Fönstret"
         ariaLabel="Fönstret" />
-
       {!gearFound && (
         <TaggedHotspot
           style={{ left: "76%", top: "78%", width: "12%", height: "16%" }}
@@ -682,13 +769,11 @@ function PuzzleWorkshopScene({ completed, foundItems, setDialog, onPickUpItem,
           }}
           label="Skatt!" treasure ariaLabel="Glittrande kugghjul" />
       )}
-
       {trapdoorVisible && (
         <button className="td-trapdoor"
           style={{ left: `${trapdoorPos.x}%`, top: `${trapdoorPos.y}%` }}
           onClick={catchTrapdoor} aria-label="Hemlig lucka" />
       )}
-
       <button className={`td-character-figure ${klonkSurprised ? "td-character-surprised" : ""}`}
               onClick={handleKlonkClick} aria-label="Prata med Herr Klonk">
         <img src={ASSETS.klonkFull} alt="Herr Klonk" />
@@ -696,7 +781,6 @@ function PuzzleWorkshopScene({ completed, foundItems, setDialog, onPickUpItem,
           {klonkSurprised ? "!!" : "!"}
         </span>
       </button>
-
       <div className="td-scene-hint">Klicka på något som intresserar dig</div>
     </div>
   );
@@ -757,20 +841,12 @@ function MissionOverlay({ hotspot, grand, onClose, children }) {
   );
 }
 
-// ============================================================
-// MASKIN-PUSSLET — NU 7 STEG MED SLUMPADE FRÅGOR
-// ============================================================
 function MachinePuzzle({ alreadyDone, onComplete, onBack }) {
-  // Bygg en spelomgång EN GÅNG vid mount — sju slumpade frågor
   const round = useMemo(() => buildPuzzleRound(), []);
   const totalSteps = round.length;
-
   const [step, setStep] = useState(0);
   const [feedback, setFeedback] = useState(null);
-  const [solvedSteps, setSolvedSteps] = useState(
-    new Array(totalSteps).fill(false)
-  );
-
+  const [solvedSteps, setSolvedSteps] = useState(new Array(totalSteps).fill(false));
   const current = round[step];
   const allSolved = solvedSteps.every(Boolean);
 
@@ -795,7 +871,6 @@ function MachinePuzzle({ alreadyDone, onComplete, onBack }) {
     else if (!alreadyDone) onComplete();
   }
 
-  // Sista steget klart? Visa avslutsskärm
   if (allSolved && feedback?.type === "success" && step === totalSteps - 1) {
     return (
       <div className="td-puzzle-complete">
@@ -815,18 +890,12 @@ function MachinePuzzle({ alreadyDone, onComplete, onBack }) {
   return (
     <>
       <GearProgressRow total={totalSteps} solved={solvedSteps.filter(Boolean).length} active={step} />
-
-      <p className="td-puzzle-step-label">
-        Pussel {step + 1} av {totalSteps}
-      </p>
-
+      <p className="td-puzzle-step-label">Pussel {step + 1} av {totalSteps}</p>
       <p className="td-mission-text">
         <em>{stepIntro(step)}</em>
         {current.text}
       </p>
-
       <PuzzleSequence sequence={current.sequence} />
-
       <div className="td-choices td-choices-row">
         {current.choices.map((cId) => (
           <button key={cId} className="td-choice td-choice-visual"
@@ -836,7 +905,6 @@ function MachinePuzzle({ alreadyDone, onComplete, onBack }) {
           </button>
         ))}
       </div>
-
       {feedback && (
         <div className={`td-feedback td-feedback-${feedback.type}`}>
           <p>{feedback.text}</p>
@@ -864,7 +932,6 @@ function stepIntro(step) {
   return intros[step] || `"Pussel ${step + 1}!"`;
 }
 
-// Rad med kugghjul som visar hur långt man har kommit
 function GearProgressRow({ total, solved, active }) {
   return (
     <div className="td-puzzle-progress">
@@ -907,7 +974,6 @@ function PuzzleSequence({ sequence }) {
   );
 }
 
-// === Renderar ett enskilt pussel-objekt baserat på dess ID ===
 function PuzzleItem({ itemId, small }) {
   const sz = small ? 32 : 48;
   if (itemId === "mystery") {
@@ -917,11 +983,8 @@ function PuzzleItem({ itemId, small }) {
     );
   }
   const [kind, value] = itemId.split(":");
-
   if (kind === "color") {
-    const colors = {
-      red: "#d94c3d", blue: "#3a6ea8", green: "#5fa860", yellow: "#f0c040",
-    };
+    const colors = { red: "#d94c3d", blue: "#3a6ea8", green: "#5fa860", yellow: "#f0c040" };
     return (
       <span className="td-puzzle-item"
             style={{ width: sz, height: sz, background: colors[value], borderRadius: "50%" }} />
@@ -949,11 +1012,8 @@ function PuzzleItem({ itemId, small }) {
     return <DotsItem count={parseInt(value, 10)} size={sz} />;
   }
   if (kind === "cs") {
-    // cs:color-shape, e.g. cs:red-triangle
     const [colorName, shapeName] = value.split("-");
-    const colors = {
-      red: "#d94c3d", blue: "#3a6ea8", green: "#5fa860", yellow: "#f0c040",
-    };
+    const colors = { red: "#d94c3d", blue: "#3a6ea8", green: "#5fa860", yellow: "#f0c040" };
     return (
       <span className="td-puzzle-item-shape" style={{ width: sz, height: sz }}>
         <ShapeSvg shape={shapeName} size={sz} color={colors[colorName]} />
@@ -964,8 +1024,7 @@ function PuzzleItem({ itemId, small }) {
 }
 
 function ShapeSvg({ shape, size, color }) {
-  const stroke = "#3a2a17";
-  const strokeW = 2.5;
+  const stroke = "#3a2a17"; const strokeW = 2.5;
   if (shape === "triangle") {
     return (
       <svg viewBox="0 0 40 40" width={size} height={size}>
@@ -977,8 +1036,7 @@ function ShapeSvg({ shape, size, color }) {
   if (shape === "circle") {
     return (
       <svg viewBox="0 0 40 40" width={size} height={size}>
-        <circle cx="20" cy="20" r="16" fill={color}
-                stroke={stroke} strokeWidth={strokeW} />
+        <circle cx="20" cy="20" r="16" fill={color} stroke={stroke} strokeWidth={strokeW} />
       </svg>
     );
   }
@@ -993,9 +1051,7 @@ function ShapeSvg({ shape, size, color }) {
   return null;
 }
 
-// Renderar n prickar inom en cirkel — för räkneuppgifter
 function DotsItem({ count, size }) {
-  // Layouter för 1-8 prickar inom ett rutnät
   const positions = {
     1: [[20, 20]],
     2: [[12, 20], [28, 20]],
@@ -1010,8 +1066,7 @@ function DotsItem({ count, size }) {
   return (
     <span className="td-puzzle-item-shape" style={{ width: size, height: size }}>
       <svg viewBox="0 0 40 40" width={size} height={size}>
-        <circle cx="20" cy="20" r="18" fill="#fdf3d8"
-                stroke="#3a2a17" strokeWidth="2.5" />
+        <circle cx="20" cy="20" r="18" fill="#fdf3d8" stroke="#3a2a17" strokeWidth="2.5" />
         {dots.map(([x, y], i) => (
           <circle key={i} cx={x} cy={y} r="2.5" fill="#3a2a17" />
         ))}
@@ -1020,7 +1075,6 @@ function DotsItem({ count, size }) {
   );
 }
 
-// Returnerar en mänsklig etikett för ett pussel-item-ID
 function labelForItem(itemId) {
   if (itemId === "mystery") return "?";
   const [kind, value] = itemId.split(":");
@@ -1049,9 +1103,6 @@ function labelForItem(itemId) {
   return itemId;
 }
 
-// ============================================================
-// LÄS- och KLOCK-uppdrag (oförändrade — fixar dessa i nästa steg)
-// ============================================================
 function ReadingMission({ alreadyDone, onComplete, onBack }) {
   const [feedback, setFeedback] = useState(null);
   const choices = [
@@ -1271,6 +1322,7 @@ function Styles() {
       .td-btn-small { font-size: 13px; padding: 6px 14px; }
       .td-btn-gold { background: var(--gold); }
 
+      /* === KARTAN === */
       .td-map-wrap {
         position: fixed; inset: 0; background: #1a1208;
         display: flex; align-items: center; justify-content: center;
@@ -1278,6 +1330,7 @@ function Styles() {
       .td-map {
         position: relative; width: 100%; height: 100%;
         background-size: cover; background-position: center; background-repeat: no-repeat;
+        overflow: hidden;
       }
       .td-hud {
         position: absolute; top: 12px; left: 50%;
@@ -1302,41 +1355,93 @@ function Styles() {
         100% { transform: scale(1); }
       }
 
+      /* === KARTANS HOTSPOTS — nu utan rektangel === */
       .td-hotspot {
-        position: absolute; background: transparent;
-        border: 3px dashed transparent; border-radius: 14px;
-        cursor: pointer; transition: all 0.2s ease; padding: 0;
+        position: absolute;
+        background: transparent;
+        border: none;
+        cursor: pointer;
+        padding: 0;
+        transition: transform 0.25s ease;
+        z-index: 4;
       }
       .td-hotspot:hover, .td-hotspot-hover {
-        background: rgba(253, 201, 77, 0.25); border-color: var(--ink);
-        box-shadow: 0 0 0 4px rgba(253, 201, 77, 0.4), 0 0 30px rgba(253, 201, 77, 0.6);
-        transform: scale(1.04);
+        transform: scale(1.03);
       }
-      .td-hotspot-done {
-        background: rgba(95, 168, 96, 0.18);
-        border: 3px solid rgba(58, 42, 23, 0.4);
+      .td-hotspot:focus { outline: none; }
+      .td-hotspot:focus-visible {
+        outline: 3px dashed rgba(253, 201, 77, 0.7);
+        outline-offset: -3px;
+        border-radius: 12px;
       }
-      .td-hotspot-done:hover { background: rgba(95, 168, 96, 0.3); }
       .td-hotspot-star {
-        position: absolute; top: -16px; right: -10px;
+        position: absolute; top: 4%; right: 4%;
         font-size: 36px; color: var(--gold);
         text-shadow: 2px 2px 0 var(--ink), -1px -1px 0 var(--ink);
         animation: starPop 0.5s ease;
+        z-index: 6;
+      }
+      .td-hotspot-done {
+        /* Konstant gyllene strålglans när platsen är klar */
+        filter: drop-shadow(0 0 20px rgba(253, 201, 77, 0.5));
+        animation: tdDoneGlow 3s ease-in-out infinite;
+      }
+      @keyframes tdDoneGlow {
+        0%, 100% { filter: drop-shadow(0 0 18px rgba(253, 201, 77, 0.4)); }
+        50% { filter: drop-shadow(0 0 28px rgba(253, 201, 77, 0.7)); }
       }
       .td-hotspot-finale-locked {
-        cursor: not-allowed; background: rgba(40, 30, 18, 0.4);
-        border: 3px solid rgba(40, 30, 18, 0.6);
+        cursor: not-allowed;
+        opacity: 0.5;
       }
-      .td-hotspot-finale-locked:hover {
-        background: rgba(40, 30, 18, 0.4); transform: none; box-shadow: none;
-      }
+      .td-hotspot-finale-locked:hover { transform: none; }
       .td-hotspot-finale-active {
-        background: rgba(253, 201, 77, 0.3); border: 3px solid var(--ink);
-        animation: pulseGold 1.4s ease-in-out infinite;
+        animation: tdFinaleGlow 1.4s ease-in-out infinite;
       }
-      @keyframes pulseGold {
-        0%, 100% { box-shadow: 0 0 0 4px rgba(253, 201, 77, 0.4), 0 0 30px rgba(253, 201, 77, 0.7); }
-        50% { box-shadow: 0 0 0 10px rgba(253, 201, 77, 0.2), 0 0 60px rgba(253, 201, 77, 0.9); }
+      @keyframes tdFinaleGlow {
+        0%, 100% { filter: drop-shadow(0 0 20px rgba(253, 201, 77, 0.6)); }
+        50% { filter: drop-shadow(0 0 40px rgba(253, 201, 77, 1)) drop-shadow(0 0 60px rgba(253, 201, 77, 0.7)); }
+      }
+
+      /* === HANDRITAD GUL MARKERING === */
+      .td-hand-mark {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.25s ease;
+        z-index: 5;
+        filter: drop-shadow(0 0 4px rgba(253, 201, 77, 0.6))
+                drop-shadow(2px 2px 0 rgba(58, 42, 23, 0.3));
+      }
+      .td-hand-mark-active {
+        opacity: 1;
+        animation: tdHandMarkDraw 0.6s ease-out, tdHandMarkWobble 4s ease-in-out 0.6s infinite;
+      }
+      @keyframes tdHandMarkDraw {
+        from {
+          opacity: 0;
+          transform: scale(0.92) rotate(-3deg);
+        }
+        to {
+          opacity: 1;
+          transform: scale(1) rotate(0deg);
+        }
+      }
+      @keyframes tdHandMarkWobble {
+        0%, 100% { transform: rotate(-0.5deg) scale(1); }
+        50% { transform: rotate(0.5deg) scale(1.005); }
+      }
+      .td-hand-mark-done {
+        opacity: 0.75;
+        animation: tdHandMarkWobble 6s ease-in-out infinite;
+      }
+      .td-hand-mark-finale {
+        animation: tdHandMarkDraw 0.6s ease-out, tdHandMarkWobble 2s ease-in-out 0.6s infinite;
+        filter: drop-shadow(0 0 8px rgba(253, 201, 77, 0.9))
+                drop-shadow(0 0 16px rgba(253, 201, 77, 0.5));
       }
 
       .td-hover-card {
@@ -1364,6 +1469,140 @@ function Styles() {
       .td-hover-short { font-size: 13px; margin: 2px 0 4px; }
       .td-hover-status { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.7; }
       .td-hover-status.ok { color: var(--green); opacity: 1; font-weight: bold; }
+
+      /* === LEVANDE KARTELEMENT === */
+
+      /* Skorstensrök */
+      .td-map-smoke {
+        position: absolute;
+        width: 30px; height: 60px;
+        pointer-events: none;
+        z-index: 2;
+      }
+      .td-map-smoke-puff {
+        position: absolute;
+        bottom: 0; left: 50%;
+        width: 20px; height: 20px;
+        background: radial-gradient(circle, rgba(80, 60, 40, 0.4) 0%, rgba(80, 60, 40, 0) 70%);
+        border-radius: 50%;
+        opacity: 0;
+        animation: tdMapSmokeRise 5s ease-out infinite;
+      }
+      .td-map-smoke-1 { animation-delay: 0s; }
+      .td-map-smoke-2 { animation-delay: 1.7s; }
+      .td-map-smoke-3 { animation-delay: 3.4s; }
+      @keyframes tdMapSmokeRise {
+        0% { transform: translate(-50%, 0) scale(0.4); opacity: 0; }
+        20% { opacity: 0.5; }
+        100% { transform: translate(-50%, -60px) scale(1.6); opacity: 0; }
+      }
+      .td-map-smoke-workshop .td-map-smoke-puff {
+        background: radial-gradient(circle, rgba(100, 80, 60, 0.35) 0%, rgba(100, 80, 60, 0) 70%);
+        animation-duration: 4s;
+      }
+
+      /* Fyrens blink */
+      .td-map-lighthouse {
+        position: absolute;
+        width: 24px; height: 24px;
+        pointer-events: none;
+        z-index: 3;
+        background: radial-gradient(circle, rgba(253, 201, 77, 0.95) 0%, rgba(253, 201, 77, 0.4) 30%, rgba(253, 201, 77, 0) 70%);
+        border-radius: 50%;
+        animation: tdLighthouseBlink 4s ease-in-out infinite;
+      }
+      @keyframes tdLighthouseBlink {
+        0%, 90%, 100% { opacity: 0; transform: scale(0.5); }
+        5%, 15% { opacity: 1; transform: scale(1.2); }
+        25% { opacity: 0.3; transform: scale(1); }
+        35%, 45% { opacity: 0.9; transform: scale(1.1); }
+        55% { opacity: 0; }
+      }
+
+      /* Luftskeppet driver långsamt */
+      .td-map-airship {
+        position: absolute;
+        left: -120px;
+        pointer-events: none;
+        z-index: 2;
+        animation: tdAirshipDrift 90s linear infinite;
+        filter: drop-shadow(2px 3px 4px rgba(0, 0, 0, 0.3));
+      }
+      @keyframes tdAirshipDrift {
+        0% { left: -120px; transform: translateY(0); }
+        50% { transform: translateY(-8px); }
+        100% { left: 110%; transform: translateY(0); }
+      }
+
+      /* Vanliga fåglar i grupp */
+      .td-map-birds {
+        position: absolute;
+        left: -80px;
+        pointer-events: none;
+        z-index: 2;
+        animation: tdBirdsFly 45s linear infinite;
+        opacity: 0.7;
+      }
+      @keyframes tdBirdsFly {
+        0% { left: -80px; transform: translateY(0); }
+        25% { transform: translateY(-6px); }
+        50% { transform: translateY(2px); }
+        75% { transform: translateY(-4px); }
+        100% { left: 110%; transform: translateY(0); }
+      }
+
+      /* Konstig fågel som flyger BAKLÄNGES (tiden är trasig!) */
+      .td-map-bird-reverse {
+        position: absolute;
+        right: -40px;
+        pointer-events: none;
+        z-index: 2;
+        animation: tdBirdReverse 30s linear infinite;
+        opacity: 0.8;
+      }
+      @keyframes tdBirdReverse {
+        0% { right: -40px; transform: scaleX(-1) translateY(0); }
+        50% { transform: scaleX(-1) translateY(8px); }
+        100% { right: 110%; transform: scaleX(-1) translateY(0); }
+      }
+
+      /* Vattenglitter */
+      .td-water-shimmer {
+        position: absolute;
+        width: 4px; height: 4px;
+        background: rgba(255, 255, 255, 0.85);
+        border-radius: 50%;
+        pointer-events: none;
+        z-index: 2;
+        animation: tdWaterShimmer 2.5s ease-in-out infinite;
+        box-shadow: 0 0 4px rgba(255, 255, 255, 0.7);
+      }
+      @keyframes tdWaterShimmer {
+        0%, 100% { opacity: 0; transform: scale(0.5); }
+        50% { opacity: 1; transform: scale(1.2); }
+      }
+
+      /* Löv som faller UPPÅT (tiden är ur lag) */
+      .td-falling-leaf {
+        position: absolute;
+        bottom: -20px;
+        pointer-events: none;
+        z-index: 3;
+        animation: tdLeafFallsUp 15s ease-in-out infinite;
+        opacity: 0.85;
+      }
+      @keyframes tdLeafFallsUp {
+        0% { bottom: -20px; transform: rotate(0deg) translateX(0); opacity: 0; }
+        10% { opacity: 0.85; }
+        25% { transform: rotate(45deg) translateX(15px); }
+        50% { transform: rotate(180deg) translateX(-10px); }
+        75% { transform: rotate(270deg) translateX(20px); }
+        90% { opacity: 0.85; }
+        100% { bottom: 110%; transform: rotate(360deg) translateX(0); opacity: 0; }
+      }
+      .td-falling-leaf-2 {
+        animation-duration: 18s;
+      }
 
       .td-interior {
         position: fixed; inset: 0; background: #1a1208;
