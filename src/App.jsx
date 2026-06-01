@@ -37,6 +37,127 @@ const ASSETS = {
   eka: "/tidsdetektiverna/eka.png",
 };
 
+// ============================================================
+// ITEMS — alla saker spelaren kan samla i sin väska
+// ============================================================
+const ITEM_DATA = {
+  "harbor:key": {
+    name: "Den gamla nyckeln",
+    icon: "🗝️",
+    obtainedFrom: "Kapten Falk",
+    description: "En gammal mässings-nyckel med konstigt välarbetad form. Falk gav den till dig efter att du seglat ekan tur och retur till fyren. 'Min farfar sa alltid att den skulle vara värdefull någon dag', sa han. Den passar nog till något... men vad?",
+  },
+  "reading:bookmark": {
+    name: "Bokmärket",
+    icon: "🔖",
+    obtainedFrom: "Mira i Bokgränden",
+    description: "Ett bokmärke i mörkröd sammet med ett gammalt mönster broderat i guldtråd. Mira hittade det inuti den äldsta boken i biblioteket. Mönstret påminner om något du sett tidigare.",
+  },
+  "clock:hand": {
+    name: "Klockvisaren",
+    icon: "⏱️",
+    obtainedFrom: "Professor Tickelton",
+    description: "En liten gyllene klockvisare som låg gömd i tornets klockverk. Tickelton sa att den 'rört sig framåt i 200 år utan att hejda sig en sekund'. Den är förvånansvärt tung för sin storlek.",
+  },
+  "puzzle:gear": {
+    name: "Det gyllene kugghjulet",
+    icon: "⚙️",
+    obtainedFrom: "Klonk i Pusselverkstaden",
+    description: "Ett vackert litet kugghjul med konstiga symboler ingraverade i kanten. Klonk muttrade något om 'tidens motor' när hen gav dig det. Symbolerna ser nästan ut att röra sig om man tittar tillräckligt länge.",
+  },
+  "treasure:medal": {
+    name: "Junior-detektiv-medaljen",
+    icon: "🏅",
+    obtainedFrom: "Skattjakten",
+    description: "Den ultimata utmärkelsen för en ung detektiv. Du löste mysteriet med Tidsmaskinen!",
+  },
+};
+
+
+// ============================================================
+// VÄSKAN — knapp och overlay för att visa items
+// ============================================================
+function InventoryButton({ count, onClick }) {
+  return (
+    <button
+      className="td-inventory-btn"
+      onClick={onClick}
+      aria-label={`Öppna väskan, ${count} saker`}
+    >
+      <span className="td-inventory-icon">🎒</span>
+      {count > 0 && <span className="td-inventory-count">{count}</span>}
+    </button>
+  );
+}
+
+function InventoryModal({ foundItems, onClose }) {
+  const [selectedId, setSelectedId] = useState(null);
+  const selected = selectedId ? ITEM_DATA[selectedId] : null;
+
+  return (
+    <div className="td-inventory-overlay" onClick={onClose}>
+      <div
+        className="td-inventory-modal"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="td-inventory-header">
+          <h2>🎒 VÄSKAN</h2>
+          <button
+            className="td-inventory-close"
+            onClick={onClose}
+            aria-label="Stäng väskan"
+          >
+            ×
+          </button>
+        </div>
+
+        {foundItems.length === 0 ? (
+          <div className="td-inventory-empty">
+            <div className="td-inventory-empty-icon">🎒</div>
+            <p>Väskan är tom. Hjälp folket i staden så fyller du på den med ledtrådar och artefakter!</p>
+          </div>
+        ) : (
+          <>
+            <div className="td-inventory-grid">
+              {foundItems.map((id) => {
+                const item = ITEM_DATA[id];
+                if (!item) return null;
+                return (
+                  <button
+                    key={id}
+                    className={`td-inventory-item ${selectedId === id ? "td-inventory-item-selected" : ""}`}
+                    onClick={() => setSelectedId(selectedId === id ? null : id)}
+                  >
+                    <div className="td-inventory-item-icon">{item.icon}</div>
+                    <div className="td-inventory-item-name">{item.name}</div>
+                  </button>
+                );
+              })}
+            </div>
+
+            {selected && (
+              <div className="td-inventory-detail">
+                <div className="td-inventory-detail-header">
+                  <span className="td-inventory-detail-icon">{selected.icon}</span>
+                  <div>
+                    <div className="td-inventory-detail-name">{selected.name}</div>
+                    <div className="td-inventory-detail-from">Från: {selected.obtainedFrom}</div>
+                  </div>
+                </div>
+                <p className="td-inventory-detail-desc">{selected.description}</p>
+              </div>
+            )}
+
+            {!selected && (
+              <p className="td-inventory-hint">Klicka på en sak för att läsa mer om den.</p>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // Hotspot-koordinater + ankarpunkt för spotlight-cirkeln (centrum)
 const HOTSPOTS = {
   reading: {
@@ -241,6 +362,7 @@ export default function App() {
   const [foundItems, setFoundItems] = useState([]);
   const [interiorDialog, setInteriorDialog] = useState(null);
   const [detailView, setDetailView] = useState(null);
+  const [inventoryOpen, setInventoryOpen] = useState(false);
 
   const stars = Object.values(completed).filter(Boolean).length;
   const allDone = stars === 3;
@@ -316,6 +438,21 @@ export default function App() {
         <MissionOverlay grand onClose={() => setView("map")}>
           <EndScreen onReset={reset} />
         </MissionOverlay>
+      )}
+
+      {/* Väska — synlig på alla vyer utom startskärm och båtspel */}
+      {view !== "start" && view !== "boatgame" && (
+        <InventoryButton
+          count={foundItems.length}
+          onClick={() => setInventoryOpen(true)}
+        />
+      )}
+
+      {inventoryOpen && (
+        <InventoryModal
+          foundItems={foundItems}
+          onClose={() => setInventoryOpen(false)}
+        />
       )}
     </div>
   );
@@ -1025,26 +1162,26 @@ function HarborScene({ foundItems, setDialog, onPickUpItem, onStartMission }) {
         smoking
       />
 
-      {/* Berit — stark "boss"-pose med båda händer på höften */}
+      {/* Berit — UPP på bryggan, lite mindre för perspektiv */}
       <HarborCharacter
-        style={{ left: "55%", bottom: "4%", height: "54%", aspectRatio: "793 / 1983" }}
+        style={{ left: "62%", bottom: "8%", height: "50%", aspectRatio: "793 / 1983" }}
         image={ASSETS.beritFull}
         label="Berit"
         onClick={() => talkTo("berit")}
       />
 
-      {/* Lasse — vid huset, KLART längre bort (mindre) */}
+      {/* Lasse — HELT NY PLATS: på själva bryggan, mellan huset och Falk */}
       <HarborCharacter
-        style={{ left: "6%", bottom: "20%", height: "32%", aspectRatio: "793 / 1983" }}
+        style={{ left: "25%", bottom: "12%", height: "40%", aspectRatio: "793 / 1983" }}
         image={ASSETS.lasseFull}
         label="???"
         onClick={() => talkTo("lasse")}
         suspicious
       />
 
-      {/* Främlingen — längst bort, MINST */}
+      {/* Främlingen — vid huset, längst bort */}
       <HarborCharacter
-        style={{ left: "20%", bottom: "26%", height: "26%", aspectRatio: "793 / 1983" }}
+        style={{ left: "9%", bottom: "20%", height: "32%", aspectRatio: "793 / 1983" }}
         image={ASSETS.framlingFull}
         label="?"
         onClick={() => talkTo("framling")}
@@ -1096,7 +1233,7 @@ const BOAT_TARGETS = {
   harbor: { x: 43, y: 90, r: 5 },
 };
 
-const BOAT_WHIRLPOOL = { x: 43, y: 44, r: 9, pull: 10, spin: 90 };
+const BOAT_WHIRLPOOL = { x: 42, y: 35, r: 6, pull: 3, spin: 70 };
 
 const BOAT_OBSTACLES = [
   // === Stora öar i mitten ===
@@ -1463,7 +1600,7 @@ function BoatGame({ onComplete, onBack }) {
               style={{
                 left: `${BOAT_WHIRLPOOL.x}%`,
                 top: `${BOAT_WHIRLPOOL.y}%`,
-                width: `${BOAT_WHIRLPOOL.r * 1.8}%`,
+                width: `${BOAT_WHIRLPOOL.r * 2}%`,
                 aspectRatio: "1 / 1",
               }}
             >
@@ -3198,6 +3335,207 @@ function Styles() {
         100% { left: 105%; top: 18%; }
       }
 
+      /* === VÄSKAN (INVENTORY) === */
+      .td-inventory-btn {
+        position: fixed;
+        top: 12px;
+        right: 16px;
+        z-index: 100;
+        background: var(--cream);
+        border: 3px solid var(--ink);
+        padding: 8px 14px;
+        font-size: 22px;
+        font-family: 'Georgia', serif;
+        font-weight: bold;
+        cursor: pointer;
+        box-shadow: 4px 4px 0 var(--ink);
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        border-radius: 4px;
+      }
+      .td-inventory-btn:hover {
+        transform: translate(-2px, -2px);
+        box-shadow: 6px 6px 0 var(--ink);
+      }
+      .td-inventory-btn:active {
+        transform: translate(2px, 2px);
+        box-shadow: 2px 2px 0 var(--ink);
+      }
+      .td-inventory-icon {
+        font-size: 24px;
+        line-height: 1;
+      }
+      .td-inventory-count {
+        background: var(--red);
+        color: var(--cream);
+        border: 2px solid var(--ink);
+        border-radius: 999px;
+        min-width: 24px;
+        height: 24px;
+        padding: 0 6px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 13px;
+        font-weight: bold;
+        line-height: 1;
+      }
+
+      .td-inventory-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(20, 12, 5, 0.7);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 200;
+        padding: 20px;
+        animation: tdFadeIn 0.25s ease;
+      }
+      .td-inventory-modal {
+        background: var(--cream);
+        border: 4px solid var(--ink);
+        border-radius: 10px;
+        padding: 0;
+        max-width: 580px;
+        width: 100%;
+        max-height: 88vh;
+        overflow-y: auto;
+        box-shadow: 10px 10px 0 var(--ink);
+        animation: tdDetailIn 0.3s ease;
+      }
+      .td-inventory-header {
+        background: var(--ink);
+        color: var(--cream);
+        padding: 14px 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 3px solid var(--gold);
+      }
+      .td-inventory-header h2 {
+        margin: 0;
+        font-size: 22px;
+        font-family: 'Georgia', serif;
+        letter-spacing: 1px;
+      }
+      .td-inventory-close {
+        background: transparent;
+        border: 2px solid var(--cream);
+        color: var(--cream);
+        width: 32px;
+        height: 32px;
+        font-size: 20px;
+        font-weight: bold;
+        cursor: pointer;
+        border-radius: 999px;
+        padding: 0;
+        line-height: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .td-inventory-close:hover {
+        background: var(--cream);
+        color: var(--ink);
+      }
+      .td-inventory-empty {
+        padding: 40px 30px;
+        text-align: center;
+      }
+      .td-inventory-empty-icon {
+        font-size: 56px;
+        margin-bottom: 16px;
+        opacity: 0.5;
+      }
+      .td-inventory-empty p {
+        font-size: 16px;
+        font-style: italic;
+        color: #5a4a3a;
+        margin: 0;
+      }
+      .td-inventory-grid {
+        padding: 20px;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+        gap: 14px;
+      }
+      .td-inventory-item {
+        background: #f0e2c4;
+        border: 2.5px solid var(--ink);
+        border-radius: 8px;
+        padding: 14px 8px 10px;
+        cursor: pointer;
+        text-align: center;
+        transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+        font-family: 'Georgia', serif;
+      }
+      .td-inventory-item:hover {
+        transform: translateY(-3px);
+        background: var(--gold);
+        box-shadow: 3px 5px 0 var(--ink);
+      }
+      .td-inventory-item-selected {
+        background: var(--gold);
+        box-shadow: 3px 5px 0 var(--ink);
+      }
+      .td-inventory-item-icon {
+        font-size: 38px;
+        margin-bottom: 6px;
+        line-height: 1;
+      }
+      .td-inventory-item-name {
+        font-size: 12px;
+        font-weight: bold;
+        color: var(--ink);
+      }
+      .td-inventory-detail {
+        margin: 0 20px 20px;
+        background: #fffaef;
+        border: 2.5px solid var(--ink);
+        border-radius: 8px;
+        padding: 16px;
+      }
+      .td-inventory-detail-header {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        margin-bottom: 12px;
+        padding-bottom: 12px;
+        border-bottom: 2px dashed var(--ink);
+      }
+      .td-inventory-detail-icon {
+        font-size: 42px;
+        line-height: 1;
+      }
+      .td-inventory-detail-name {
+        font-size: 18px;
+        font-weight: bold;
+        font-family: 'Georgia', serif;
+        color: var(--ink);
+      }
+      .td-inventory-detail-from {
+        font-size: 12px;
+        color: var(--red);
+        font-style: italic;
+        margin-top: 2px;
+      }
+      .td-inventory-detail-desc {
+        font-size: 15px;
+        line-height: 1.5;
+        margin: 0;
+        color: #3a2a17;
+      }
+      .td-inventory-hint {
+        text-align: center;
+        font-style: italic;
+        color: #7a6a55;
+        margin: 0 20px 20px;
+        font-size: 13px;
+      }
+
       /* === BÅTSPELET === */
       .td-boat-game {
         position: fixed;
@@ -3267,7 +3605,7 @@ function Styles() {
       /* === BÅTEN (sprite) === */
       .td-boat-sprite {
         position: absolute;
-        width: 5.5%;
+        width: 4.5%;
         height: auto;
         pointer-events: none;
         z-index: 10;
