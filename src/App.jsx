@@ -1025,9 +1025,9 @@ function HarborScene({ foundItems, setDialog, onPickUpItem, onStartMission }) {
         smoking
       />
 
-      {/* Berit — hennes hand lutar mot kajens lådor (höger sida) */}
+      {/* Berit — stark "boss"-pose med båda händer på höften */}
       <HarborCharacter
-        style={{ left: "55%", bottom: "4%", height: "54%", aspectRatio: "887 / 1774" }}
+        style={{ left: "55%", bottom: "4%", height: "54%", aspectRatio: "793 / 1983" }}
         image={ASSETS.beritFull}
         label="Berit"
         onClick={() => talkTo("berit")}
