@@ -996,18 +996,6 @@ function HarborScene({ foundItems, setDialog, onPickUpItem, onStartMission }) {
          style={{ backgroundImage: `url(${ASSETS.hamn})` }}>
 
       {/* === LEVANDE BAKGRUNDSELEMENT === */}
-      {/* Vattenglitter — bara på faktiska vatten-områden i bilden */}
-      {/* Hav i fjärran (mellan klippor och horisont) */}
-      <div className="td-harbor-shimmer" style={{ left: "45%", top: "38%" }} />
-      <div className="td-harbor-shimmer" style={{ left: "55%", top: "36%", animationDelay: "0.6s" }} />
-      <div className="td-harbor-shimmer" style={{ left: "65%", top: "37%", animationDelay: "1.2s" }} />
-      <div className="td-harbor-shimmer" style={{ left: "78%", top: "35%", animationDelay: "1.9s" }} />
-      <div className="td-harbor-shimmer" style={{ left: "88%", top: "37%", animationDelay: "0.9s" }} />
-      {/* Vatten höger nere (vid ekan/båten) */}
-      <div className="td-harbor-shimmer" style={{ left: "82%", top: "85%", animationDelay: "0.3s" }} />
-      <div className="td-harbor-shimmer" style={{ left: "92%", top: "82%", animationDelay: "2.5s" }} />
-      <div className="td-harbor-shimmer" style={{ left: "88%", top: "92%", animationDelay: "1.5s" }} />
-
       {/* Lyktornas glöd — uppe vid hamnkaptenens hus */}
       <div className="td-harbor-lantern" style={{ left: "8%", top: "33%" }} />
       <div className="td-harbor-lantern" style={{ left: "27%", top: "33%", animationDelay: "1.3s" }} />
@@ -1016,10 +1004,10 @@ function HarborScene({ foundItems, setDialog, onPickUpItem, onStartMission }) {
       {/* Fyrens blink i fjärran */}
       <div className="td-harbor-lighthouse" style={{ left: "82%", top: "26%" }} />
 
-      {/* Måsen på pållaren — rör på huvudet då och då (subtil) */}
+      {/* Måsen på pållaren */}
       <div className="td-harbor-seagull" style={{ left: "94%", top: "70%" }} />
 
-      {/* En fågel-silhuett som flyger förbi i fjärran */}
+      {/* Fågel-silhuett som flyger förbi i fjärran */}
       <svg className="td-harbor-bird-fly" viewBox="0 0 30 14" aria-hidden="true">
         <path d="M 3 8 Q 6 4, 9 8 Q 12 4, 15 8" stroke="#3a2a17"
               strokeWidth="1.5" fill="none" strokeLinecap="round" />
@@ -1027,9 +1015,9 @@ function HarborScene({ foundItems, setDialog, onPickUpItem, onStartMission }) {
 
       {/* === KLICKBARA KARAKTÄRER === */}
 
-      {/* Falk — huvudpersonen, central på kajen, mest framträdande */}
+      {/* Falk — huvudpersonen, längst fram och störst, central */}
       <HarborCharacter
-        style={{ left: "38%", bottom: "4%", height: "56%", aspectRatio: "793 / 1983" }}
+        style={{ left: "42%", bottom: "4%", height: "56%", aspectRatio: "793 / 1983" }}
         image={ASSETS.falkFull}
         label="Kapten Falk"
         onClick={() => talkTo("falk")}
@@ -1037,26 +1025,27 @@ function HarborScene({ foundItems, setDialog, onPickUpItem, onStartMission }) {
         smoking
       />
 
-      {/* Lasse — luggsligen vid hamnkaptenens hus, kikar nervöst */}
+      {/* Berit — spegelvänd så hon lutar mot kajens befintliga lådor */}
       <HarborCharacter
-        style={{ left: "6%", bottom: "4%", height: "48%", aspectRatio: "793 / 1983" }}
+        style={{ left: "60%", bottom: "4%", height: "50%", aspectRatio: "887 / 1774" }}
+        image={ASSETS.beritFull}
+        label="Berit"
+        onClick={() => talkTo("berit")}
+        mirror
+      />
+
+      {/* Lasse — vid huset, mindre och lite tillbaka (perspektiv) */}
+      <HarborCharacter
+        style={{ left: "7%", bottom: "6%", height: "46%", aspectRatio: "793 / 1983" }}
         image={ASSETS.lasseFull}
         label="???"
         onClick={() => talkTo("lasse")}
         suspicious
       />
 
-      {/* Berit — vid lådorna på högra delen av kajen */}
+      {/* Främlingen — längst tillbaka, minst (perspektiv = djup) */}
       <HarborCharacter
-        style={{ left: "53%", bottom: "4%", height: "50%", aspectRatio: "887 / 1774" }}
-        image={ASSETS.beritFull}
-        label="Berit"
-        onClick={() => talkTo("berit")}
-      />
-
-      {/* Främlingen — mellan Lasse och Falk, lite längre bort (mindre) */}
-      <HarborCharacter
-        style={{ left: "23%", bottom: "8%", height: "42%", aspectRatio: "793 / 1983" }}
+        style={{ left: "22%", bottom: "9%", height: "40%", aspectRatio: "793 / 1983" }}
         image={ASSETS.framlingFull}
         label="?"
         onClick={() => talkTo("framling")}
@@ -1075,10 +1064,10 @@ function HarborScene({ foundItems, setDialog, onPickUpItem, onStartMission }) {
 // ============================================================
 // HarborCharacter — full-body karaktär som står på kajen
 // ============================================================
-function HarborCharacter({ style, image, label, onClick, primary, suspicious, mystery, smoking }) {
+function HarborCharacter({ style, image, label, onClick, primary, suspicious, mystery, smoking, mirror }) {
   return (
     <button
-      className={`td-harbor-character ${primary ? "td-harbor-primary" : ""} ${suspicious ? "td-harbor-suspicious" : ""} ${mystery ? "td-harbor-mystery" : ""}`}
+      className={`td-harbor-character ${primary ? "td-harbor-primary" : ""} ${suspicious ? "td-harbor-suspicious" : ""} ${mystery ? "td-harbor-mystery" : ""} ${mirror ? "td-harbor-mirror" : ""}`}
       style={style}
       onClick={onClick}
       aria-label={label}
@@ -2895,6 +2884,11 @@ function Styles() {
         display: block;
         object-fit: contain;
         pointer-events: none;
+      }
+
+      /* Spegelvänd för Berit så hon lutar åt rätt håll mot kajens lådor */
+      .td-harbor-mirror .td-harbor-character-img {
+        transform: scaleX(-1);
       }
 
       /* Mark under karaktären — gulden glöd vid fötterna */
