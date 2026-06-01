@@ -986,8 +986,32 @@ function HarborScene({ foundItems, setDialog, onPickUpItem, onStartMission }) {
     <div className="td-scene-image"
          style={{ backgroundImage: `url(${ASSETS.hamn})` }}>
 
-      {/* Måsen på pållaren — bara visuell */}
-      {/* (finns redan i bilden) */}
+      {/* === LEVANDE BAKGRUNDSELEMENT === */}
+      {/* Vattenglitter över havet — flera punkter med olika fördröjning */}
+      <div className="td-harbor-shimmer" style={{ left: "55%", top: "48%" }} />
+      <div className="td-harbor-shimmer" style={{ left: "68%", top: "44%", animationDelay: "0.6s" }} />
+      <div className="td-harbor-shimmer" style={{ left: "78%", top: "50%", animationDelay: "1.2s" }} />
+      <div className="td-harbor-shimmer" style={{ left: "85%", top: "46%", animationDelay: "1.9s" }} />
+      <div className="td-harbor-shimmer" style={{ left: "62%", top: "53%", animationDelay: "0.3s" }} />
+      <div className="td-harbor-shimmer" style={{ left: "90%", top: "55%", animationDelay: "2.5s" }} />
+      <div className="td-harbor-shimmer" style={{ left: "73%", top: "57%", animationDelay: "1.5s" }} />
+
+      {/* Lyktornas glöd — uppe vid hamnkaptenens hus */}
+      <div className="td-harbor-lantern" style={{ left: "8%", top: "33%" }} />
+      <div className="td-harbor-lantern" style={{ left: "27%", top: "33%", animationDelay: "1.3s" }} />
+      <div className="td-harbor-lantern" style={{ left: "59%", top: "45%", animationDelay: "0.7s" }} />
+
+      {/* Fyrens blink i fjärran */}
+      <div className="td-harbor-lighthouse" style={{ left: "82%", top: "26%" }} />
+
+      {/* Måsen på pållaren — rör på huvudet då och då (subtil) */}
+      <div className="td-harbor-seagull" style={{ left: "94%", top: "70%" }} />
+
+      {/* En fågel-silhuett som flyger förbi i fjärran */}
+      <svg className="td-harbor-bird-fly" viewBox="0 0 30 14" aria-hidden="true">
+        <path d="M 3 8 Q 6 4, 9 8 Q 12 4, 15 8" stroke="#3a2a17"
+              strokeWidth="1.5" fill="none" strokeLinecap="round" />
+      </svg>
 
       {/* === KLICKBARA KARAKTÄRER === */}
 
@@ -998,6 +1022,7 @@ function HarborScene({ foundItems, setDialog, onPickUpItem, onStartMission }) {
         label="Kapten Falk"
         onClick={() => talkTo("falk")}
         primary
+        smoking
       />
 
       {/* Lasse — gömmer sig till vänster vid hamnkaptenens hus */}
@@ -1046,7 +1071,7 @@ function HarborScene({ foundItems, setDialog, onPickUpItem, onStartMission }) {
 // ============================================================
 // HarborCharacter — klickbar karaktär med liten porträtt-knapp
 // ============================================================
-function HarborCharacter({ style, portrait, label, onClick, primary, suspicious, mystery }) {
+function HarborCharacter({ style, portrait, label, onClick, primary, suspicious, mystery, smoking }) {
   return (
     <button
       className={`td-harbor-character ${primary ? "td-harbor-primary" : ""} ${suspicious ? "td-harbor-suspicious" : ""} ${mystery ? "td-harbor-mystery" : ""}`}
@@ -1058,6 +1083,13 @@ function HarborCharacter({ style, portrait, label, onClick, primary, suspicious,
       <span className="td-harbor-character-portrait">
         <img src={portrait} alt={label} />
       </span>
+      {smoking && (
+        <span className="td-harbor-smoke" aria-hidden="true">
+          <span className="td-harbor-smoke-puff td-harbor-smoke-1" />
+          <span className="td-harbor-smoke-puff td-harbor-smoke-2" />
+          <span className="td-harbor-smoke-puff td-harbor-smoke-3" />
+        </span>
+      )}
       <span className="td-harbor-character-tag">{label}</span>
     </button>
   );
@@ -2399,9 +2431,15 @@ function Styles() {
         align-items: flex-end;
         justify-content: center;
         transition: transform 0.2s ease;
+        animation: tdHarborBreathe 3.5s ease-in-out infinite;
+      }
+      @keyframes tdHarborBreathe {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-3px); }
       }
       .td-harbor-character:hover {
         transform: scale(1.05) translateY(-4px);
+        animation-play-state: paused;
       }
       .td-harbor-character:focus { outline: none; }
       .td-harbor-character:focus-visible {
@@ -2485,6 +2523,12 @@ function Styles() {
 
       .td-harbor-suspicious .td-harbor-character-portrait {
         filter: brightness(0.85);
+        animation: tdLasseNervous 4s ease-in-out infinite;
+      }
+      @keyframes tdLasseNervous {
+        0%, 40%, 100% { transform: rotate(0deg); }
+        50%, 60% { transform: rotate(-4deg); }
+        70%, 80% { transform: rotate(4deg); }
       }
       .td-harbor-suspicious .td-harbor-character-tag {
         background: #d4c098;
@@ -2494,10 +2538,164 @@ function Styles() {
       .td-harbor-mystery .td-harbor-character-portrait {
         border-color: #5a4a7a;
         filter: brightness(0.9) saturate(0.8);
+        animation: tdMysterySway 6s ease-in-out infinite;
+      }
+      @keyframes tdMysterySway {
+        0%, 100% { transform: rotate(-2deg); }
+        50% { transform: rotate(2deg); }
       }
       .td-harbor-mystery .td-harbor-character-tag {
         background: #c4b6d4;
         color: #3a2a4a;
+      }
+
+      /* === FALKS PIPRÖK === */
+      .td-harbor-smoke {
+        position: absolute;
+        left: 65%;
+        top: 50%;
+        width: 30px;
+        height: 60px;
+        pointer-events: none;
+        z-index: 2;
+      }
+      .td-harbor-smoke-puff {
+        position: absolute;
+        bottom: 0;
+        left: 50%;
+        width: 12px;
+        height: 12px;
+        background: radial-gradient(circle,
+          rgba(220, 210, 200, 0.85) 0%,
+          rgba(220, 210, 200, 0) 70%);
+        border-radius: 50%;
+        opacity: 0;
+        animation: tdSmokeRise 4s ease-out infinite;
+      }
+      .td-harbor-smoke-1 { animation-delay: 0s; }
+      .td-harbor-smoke-2 { animation-delay: 1.3s; }
+      .td-harbor-smoke-3 { animation-delay: 2.6s; }
+      @keyframes tdSmokeRise {
+        0% {
+          transform: translate(-50%, 0) scale(0.4);
+          opacity: 0;
+        }
+        15% { opacity: 0.7; }
+        60% {
+          transform: translate(-30%, -40px) scale(1.3);
+          opacity: 0.5;
+        }
+        100% {
+          transform: translate(-10%, -80px) scale(2);
+          opacity: 0;
+        }
+      }
+
+      /* === VATTENGLITTER === */
+      .td-harbor-shimmer {
+        position: absolute;
+        width: 5px;
+        height: 5px;
+        background: rgba(255, 255, 255, 0.9);
+        border-radius: 50%;
+        pointer-events: none;
+        z-index: 2;
+        animation: tdHarborShimmer 3s ease-in-out infinite;
+        box-shadow: 0 0 6px rgba(255, 240, 200, 0.7);
+      }
+      @keyframes tdHarborShimmer {
+        0%, 100% { opacity: 0; transform: scale(0.3); }
+        50% { opacity: 1; transform: scale(1.4); }
+      }
+
+      /* === LYKTOR — varma puls === */
+      .td-harbor-lantern {
+        position: absolute;
+        width: 24px;
+        height: 24px;
+        pointer-events: none;
+        z-index: 2;
+        background: radial-gradient(circle,
+          rgba(253, 201, 77, 0.6) 0%,
+          rgba(253, 201, 77, 0.15) 40%,
+          rgba(253, 201, 77, 0) 80%);
+        border-radius: 50%;
+        animation: tdLanternPulse 3s ease-in-out infinite;
+        transform: translate(-50%, -50%);
+      }
+      @keyframes tdLanternPulse {
+        0%, 100% { opacity: 0.5; transform: translate(-50%, -50%) scale(0.9); }
+        50% { opacity: 0.95; transform: translate(-50%, -50%) scale(1.15); }
+      }
+
+      /* === FYRENS BLINK === */
+      .td-harbor-lighthouse {
+        position: absolute;
+        width: 18px;
+        height: 18px;
+        pointer-events: none;
+        z-index: 2;
+        background: radial-gradient(circle,
+          rgba(253, 201, 77, 0.95) 0%,
+          rgba(253, 201, 77, 0.3) 40%,
+          rgba(253, 201, 77, 0) 80%);
+        border-radius: 50%;
+        animation: tdHarborLighthouseBlink 5s ease-in-out infinite;
+        transform: translate(-50%, -50%);
+      }
+      @keyframes tdHarborLighthouseBlink {
+        0%, 88%, 100% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+        4%, 12% { opacity: 1; transform: translate(-50%, -50%) scale(1.3); }
+        20% { opacity: 0.2; }
+        30%, 40% { opacity: 0.9; transform: translate(-50%, -50%) scale(1.1); }
+        55% { opacity: 0; }
+      }
+
+      /* === MÅSE PÅ PÅLLARE === */
+      .td-harbor-seagull {
+        position: absolute;
+        width: 18px;
+        height: 18px;
+        pointer-events: none;
+        z-index: 3;
+        animation: tdSeagullPeck 6s ease-in-out infinite;
+        transform-origin: bottom center;
+      }
+      .td-harbor-seagull::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(ellipse 60% 40% at 50% 40%,
+          rgba(0, 0, 0, 0.15) 0%, rgba(0, 0, 0, 0) 80%);
+        border-radius: 50%;
+      }
+      @keyframes tdSeagullPeck {
+        0%, 70%, 100% { transform: rotate(0deg); }
+        75%, 78% { transform: rotate(-15deg); }
+        82%, 85% { transform: rotate(0deg); }
+        88% { transform: rotate(-12deg); }
+        92% { transform: rotate(0deg); }
+      }
+
+      /* === FÅGEL SOM FLYGER FÖRBI === */
+      .td-harbor-bird-fly {
+        position: absolute;
+        top: 18%;
+        left: -5%;
+        width: 28px;
+        height: 14px;
+        pointer-events: none;
+        z-index: 2;
+        opacity: 0.55;
+        animation: tdHarborBirdFly 22s linear infinite;
+        animation-delay: 8s;
+      }
+      @keyframes tdHarborBirdFly {
+        0% { left: -5%; top: 18%; }
+        25% { top: 14%; }
+        50% { top: 20%; }
+        75% { top: 15%; }
+        100% { left: 105%; top: 18%; }
       }
 
       /* === EKAN — startknapp === */
