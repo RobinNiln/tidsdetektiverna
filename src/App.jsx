@@ -1262,10 +1262,10 @@ function BoatGame({ onComplete, onBack }) {
           d.angle += turn;
 
           // Acceleration — bara om vi är någotsånär rätt riktad
-          const maxSpeed = 8.5; // procent/sek (puttrande gammal eka)
+          const maxSpeed = 6; // procent/sek (puttrande gammal eka)
           const aimedOk = Math.abs(diff) < 60;
           if (aimedOk) {
-            d.speed = Math.min(maxSpeed, d.speed + 6 * dt);
+            d.speed = Math.min(maxSpeed, d.speed + 4 * dt);
           } else {
             d.speed = Math.max(0, d.speed - 3 * dt);
           }
@@ -1407,8 +1407,7 @@ function BoatGame({ onComplete, onBack }) {
           <div
             className="td-boat-world"
             style={{
-              left: `${wL}%`,
-              top: `${wT}%`,
+              transform: `translate3d(${wL / ZOOM}%, ${wT / ZOOM}%, 0)`,
               width: `${ZOOM * 100}%`,
               height: `${ZOOM * 100}%`,
               backgroundImage: `url(${ASSETS.vik})`,
@@ -3164,11 +3163,13 @@ function Styles() {
       /* === WORLD — den faktiska kartan som rullar med båten === */
       .td-boat-world {
         position: absolute;
+        top: 0;
+        left: 0;
         background-size: cover;
         background-position: center;
         background-repeat: no-repeat;
-        transition: left 0.08s ease-out, top 0.08s ease-out;
-        will-change: left, top;
+        will-change: transform;
+        transform: translate3d(0, 0, 0);
       }
 
       /* === BÅTEN (sprite) === */
