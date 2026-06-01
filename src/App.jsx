@@ -23,6 +23,14 @@ const ASSETS = {
   leaf1: "/tidsdetektiverna/leaf1.png",
   leaf2: "/tidsdetektiverna/Leaf2.png",
   leaf3: "/tidsdetektiverna/leaf3.png",
+  // Hamnen
+  hamn: "/tidsdetektiverna/hamn.jpg",
+  falk: "/tidsdetektiverna/falk.jpg",
+  lasse: "/tidsdetektiverna/lasse.jpg",
+  berit: "/tidsdetektiverna/berit.jpg",
+  framling: "/tidsdetektiverna/framling.jpg",
+  vik: "/tidsdetektiverna/vik.jpg",
+  eka: "/tidsdetektiverna/eka.png",
 };
 
 // Hotspot-koordinater + ankarpunkt för spotlight-cirkeln (centrum)
@@ -50,6 +58,13 @@ const HOTSPOTS = {
     character: null,
     x: 41, y: 22, w: 22, h: 28,
     cx: 52, cy: 36,
+  },
+  harbor: {
+    key: "harbor", title: "Hamnen", short: "Bonus-uppdrag",
+    character: "falk", characterName: "Kapten Falk",
+    x: 1, y: 14, w: 14, h: 32,
+    cx: 8, cy: 30,
+    bonus: true, // räknas inte som stjärnuppdrag
   },
 };
 
@@ -326,7 +341,7 @@ function CharacterPortrait({ src, name }) {
 // KARTAN — Spotlight + Förstoringsglas + Gömd katt
 // ============================================================
 function MapView({ completed, stars, allDone, hovered, setHovered, onPick, onReset }) {
-  const visibleHotspots = ["reading", "clock", "puzzle"];
+  const visibleHotspots = ["reading", "clock", "puzzle", "harbor"];
   const mapRef = useRef(null);
 
   // === Förstoringsglas-läge ===
@@ -618,6 +633,12 @@ function InteriorView({ locationKey, completed, foundItems, dialog, setDialog,
         setDialog={setDialog} onPickUpItem={onPickUpItem}
         onStartMission={onStartMission} setDetailView={setDetailView} />
     );
+  } else if (locationKey === "harbor") {
+    scene = (
+      <HarborScene foundItems={foundItems}
+        setDialog={setDialog} onPickUpItem={onPickUpItem}
+        onStartMission={onStartMission} />
+    );
   } else {
     scene = <ComingSoonScene title={hotspot.title} onStartMission={onStartMission} />;
   }
@@ -630,9 +651,37 @@ function InteriorView({ locationKey, completed, foundItems, dialog, setDialog,
       </div>
       <div className="td-interior-stage">{scene}</div>
       {dialog && (
-        <div className="td-dialog-bubble" onClick={() => setDialog(null)}>
-          <p>{dialog}</p>
-          <div className="td-dialog-tip">Klicka för att stänga</div>
+        <div className="td-dialog-bubble"
+             onClick={typeof dialog === "object" && dialog.action ? null : () => setDialog(null)}>
+          {typeof dialog === "object" ? (
+            <>
+              <div className="td-dialog-header">
+                {dialog.portrait && (
+                  <div className="td-dialog-portrait">
+                    <img src={dialog.portrait} alt={dialog.name || ""} />
+                  </div>
+                )}
+                {dialog.name && <strong className="td-dialog-name">{dialog.name}</strong>}
+              </div>
+              <p>{dialog.text}</p>
+              {dialog.action ? (
+                <button className="td-btn td-btn-gold"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          dialog.action.onClick();
+                        }}>
+                  {dialog.action.label}
+                </button>
+              ) : (
+                <div className="td-dialog-tip">Klicka för att stänga</div>
+              )}
+            </>
+          ) : (
+            <>
+              <p>{dialog}</p>
+              <div className="td-dialog-tip">Klicka för att stänga</div>
+            </>
+          )}
         </div>
       )}
       {detailView && (
@@ -850,7 +899,171 @@ function PuzzleWorkshopScene({ completed, foundItems, setDialog, onPickUpItem,
   );
 }
 
-function TaggedHotspot({ style, tagPosition, tagRotation = -2, onClick, label,
+// ============================================================
+// HAMNENS SCEN
+// ============================================================
+const HARBOR_DIALOGS = {
+  falk: {
+    portrait: "falk",
+    name: "Kapten Falk",
+    initial: "Ahoj där, ung detektiv! Jag är Kapten Falk. Lyssna nu — jag har ett paket som måste till fyrvaktaren ute på Yttre Skäret. Min gamla rygg är inte vad den varit, men min eka putt-putt-puttrar fortfarande! Vill du ta paketet dit och hämta hem ett brev jag väntar på?",
+    accepted: "Bra! Hoppa i ekan vid bryggan. Akta dig för reven och var rädd om virvelvattnet... och de där flytande stockarna. Färden går ut, sedan tillbaka. Lycka till, sjöman!",
+    completed: "Du klarade det! Här, behåll den här gamla nyckeln som tack. Jag vet inte vad den går till, men min farfar sa alltid att den skulle vara värdefull någon dag.",
+  },
+  lasse: {
+    portrait: "lasse",
+    name: "Lurige Lasse",
+    initial: "Pssst! Du där! Vill du köpa en KARTA till piratskatten? Bara tre guldmynt! Helt äkta, det lovar jag! ...okej okej, två mynt. Men då får du också en pyttesmå burk med 'magisk' sand. Helt äkta! Det lovar jag!",
+    second: "Vill du köpa en hatt? Den är mycket fin. Bara fyra mynt. ...okej tre. Den ramlade av en sjökapten igår. Eller jo, helt äkta är den ju.",
+    third: "Du verkar smart. Vill du köpa en TIDSMASKIN-RITNING? Helt äkta! Jag hittade den i havet. Hav är pålitliga. ...nej? Okej.",
+  },
+  berit: {
+    portrait: "berit",
+    name: "Berit",
+    initial: "Hej hej! Jag är Berit, jag jobbar i hamnen. Lyfter lådor, knyter knopar, allt sånt. Om du vill veta något i den här hamnen — fråga mig. Jag ser allt och hör mer. Falk är en god man förresten. Och håll dig borta från Lasse, han säljer skräp.",
+    second: "Visste du att fyrvaktaren bara väntar brev från Falk en gång om året? Något viktigt på gång där.",
+    third: "Mina armar är trötta. Femton lådor idag. Men det är klart, någon måste göra jobbet!",
+  },
+  framling: {
+    portrait: "framling",
+    name: "Den mystiska främlingen",
+    initial: "*Främlingen tittar upp från sin bok och ler svagt.* Vägar korsas där sjön möter himlen. Jag har sett tre stjärnor falla över denna stad. Snart blir det fyra. Den som söker tiden ska först förstå vattnet.",
+    second: "*Hen bläddrar i sin bok.* Stockarna i viken... de driver inte slumpmässigt. Tiden själv har glömt åt vilket håll de ska.",
+    third: "*Främlingen tystnar och pekar mot horisonten utan att säga något.*",
+  },
+};
+
+function HarborScene({ foundItems, setDialog, onPickUpItem, onStartMission }) {
+  // Räkna hur många gånger varje karaktär klickats (för progressiva dialoger)
+  const clickCounts = useRef({ lasse: 0, berit: 0, framling: 0 });
+  const [missionAccepted, setMissionAccepted] = useState(false);
+  const harborKeyFound = foundItems.includes("harbor:key");
+
+  function talkTo(charKey) {
+    const data = HARBOR_DIALOGS[charKey];
+    let text;
+    if (charKey === "falk") {
+      if (harborKeyFound) text = data.completed;
+      else if (missionAccepted) text = data.accepted;
+      else text = data.initial;
+    } else {
+      // Lasse, Berit, Främling — cykla genom dialoger
+      const count = clickCounts.current[charKey];
+      if (count === 0) text = data.initial;
+      else if (count === 1) text = data.second;
+      else text = data.third;
+      clickCounts.current[charKey] = Math.min(count + 1, 2);
+    }
+    setDialog({
+      portrait: ASSETS[data.portrait],
+      name: data.name,
+      text,
+    });
+  }
+
+  function startBoatGame() {
+    setMissionAccepted(true);
+    // För nu — placeholder. Båtspelet kommer i steg 2.
+    setDialog({
+      portrait: ASSETS.falk,
+      name: "Kapten Falk",
+      text: "Båtspelet kommer i nästa steg! För nu — säg \"Klart!\" så låtsas vi att du seglade till fyren och tillbaka.",
+      action: {
+        label: "✓ Klart! (för testning)",
+        onClick: () => {
+          if (!harborKeyFound) onPickUpItem("harbor:key");
+          setDialog({
+            portrait: ASSETS.falk,
+            name: "Kapten Falk",
+            text: HARBOR_DIALOGS.falk.completed,
+          });
+        },
+      },
+    });
+  }
+
+  return (
+    <div className="td-scene-image"
+         style={{ backgroundImage: `url(${ASSETS.hamn})` }}>
+
+      {/* Måsen på pållaren — bara visuell */}
+      {/* (finns redan i bilden) */}
+
+      {/* === KLICKBARA KARAKTÄRER === */}
+
+      {/* Falk — står på kajen i mitten, framför bommen */}
+      <HarborCharacter
+        style={{ left: "45%", top: "55%", width: "10%", height: "30%" }}
+        portrait={ASSETS.falk}
+        label="Kapten Falk"
+        onClick={() => talkTo("falk")}
+        primary
+      />
+
+      {/* Lasse — gömmer sig till vänster vid hamnkaptenens hus */}
+      <HarborCharacter
+        style={{ left: "16%", top: "58%", width: "9%", height: "26%" }}
+        portrait={ASSETS.lasse}
+        label="???"
+        onClick={() => talkTo("lasse")}
+        suspicious
+      />
+
+      {/* Berit — vid lådorna på högra delen av kajen */}
+      <HarborCharacter
+        style={{ left: "62%", top: "55%", width: "9%", height: "28%" }}
+        portrait={ASSETS.berit}
+        label="Berit"
+        onClick={() => talkTo("berit")}
+      />
+
+      {/* Främlingen — vid kanten av kajen, lite avsides */}
+      <HarborCharacter
+        style={{ left: "30%", top: "58%", width: "8%", height: "26%" }}
+        portrait={ASSETS.framling}
+        label="?"
+        onClick={() => talkTo("framling")}
+        mystery
+      />
+
+      {/* === EKAN — startar båtspelet === */}
+      {!harborKeyFound && missionAccepted && (
+        <button className="td-boat-launch"
+                onClick={startBoatGame}
+                aria-label="Hoppa i ekan">
+          <span className="td-boat-launch-glow" />
+          <span className="td-boat-launch-tag">▸ Ge dig av!</span>
+        </button>
+      )}
+
+      <div className="td-scene-hint">
+        Prata med folket på hamnen
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// HarborCharacter — klickbar karaktär med liten porträtt-knapp
+// ============================================================
+function HarborCharacter({ style, portrait, label, onClick, primary, suspicious, mystery }) {
+  return (
+    <button
+      className={`td-harbor-character ${primary ? "td-harbor-primary" : ""} ${suspicious ? "td-harbor-suspicious" : ""} ${mystery ? "td-harbor-mystery" : ""}`}
+      style={style}
+      onClick={onClick}
+      aria-label={label}
+    >
+      <span className="td-harbor-character-glow" />
+      <span className="td-harbor-character-portrait">
+        <img src={portrait} alt={label} />
+      </span>
+      <span className="td-harbor-character-tag">{label}</span>
+    </button>
+  );
+}
+
+
                           primary, treasure, ariaLabel }) {
   return (
     <button
@@ -2173,6 +2386,196 @@ function Styles() {
         pointer-events: none; white-space: nowrap; z-index: 5;
       }
 
+      /* === HAMNENS KARAKTÄRER === */
+      .td-harbor-character {
+        position: absolute;
+        background: transparent;
+        border: none;
+        cursor: pointer;
+        padding: 0;
+        z-index: 4;
+        display: flex;
+        align-items: flex-end;
+        justify-content: center;
+        transition: transform 0.2s ease;
+      }
+      .td-harbor-character:hover {
+        transform: scale(1.05) translateY(-4px);
+      }
+      .td-harbor-character:focus { outline: none; }
+      .td-harbor-character:focus-visible {
+        outline: 3px dashed rgba(253, 201, 77, 0.7);
+        outline-offset: -3px;
+        border-radius: 12px;
+      }
+
+      .td-harbor-character-glow {
+        position: absolute;
+        bottom: -10%;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 110%;
+        height: 30%;
+        background: radial-gradient(
+          ellipse at center,
+          rgba(253, 201, 77, 0.5) 0%,
+          rgba(253, 201, 77, 0.15) 50%,
+          rgba(253, 201, 77, 0) 100%
+        );
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.25s ease;
+      }
+      .td-harbor-character:hover .td-harbor-character-glow {
+        opacity: 1;
+      }
+
+      .td-harbor-character-portrait {
+        position: relative;
+        width: 80%;
+        aspect-ratio: 1 / 1;
+        border-radius: 50%;
+        overflow: hidden;
+        border: 3px solid var(--ink);
+        background: var(--cream);
+        box-shadow: 3px 3px 0 var(--ink), 0 0 15px rgba(0, 0, 0, 0.4);
+        transition: box-shadow 0.25s ease, border-color 0.25s ease;
+        margin-bottom: 15%;
+      }
+      .td-harbor-character-portrait img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+      }
+      .td-harbor-character:hover .td-harbor-character-portrait {
+        box-shadow: 4px 4px 0 var(--ink), 0 0 25px rgba(253, 201, 77, 0.7);
+      }
+
+      .td-harbor-character-tag {
+        position: absolute;
+        bottom: 0;
+        left: 50%;
+        transform: translateX(-50%) rotate(-2deg);
+        background: var(--cream);
+        border: 2px solid var(--ink);
+        padding: 2px 10px;
+        font-weight: bold;
+        font-size: 12px;
+        color: var(--ink);
+        font-family: 'Georgia', serif;
+        white-space: nowrap;
+        box-shadow: 2px 2px 0 var(--ink);
+        pointer-events: none;
+      }
+
+      /* Specialvarianter */
+      .td-harbor-primary .td-harbor-character-portrait {
+        border-color: var(--gold);
+        animation: tdHarborPrimaryPulse 2s ease-in-out infinite;
+      }
+      .td-harbor-primary .td-harbor-character-tag {
+        background: var(--gold);
+      }
+      @keyframes tdHarborPrimaryPulse {
+        0%, 100% { box-shadow: 3px 3px 0 var(--ink), 0 0 15px rgba(253, 201, 77, 0.4); }
+        50% { box-shadow: 3px 3px 0 var(--ink), 0 0 25px rgba(253, 201, 77, 0.8); }
+      }
+
+      .td-harbor-suspicious .td-harbor-character-portrait {
+        filter: brightness(0.85);
+      }
+      .td-harbor-suspicious .td-harbor-character-tag {
+        background: #d4c098;
+        font-style: italic;
+      }
+
+      .td-harbor-mystery .td-harbor-character-portrait {
+        border-color: #5a4a7a;
+        filter: brightness(0.9) saturate(0.8);
+      }
+      .td-harbor-mystery .td-harbor-character-tag {
+        background: #c4b6d4;
+        color: #3a2a4a;
+      }
+
+      /* === EKAN — startknapp === */
+      .td-boat-launch {
+        position: absolute;
+        right: 4%; bottom: 15%;
+        width: 14%;
+        height: 18%;
+        background: transparent;
+        border: none;
+        cursor: pointer;
+        padding: 0;
+        z-index: 5;
+        animation: tdBoatBob 2.5s ease-in-out infinite;
+      }
+      @keyframes tdBoatBob {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-4px); }
+      }
+      .td-boat-launch-glow {
+        position: absolute;
+        inset: -10%;
+        background: radial-gradient(
+          ellipse at center,
+          rgba(253, 201, 77, 0.5) 0%,
+          rgba(253, 201, 77, 0) 70%
+        );
+        pointer-events: none;
+        animation: tdValvePulse 2s ease-in-out infinite;
+      }
+      .td-boat-launch-tag {
+        position: absolute;
+        top: -25%; left: 50%;
+        transform: translateX(-50%) rotate(-2deg);
+        background: var(--red);
+        color: var(--cream);
+        border: 2.5px solid var(--ink);
+        padding: 4px 14px;
+        font-weight: bold;
+        font-size: 14px;
+        font-family: 'Georgia', serif;
+        white-space: nowrap;
+        box-shadow: 3px 3px 0 var(--ink);
+        animation: tdTagWiggle 3s ease-in-out infinite;
+      }
+
+      /* === DIALOG MED PORTRÄTT === */
+      .td-dialog-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 10px;
+        padding-bottom: 10px;
+        border-bottom: 2px dashed var(--ink);
+      }
+      .td-dialog-portrait {
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        overflow: hidden;
+        border: 2.5px solid var(--ink);
+        flex-shrink: 0;
+        box-shadow: 2px 2px 0 var(--ink);
+        background: var(--paper);
+      }
+      .td-dialog-portrait img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+      }
+      .td-dialog-name {
+        font-size: 18px;
+        color: var(--red);
+        font-weight: bold;
+        letter-spacing: 0.5px;
+      }
+
+      /* === BEFINTLIG DIALOG-BUBBLA === */
       .td-dialog-bubble {
         position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
         background: var(--cream);
