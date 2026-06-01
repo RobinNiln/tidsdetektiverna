@@ -1087,16 +1087,35 @@ const HARBOR_DIALOGS = {
 };
 
 function HarborScene({ foundItems, setDialog, onPickUpItem, onStartMission }) {
-  // Räkna hur många gånger varje karaktär klickats (för progressiva dialoger)
-  const clickCounts = useRef({ lasse: 0, berit: 0, framling: 0 });
   const [missionAccepted, setMissionAccepted] = useState(false);
   const harborKeyFound = foundItems.includes("harbor:key");
 
+  // Visa en specifik dialog i en cykel-karaktärs sekvens (Lasse, Berit, Främlingen)
+  // — Med "Nästa →"-knapp om det finns mer att säga
+  function showCycleDialog(charKey, dialogIndex) {
+    const data = HARBOR_DIALOGS[charKey];
+    const dialogs = [data.initial, data.second, data.third];
+    const text = dialogs[dialogIndex];
+    const hasNext = dialogIndex < dialogs.length - 1;
+
+    setDialog({
+      portrait: ASSETS[data.portrait],
+      name: data.name,
+      text,
+      action: hasNext
+        ? {
+            label: "Nästa →",
+            onClick: () => showCycleDialog(charKey, dialogIndex + 1),
+          }
+        : null,
+    });
+  }
+
   function talkTo(charKey) {
     const data = HARBOR_DIALOGS[charKey];
-    let text;
-    let action;
     if (charKey === "falk") {
+      let text;
+      let action;
       if (harborKeyFound) {
         text = data.completed;
       } else if (missionAccepted) {
@@ -1106,20 +1125,16 @@ function HarborScene({ foundItems, setDialog, onPickUpItem, onStartMission }) {
         text = data.initial;
         action = { label: "▸ Jag tar uppdraget!", onClick: startBoatGame };
       }
+      setDialog({
+        portrait: ASSETS[data.portrait],
+        name: data.name,
+        text,
+        action,
+      });
     } else {
-      // Lasse, Berit, Främling — cykla genom dialoger
-      const count = clickCounts.current[charKey];
-      if (count === 0) text = data.initial;
-      else if (count === 1) text = data.second;
-      else text = data.third;
-      clickCounts.current[charKey] = Math.min(count + 1, 2);
+      // Cykel-karaktärer: börja från första dialog med "Nästa →"-knapp
+      showCycleDialog(charKey, 0);
     }
-    setDialog({
-      portrait: ASSETS[data.portrait],
-      name: data.name,
-      text,
-      action,
-    });
   }
 
   function startBoatGame() {
