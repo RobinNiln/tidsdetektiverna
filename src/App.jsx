@@ -25,7 +25,6 @@ const ASSETS = {
   leaf3: "/tidsdetektiverna/leaf3.png",
   // Hamnen
   hamn: "/tidsdetektiverna/hamn.jpg",
-  hamnVideo: "/tidsdetektiverna/hamn.mp4",
   falk: "/tidsdetektiverna/falk.jpg",
   lasse: "/tidsdetektiverna/lasse.jpg",
   berit: "/tidsdetektiverna/berit.jpg",
@@ -984,30 +983,39 @@ function HarborScene({ foundItems, setDialog, onPickUpItem, onStartMission }) {
   }
 
   return (
-    <div className="td-scene-image td-scene-with-video"
+    <div className="td-scene-image"
          style={{ backgroundImage: `url(${ASSETS.hamn})` }}>
 
-      {/* Bakgrundsvideo — vattnet rör sig, måsar flyger */}
-      <video
-        className="td-scene-bg-video"
-        src={ASSETS.hamnVideo}
-        autoPlay
-        muted
-        loop
-        playsInline
-        aria-hidden="true"
-      />
-
       {/* === LEVANDE BAKGRUNDSELEMENT === */}
-      {/* (Vatten + måsar + fyr finns redan i videon — vi behåller bara lyktorna) */}
+      {/* Vattenglitter över havet — flera punkter med olika fördröjning */}
+      <div className="td-harbor-shimmer" style={{ left: "55%", top: "48%" }} />
+      <div className="td-harbor-shimmer" style={{ left: "68%", top: "44%", animationDelay: "0.6s" }} />
+      <div className="td-harbor-shimmer" style={{ left: "78%", top: "50%", animationDelay: "1.2s" }} />
+      <div className="td-harbor-shimmer" style={{ left: "85%", top: "46%", animationDelay: "1.9s" }} />
+      <div className="td-harbor-shimmer" style={{ left: "62%", top: "53%", animationDelay: "0.3s" }} />
+      <div className="td-harbor-shimmer" style={{ left: "90%", top: "55%", animationDelay: "2.5s" }} />
+      <div className="td-harbor-shimmer" style={{ left: "73%", top: "57%", animationDelay: "1.5s" }} />
 
       {/* Lyktornas glöd — uppe vid hamnkaptenens hus */}
       <div className="td-harbor-lantern" style={{ left: "8%", top: "33%" }} />
       <div className="td-harbor-lantern" style={{ left: "27%", top: "33%", animationDelay: "1.3s" }} />
+      <div className="td-harbor-lantern" style={{ left: "59%", top: "45%", animationDelay: "0.7s" }} />
+
+      {/* Fyrens blink i fjärran */}
+      <div className="td-harbor-lighthouse" style={{ left: "82%", top: "26%" }} />
+
+      {/* Måsen på pållaren — rör på huvudet då och då (subtil) */}
+      <div className="td-harbor-seagull" style={{ left: "94%", top: "70%" }} />
+
+      {/* En fågel-silhuett som flyger förbi i fjärran */}
+      <svg className="td-harbor-bird-fly" viewBox="0 0 30 14" aria-hidden="true">
+        <path d="M 3 8 Q 6 4, 9 8 Q 12 4, 15 8" stroke="#3a2a17"
+              strokeWidth="1.5" fill="none" strokeLinecap="round" />
+      </svg>
 
       {/* === KLICKBARA KARAKTÄRER === */}
 
-      {/* Falk — står på kajen i mitten */}
+      {/* Falk — står på kajen i mitten, framför bommen */}
       <HarborCharacter
         style={{ left: "45%", top: "55%", width: "10%", height: "30%" }}
         portrait={ASSETS.falk}
@@ -1026,9 +1034,9 @@ function HarborScene({ foundItems, setDialog, onPickUpItem, onStartMission }) {
         suspicious
       />
 
-      {/* Berit — står ute på bryggan */}
+      {/* Berit — vid lådorna på högra delen av kajen */}
       <HarborCharacter
-        style={{ left: "60%", top: "60%", width: "9%", height: "26%" }}
+        style={{ left: "62%", top: "55%", width: "9%", height: "28%" }}
         portrait={ASSETS.berit}
         label="Berit"
         onClick={() => talkTo("berit")}
@@ -2412,20 +2420,6 @@ function Styles() {
       }
 
       /* === HAMNENS KARAKTÄRER === */
-      .td-scene-with-video {
-        position: relative;
-        overflow: hidden;
-      }
-      .td-scene-bg-video {
-        position: absolute;
-        inset: 0;
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        z-index: 0;
-        pointer-events: none;
-      }
-
       .td-harbor-character {
         position: absolute;
         background: transparent;
