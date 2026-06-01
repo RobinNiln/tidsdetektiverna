@@ -1106,26 +1106,61 @@ const BOAT_TARGETS = {
 const BOAT_WHIRLPOOL = { x: 42, y: 32, r: 9, pull: 10, spin: 90 };
 
 const BOAT_OBSTACLES = [
-  // Större öar
+  // === Större öar i mitten ===
   { x: 23, y: 38, r: 9, msg: "AJ! En ö i vägen!" },
   { x: 62, y: 55, r: 9, msg: "AJ! Pang i ön!" },
-  // Rev (mörkare områden i vattnet)
+
+  // === Rev (mörkare områden i vattnet) ===
   { x: 35, y: 25, r: 5, msg: "AJ! Ett rev!" },
   { x: 48, y: 22, r: 4, msg: "AJ! Stenar under ytan!" },
   { x: 75, y: 30, r: 4, msg: "AJ! Rev!" },
-  { x: 18, y: 25, r: 4, msg: "AJ! Klippor!" },
   { x: 32, y: 55, r: 5, msg: "AJ! Grunt vatten!" },
   { x: 78, y: 42, r: 4, msg: "AJ! Rev!" },
   { x: 30, y: 78, r: 5, msg: "AJ! Stenar!" },
   { x: 42, y: 75, r: 4, msg: "AJ! Rev under båten!" },
   { x: 55, y: 70, r: 4, msg: "AJ! Vass sten!" },
   { x: 75, y: 70, r: 5, msg: "AJ! Klippor!" },
-  // Flytande stockar (statiska för nu)
+
+  // === Flytande stockar ===
   { x: 43, y: 28, r: 2.5, msg: "AJ! En flytande stock!" },
   { x: 62, y: 38, r: 2.5, msg: "AJ! En stock!" },
   { x: 75, y: 42, r: 2.5, msg: "AJ! En stock!" },
   { x: 50, y: 55, r: 2.5, msg: "AJ! En stock!" },
   { x: 43, y: 62, r: 2.5, msg: "AJ! En stock!" },
+
+  // === Vänster strand (uppifrån ner) ===
+  { x: 7, y: 12, r: 5, msg: "AJ! Stranden!" },
+  { x: 6, y: 22, r: 4, msg: "AJ! Klippor vid stranden!" },
+  { x: 6, y: 32, r: 4, msg: "AJ! Stranden!" },
+  { x: 6, y: 45, r: 4, msg: "AJ! Stenig strand!" },
+  { x: 8, y: 58, r: 4, msg: "AJ! Stranden!" },
+  { x: 6, y: 70, r: 4, msg: "AJ! Stranden!" },
+  { x: 9, y: 82, r: 4, msg: "AJ! Strandkanten!" },
+
+  // === Höger strand ===
+  { x: 92, y: 25, r: 4, msg: "AJ! Klippor!" },
+  { x: 93, y: 35, r: 4, msg: "AJ! Stranden!" },
+  { x: 92, y: 48, r: 4, msg: "AJ! Stranden!" },
+  { x: 93, y: 60, r: 4, msg: "AJ! Stranden!" },
+  { x: 92, y: 72, r: 4, msg: "AJ! Stranden!" },
+  { x: 91, y: 84, r: 4, msg: "AJ! Strandkanten!" },
+
+  // === Övre strand (utöver fyrön) ===
+  { x: 14, y: 4, r: 4, msg: "AJ! Stranden!" },
+  { x: 28, y: 3, r: 4, msg: "AJ! Stranden!" },
+  { x: 45, y: 4, r: 4, msg: "AJ! Stranden!" },
+  { x: 60, y: 3, r: 4, msg: "AJ! Stranden!" },
+
+  // === Nedre strand (utöver bryggan) ===
+  { x: 18, y: 92, r: 4, msg: "AJ! Stranden!" },
+  { x: 30, y: 93, r: 4, msg: "AJ! Stranden!" },
+  { x: 65, y: 93, r: 4, msg: "AJ! Stranden!" },
+  { x: 80, y: 92, r: 4, msg: "AJ! Stranden!" },
+
+  // === Bryggan i hamnen — hindrar att köra in i sidorna av bryggan ===
+  // (men hamn-målet vid (48, 88) ligger framför bryggan så man kan nå det)
+  { x: 38, y: 91, r: 3, msg: "AJ! Bryggan!" },
+  { x: 58, y: 91, r: 3, msg: "AJ! Bryggan!" },
 ];
 
 function BoatGame({ onComplete, onBack }) {
@@ -1135,7 +1170,7 @@ function BoatGame({ onComplete, onBack }) {
   // Allt snabbt-ändrande data lagras i ref för att undvika
   // React-rerendering varje frame
   const dataRef = useRef({
-    x: 48, y: 84,        // båtens position (procent)
+    x: 45, y: 78,        // båtens startposition (i öppet vatten ovanför bryggan)
     angle: 0,            // 0 = uppåt
     speed: 0,
     target: null,        // {x, y} dit spelaren pekar
@@ -1145,7 +1180,7 @@ function BoatGame({ onComplete, onBack }) {
     nextTrailId: 0,
   });
 
-  const [boat, setBoat] = useState({ x: 48, y: 84, angle: 0 });
+  const [boat, setBoat] = useState({ x: 45, y: 78, angle: 0 });
   const [phase, setPhase] = useState("to_lighthouse");
   const [targetMarker, setTargetMarker] = useState(null);
   const [crashMsg, setCrashMsg] = useState(null);
@@ -1156,14 +1191,13 @@ function BoatGame({ onComplete, onBack }) {
   // Zoom-nivå för kameran — högre = närmare båten, men mindre översikt
   const ZOOM = 2;
 
-  // Beräkna kamerans position så att båten är i mitten av viewport
-  // (eller så nära mitten som möjligt utan att visa utanför kartan)
+  // Kamerans position — följer båten direkt utan clamping
+  // (så även vid kanten av kartan visas båten i mitten av skärmen)
   function getWorldOffset(bx, by) {
-    let wL = 50 - ZOOM * bx;
-    let wT = 50 - ZOOM * by;
-    wL = Math.max(100 - ZOOM * 100, Math.min(0, wL));
-    wT = Math.max(100 - ZOOM * 100, Math.min(0, wT));
-    return { wL, wT };
+    return {
+      wL: 50 - ZOOM * bx,
+      wT: 50 - ZOOM * by,
+    };
   }
 
   function eventToPos(e) {
@@ -1223,17 +1257,17 @@ function BoatGame({ onComplete, onBack }) {
           while (diff < -180) diff += 360;
 
           // Vänd båten gradvis
-          const turnRate = 120; // grader/sek
+          const turnRate = 90; // grader/sek
           const turn = Math.max(-turnRate * dt, Math.min(turnRate * dt, diff));
           d.angle += turn;
 
           // Acceleration — bara om vi är någotsånär rätt riktad
-          const maxSpeed = 14; // procent/sek
+          const maxSpeed = 8.5; // procent/sek (puttrande gammal eka)
           const aimedOk = Math.abs(diff) < 60;
           if (aimedOk) {
-            d.speed = Math.min(maxSpeed, d.speed + 10 * dt);
+            d.speed = Math.min(maxSpeed, d.speed + 6 * dt);
           } else {
-            d.speed = Math.max(0, d.speed - 4 * dt);
+            d.speed = Math.max(0, d.speed - 3 * dt);
           }
         } else {
           // Vi är nästan vid målet — sakta in
@@ -1249,9 +1283,9 @@ function BoatGame({ onComplete, onBack }) {
       d.x += Math.sin(rad) * d.speed * dt;
       d.y -= Math.cos(rad) * d.speed * dt;
 
-      // Spelytans gränser
-      d.x = Math.max(8, Math.min(92, d.x));
-      d.y = Math.max(4, Math.min(92, d.y));
+      // Spelytans yttre gränser (förhindrar att båten åker utanför kartan helt)
+      d.x = Math.max(11, Math.min(89, d.x));
+      d.y = Math.max(6, Math.min(91, d.y));
 
       // === Virveln drar in ===
       const wdx = d.x - BOAT_WHIRLPOOL.x;
@@ -3116,7 +3150,7 @@ function Styles() {
         aspect-ratio: 3 / 4;
         max-height: 100%;
         height: 100%;
-        background: #2a3a4a;
+        background: #d4b896; /* papper-färg för utanför kartan */
         border: 3px solid var(--ink);
         border-radius: 4px;
         box-shadow: 0 0 30px rgba(0, 0, 0, 0.7);
@@ -3133,14 +3167,14 @@ function Styles() {
         background-size: cover;
         background-position: center;
         background-repeat: no-repeat;
-        transition: left 0.15s ease-out, top 0.15s ease-out;
+        transition: left 0.08s ease-out, top 0.08s ease-out;
         will-change: left, top;
       }
 
       /* === BÅTEN (sprite) === */
       .td-boat-sprite {
         position: absolute;
-        width: 8.5%;
+        width: 5.5%;
         height: auto;
         pointer-events: none;
         z-index: 10;
