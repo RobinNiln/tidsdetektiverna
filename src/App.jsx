@@ -929,23 +929,23 @@ const HARBOR_DIALOGS = {
   lasse: {
     portrait: "lasse",
     name: "Lurige Lasse",
-    initial: "Pssst! Du där! Vill du köpa en KARTA till piratskatten? Bara tre guldmynt! Helt äkta, det lovar jag! ...okej okej, två mynt. Men då får du också en pyttesmå burk med 'magisk' sand. Helt äkta! Det lovar jag!",
-    second: "Vill du köpa en hatt? Den är mycket fin. Bara fyra mynt. ...okej tre. Den ramlade av en sjökapten igår. Eller jo, helt äkta är den ju.",
-    third: "Du verkar smart. Vill du köpa en TIDSMASKIN-RITNING? Helt äkta! Jag hittade den i havet. Hav är pålitliga. ...nej? Okej.",
+    initial: "Pssst! Du där, unga detektiv! Jag har en alldeles ÄKTA skattkarta till piraternas guld! Bara tre guldmynt! ...okej, två. Helt äkta, det lovar jag på min mormors grav! Hon dog förresten med ett leende på läpparna, så hennes grav är en mycket pålitlig sak att lova på.",
+    second: "Inte intresserad? Hmm. Vill du köpa en magisk burk med Atlantissand då? Den gör att man flyter på vatten. Eller... eller får det att regna! En av de där! Bara två mynt. Helt äkta sand, säger jag!",
+    third: "Du tror inte på mig?! Hmpf. Den där skattkartan KOMMER du att ångra att du inte köpte. När du står där om en månad utan guld och tänker 'om jag bara hade lyssnat på Lurige Lasse'... så minns mig då. Jag finns alltid här. Tyvärr.",
   },
   berit: {
     portrait: "berit",
     name: "Berit",
-    initial: "Hej hej! Jag är Berit, jag jobbar i hamnen. Lyfter lådor, knyter knopar, allt sånt. Om du vill veta något i den här hamnen — fråga mig. Jag ser allt och hör mer. Falk är en god man förresten. Och håll dig borta från Lasse, han säljer skräp.",
-    second: "Visste du att fyrvaktaren bara väntar brev från Falk en gång om året? Något viktigt på gång där.",
-    third: "Mina armar är trötta. Femton lådor idag. Men det är klart, någon måste göra jobbet!",
+    initial: "Hej! Jag är Berit, hamnens starkaste arm. Ska du segla med Falks eka? Då måste jag varna dig — viken är FULL av rev under ytan. Håll dig till de djupare partierna. Och virveln vid mittpunkten? Närma dig inte den! Min farbror gjorde det en gång. Han kom hem... men håret blev grått över en natt.",
+    second: "Stockarna som driver i viken är gamla telegrafstolpar från ett vrak från 1923. De är tyngre än de ser ut. Krocka inte med dem, då ringer det i öronen i en vecka.",
+    third: "Fyrvaktaren är ensam där ute, vet du. Han har inte besökt fastlandet på sju år. Säger han åtminstone. När du kommer fram, vinka åt honom från min sida. Han brukar vinka tillbaka.",
   },
   framling: {
     portrait: "framling",
     name: "Den mystiska främlingen",
-    initial: "*Främlingen tittar upp från sin bok och ler svagt.* Vägar korsas där sjön möter himlen. Jag har sett tre stjärnor falla över denna stad. Snart blir det fyra. Den som söker tiden ska först förstå vattnet.",
-    second: "*Hen bläddrar i sin bok.* Stockarna i viken... de driver inte slumpmässigt. Tiden själv har glömt åt vilket håll de ska.",
-    third: "*Främlingen tystnar och pekar mot horisonten utan att säga något.*",
+    initial: "*Främlingen tittar upp från sin bok och ler svagt.* Du letar efter Tidsmaskinen, inte sant? Jag har sett ditt namn i mina anteckningar... fast bläcket är inte torrt ännu. Lyssna noga: TRE nycklar krävs för att öppna porten i Tidsstaden. Du har redan börjat hitta den första.",
+    second: "*Främlingen bläddrar i sin bok med kompass i handen.* Klockan i tornet räknar inte sekunder. Den räknar något annat. Och boken i bokgränden är inte bara en bok — den är en karta. Lyssna på det som inte sägs.",
+    third: "*Främlingen slår igen sin bok med en smäll.* En sista varning, ung detektiv: när du står vid Tidsmaskinen och ska välja — välj inte den knapp som glöder starkast. Det är den som VILL bli vald som väntar på dig.",
   },
 };
 
@@ -1180,6 +1180,8 @@ function BoatGame({ onComplete, onBack }) {
   const [arrivedAtLighthouse, setArrivedAtLighthouse] = useState(false);
   const [completed, setCompleted] = useState(false);
   const [trail, setTrail] = useState([]);
+  const [splashes, setSplashes] = useState([]);
+  const nextSplashIdRef = useRef(0);
 
   // Zoom-nivå för kameran — högre = närmare båten, men mindre översikt
   const ZOOM = 2;
@@ -1331,6 +1333,14 @@ function BoatGame({ onComplete, onBack }) {
           if (!d.crashing) {
             d.crashing = true;
             setCrashMsg(obs.msg);
+            // Spawna vattenspruta vid krock-punkten
+            const splashId = nextSplashIdRef.current++;
+            const splashX = d.x;
+            const splashY = d.y;
+            setSplashes((prev) => [...prev, { id: splashId, x: splashX, y: splashY }]);
+            setTimeout(() => {
+              setSplashes((prev) => prev.filter((s) => s.id !== splashId));
+            }, 700);
             setTimeout(() => {
               setCrashMsg(null);
               d.crashing = false;
@@ -1433,6 +1443,27 @@ function BoatGame({ onComplete, onBack }) {
               backgroundImage: `url(${ASSETS.vik})`,
             }}
           >
+            {/* Fyrljuset — pulserande gulden glöd ovanpå fyren */}
+            <div
+              className="td-boat-lighthouse-light"
+              style={{ left: `${BOAT_TARGETS.lighthouse.x}%`, top: `${BOAT_TARGETS.lighthouse.y}%` }}
+            />
+
+            {/* Virvel — animerade ringar ovanpå virveln på kartan */}
+            <div
+              className="td-boat-whirlpool-fx"
+              style={{
+                left: `${BOAT_WHIRLPOOL.x}%`,
+                top: `${BOAT_WHIRLPOOL.y}%`,
+                width: `${BOAT_WHIRLPOOL.r * 1.8}%`,
+                aspectRatio: "1 / 1",
+              }}
+            >
+              <div className="td-boat-whirlpool-ring td-boat-whirlpool-ring-1" />
+              <div className="td-boat-whirlpool-ring td-boat-whirlpool-ring-2" />
+              <div className="td-boat-whirlpool-ring td-boat-whirlpool-ring-3" />
+            </div>
+
             {/* Mål-markör */}
             {currentTarget && !completed && (
               <div
@@ -1472,6 +1503,23 @@ function BoatGame({ onComplete, onBack }) {
                 transform: `translate(-50%, -50%) rotate(${boat.angle}deg)`,
               }}
             />
+
+            {/* Vattenspruta vid krockar */}
+            {splashes.map((s) => (
+              <div
+                key={s.id}
+                className="td-boat-splash"
+                style={{ left: `${s.x}%`, top: `${s.y}%` }}
+              >
+                {[0, 1, 2, 3, 4, 5, 6].map((i) => (
+                  <span
+                    key={i}
+                    className="td-boat-splash-drop"
+                    style={{ "--angle": `${(360 / 7) * i}deg` }}
+                  />
+                ))}
+              </div>
+            ))}
           </div>
 
           {/* Krasch-meddelande (ligger i viewport, inte i world) */}
@@ -2860,6 +2908,24 @@ function Styles() {
         filter: drop-shadow(3px 6px 6px rgba(0, 0, 0, 0.4));
         transition: transform 0.2s ease;
       }
+      /* Skugga på marken vid karaktärens fötter — förankrar dem visuellt */
+      .td-harbor-character::before {
+        content: "";
+        position: absolute;
+        bottom: -1.5%;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 75%;
+        height: 5%;
+        background: radial-gradient(
+          ellipse at center,
+          rgba(20, 12, 5, 0.55) 0%,
+          rgba(20, 12, 5, 0.3) 40%,
+          rgba(20, 12, 5, 0) 75%
+        );
+        pointer-events: none;
+        z-index: -1;
+      }
       @keyframes tdHarborBreathe {
         0%, 100% { transform: translateY(0); }
         50% { transform: translateY(-3px); }
@@ -3221,6 +3287,96 @@ function Styles() {
         0% { opacity: 0.9; transform: translate(-50%, -50%) scale(0.4); }
         30% { opacity: 0.85; }
         100% { opacity: 0; transform: translate(-50%, -50%) scale(2.5); }
+      }
+
+      /* === FYRLJUSET I BÅTSPELET === */
+      .td-boat-lighthouse-light {
+        position: absolute;
+        transform: translate(-50%, -50%);
+        width: 14%;
+        aspect-ratio: 1 / 1;
+        background: radial-gradient(circle,
+          rgba(255, 230, 120, 0.85) 0%,
+          rgba(255, 200, 80, 0.4) 25%,
+          rgba(255, 180, 60, 0.15) 50%,
+          rgba(255, 180, 60, 0) 75%);
+        border-radius: 50%;
+        pointer-events: none;
+        z-index: 4;
+        animation: tdBoatLighthouseBlink 4.5s ease-in-out infinite;
+      }
+      @keyframes tdBoatLighthouseBlink {
+        0%, 100% { opacity: 0; transform: translate(-50%, -50%) scale(0.4); }
+        8%, 18% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
+        26% { opacity: 0.3; }
+        36%, 46% { opacity: 0.9; transform: translate(-50%, -50%) scale(1); }
+        60% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+      }
+
+      /* === VIRVELN === */
+      .td-boat-whirlpool-fx {
+        position: absolute;
+        transform: translate(-50%, -50%);
+        pointer-events: none;
+        z-index: 3;
+      }
+      .td-boat-whirlpool-ring {
+        position: absolute;
+        inset: 0;
+        border: 2.5px solid rgba(240, 250, 255, 0.45);
+        border-radius: 50%;
+        animation: tdWhirlpoolRing 3.5s linear infinite;
+      }
+      .td-boat-whirlpool-ring-1 { animation-delay: 0s; }
+      .td-boat-whirlpool-ring-2 { animation-delay: 1.2s; }
+      .td-boat-whirlpool-ring-3 { animation-delay: 2.4s; }
+      @keyframes tdWhirlpoolRing {
+        0% {
+          transform: rotate(0deg) scale(0.2);
+          opacity: 0;
+          border-color: rgba(255, 255, 255, 0.8);
+        }
+        15% { opacity: 0.7; }
+        100% {
+          transform: rotate(720deg) scale(1.2);
+          opacity: 0;
+          border-color: rgba(200, 230, 255, 0.2);
+        }
+      }
+
+      /* === VATTENSPRUT VID KROCK === */
+      .td-boat-splash {
+        position: absolute;
+        transform: translate(-50%, -50%);
+        width: 30px;
+        height: 30px;
+        pointer-events: none;
+        z-index: 12;
+      }
+      .td-boat-splash-drop {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        width: 7px;
+        height: 7px;
+        margin: -3.5px 0 0 -3.5px;
+        background: radial-gradient(circle,
+          rgba(255, 255, 255, 0.95) 0%,
+          rgba(200, 230, 255, 0.7) 40%,
+          rgba(180, 210, 240, 0) 70%);
+        border-radius: 50%;
+        animation: tdSplashFly 0.7s ease-out forwards;
+        transform-origin: center;
+      }
+      @keyframes tdSplashFly {
+        0% {
+          transform: rotate(var(--angle)) translateY(0) scale(0.3);
+          opacity: 1;
+        }
+        100% {
+          transform: rotate(var(--angle)) translateY(-35px) scale(1.6);
+          opacity: 0;
+        }
       }
 
       /* === MÅL-MARKÖR (fyren / hamnen) === */
