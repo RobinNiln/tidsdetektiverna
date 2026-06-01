@@ -246,7 +246,10 @@ export default function App() {
     setActiveLocation(key); setInteriorDialog(null); setDetailView(null);
     setView("interior");
   }
-  function startMission() { setView("mission"); }
+  function startMission() {
+    if (activeLocation === "harbor") setView("boatgame");
+    else setView("mission");
+  }
   function backToInterior() { setView("interior"); }
   function backToMap() {
     setActiveLocation(null); setInteriorDialog(null);
@@ -295,6 +298,15 @@ export default function App() {
               onComplete={() => completeMission("puzzle")} onBack={backToInterior} />
           )}
         </MissionOverlay>
+      )}
+      {view === "boatgame" && (
+        <BoatGame
+          onComplete={() => {
+            pickUpItem("harbor:key");
+            setView("interior");
+          }}
+          onBack={() => setView("interior")}
+        />
       )}
       {view === "end" && (
         <MissionOverlay grand onClose={() => setView("map")}>
@@ -942,10 +954,17 @@ function HarborScene({ foundItems, setDialog, onPickUpItem, onStartMission }) {
   function talkTo(charKey) {
     const data = HARBOR_DIALOGS[charKey];
     let text;
+    let action;
     if (charKey === "falk") {
-      if (harborKeyFound) text = data.completed;
-      else if (missionAccepted) text = data.accepted;
-      else text = data.initial;
+      if (harborKeyFound) {
+        text = data.completed;
+      } else if (missionAccepted) {
+        text = data.accepted;
+        action = { label: "▸ Ge dig av igen!", onClick: () => { setDialog(null); onStartMission(); } };
+      } else {
+        text = data.initial;
+        action = { label: "▸ Jag tar uppdraget!", onClick: startBoatGame };
+      }
     } else {
       // Lasse, Berit, Främling — cykla genom dialoger
       const count = clickCounts.current[charKey];
@@ -958,28 +977,14 @@ function HarborScene({ foundItems, setDialog, onPickUpItem, onStartMission }) {
       portrait: ASSETS[data.portrait],
       name: data.name,
       text,
+      action,
     });
   }
 
   function startBoatGame() {
     setMissionAccepted(true);
-    // För nu — placeholder. Båtspelet kommer i steg 2.
-    setDialog({
-      portrait: ASSETS.falk,
-      name: "Kapten Falk",
-      text: "Båtspelet kommer i nästa steg! För nu — säg \"Klart!\" så låtsas vi att du seglade till fyren och tillbaka.",
-      action: {
-        label: "✓ Klart! (för testning)",
-        onClick: () => {
-          if (!harborKeyFound) onPickUpItem("harbor:key");
-          setDialog({
-            portrait: ASSETS.falk,
-            name: "Kapten Falk",
-            text: HARBOR_DIALOGS.falk.completed,
-          });
-        },
-      },
-    });
+    setDialog(null);
+    onStartMission();
   }
 
   return (
@@ -1051,15 +1056,7 @@ function HarborScene({ foundItems, setDialog, onPickUpItem, onStartMission }) {
         mystery
       />
 
-      {/* === EKAN — startar båtspelet === */}
-      {!harborKeyFound && missionAccepted && (
-        <button className="td-boat-launch"
-                onClick={startBoatGame}
-                aria-label="Hoppa i ekan">
-          <span className="td-boat-launch-glow" />
-          <span className="td-boat-launch-tag">▸ Ge dig av!</span>
-        </button>
-      )}
+      {/* === EKAN — Falks dialog startar båtspelet === */}
 
       <div className="td-scene-hint">
         Prata med folket på hamnen
@@ -1092,6 +1089,321 @@ function HarborCharacter({ style, portrait, label, onClick, primary, suspicious,
       )}
       <span className="td-harbor-character-tag">{label}</span>
     </button>
+  );
+}
+
+
+// ============================================================
+// BÅTSPELET — top-down navigation genom viken
+// ============================================================
+
+// Spelvärldens konstanter (alla i procent av vikens storlek)
+const BOAT_TARGETS = {
+  lighthouse: { x: 80, y: 11, r: 7 },
+  harbor: { x: 48, y: 88, r: 5 },
+};
+
+const BOAT_WHIRLPOOL = { x: 42, y: 32, r: 9, pull: 10, spin: 90 };
+
+const BOAT_OBSTACLES = [
+  // Större öar
+  { x: 23, y: 38, r: 9, msg: "AJ! En ö i vägen!" },
+  { x: 62, y: 55, r: 9, msg: "AJ! Pang i ön!" },
+  // Rev (mörkare områden i vattnet)
+  { x: 35, y: 25, r: 5, msg: "AJ! Ett rev!" },
+  { x: 48, y: 22, r: 4, msg: "AJ! Stenar under ytan!" },
+  { x: 75, y: 30, r: 4, msg: "AJ! Rev!" },
+  { x: 18, y: 25, r: 4, msg: "AJ! Klippor!" },
+  { x: 32, y: 55, r: 5, msg: "AJ! Grunt vatten!" },
+  { x: 78, y: 42, r: 4, msg: "AJ! Rev!" },
+  { x: 30, y: 78, r: 5, msg: "AJ! Stenar!" },
+  { x: 42, y: 75, r: 4, msg: "AJ! Rev under båten!" },
+  { x: 55, y: 70, r: 4, msg: "AJ! Vass sten!" },
+  { x: 75, y: 70, r: 5, msg: "AJ! Klippor!" },
+  // Flytande stockar (statiska för nu)
+  { x: 43, y: 28, r: 2.5, msg: "AJ! En flytande stock!" },
+  { x: 62, y: 38, r: 2.5, msg: "AJ! En stock!" },
+  { x: 75, y: 42, r: 2.5, msg: "AJ! En stock!" },
+  { x: 50, y: 55, r: 2.5, msg: "AJ! En stock!" },
+  { x: 43, y: 62, r: 2.5, msg: "AJ! En stock!" },
+];
+
+function BoatGame({ onComplete, onBack }) {
+  const stageRef = useRef(null);
+  const boatRef = useRef(null);
+
+  // Allt snabbt-ändrande data lagras i ref för att undvika
+  // React-rerendering varje frame
+  const dataRef = useRef({
+    x: 48, y: 84,        // båtens position (procent)
+    angle: 0,            // 0 = uppåt
+    speed: 0,
+    target: null,        // {x, y} dit spelaren pekar
+    phase: "to_lighthouse",
+    crashing: false,
+  });
+
+  const [boat, setBoat] = useState({ x: 48, y: 84, angle: 0 });
+  const [phase, setPhase] = useState("to_lighthouse");
+  const [targetMarker, setTargetMarker] = useState(null);
+  const [crashMsg, setCrashMsg] = useState(null);
+  const [arrivedAtLighthouse, setArrivedAtLighthouse] = useState(false);
+  const [completed, setCompleted] = useState(false);
+
+  function eventToPos(e) {
+    const rect = stageRef.current.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    return { x, y };
+  }
+
+  function handlePointerDown(e) {
+    if (completed) return;
+    e.preventDefault();
+    if (e.target.setPointerCapture && e.pointerId !== undefined) {
+      try { e.target.setPointerCapture(e.pointerId); } catch {}
+    }
+    const pos = eventToPos(e);
+    dataRef.current.target = pos;
+    setTargetMarker(pos);
+  }
+  function handlePointerMove(e) {
+    if (!dataRef.current.target || completed) return;
+    const pos = eventToPos(e);
+    dataRef.current.target = pos;
+    setTargetMarker(pos);
+  }
+  function handlePointerUp() {
+    dataRef.current.target = null;
+    setTargetMarker(null);
+  }
+
+  // Game loop
+  useEffect(() => {
+    let raf;
+    let lastTime = performance.now();
+
+    function loop(time) {
+      const dt = Math.min((time - lastTime) / 1000, 0.05);
+      lastTime = time;
+      const d = dataRef.current;
+
+      // === Styrning ===
+      if (d.target && !completed) {
+        const dx = d.target.x - d.x;
+        const dy = d.target.y - d.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (dist > 1.5) {
+          // Önskad vinkel (atan2 med sin/cos eftersom 0 = uppåt)
+          const targetAngle = (Math.atan2(dx, -dy) * 180) / Math.PI;
+          let diff = targetAngle - d.angle;
+          while (diff > 180) diff -= 360;
+          while (diff < -180) diff += 360;
+
+          // Vänd båten gradvis
+          const turnRate = 120; // grader/sek
+          const turn = Math.max(-turnRate * dt, Math.min(turnRate * dt, diff));
+          d.angle += turn;
+
+          // Acceleration — bara om vi är någotsånär rätt riktad
+          const maxSpeed = 14; // procent/sek
+          const aimedOk = Math.abs(diff) < 60;
+          if (aimedOk) {
+            d.speed = Math.min(maxSpeed, d.speed + 10 * dt);
+          } else {
+            d.speed = Math.max(0, d.speed - 4 * dt);
+          }
+        } else {
+          // Vi är nästan vid målet — sakta in
+          d.speed = Math.max(0, d.speed - 12 * dt);
+        }
+      } else {
+        // Inget mål → sakta in
+        d.speed = Math.max(0, d.speed - 6 * dt);
+      }
+
+      // === Flytta ===
+      const rad = (d.angle * Math.PI) / 180;
+      d.x += Math.sin(rad) * d.speed * dt;
+      d.y -= Math.cos(rad) * d.speed * dt;
+
+      // Spelytans gränser
+      d.x = Math.max(8, Math.min(92, d.x));
+      d.y = Math.max(4, Math.min(92, d.y));
+
+      // === Virveln drar in ===
+      const wdx = d.x - BOAT_WHIRLPOOL.x;
+      const wdy = d.y - BOAT_WHIRLPOOL.y;
+      const wdist = Math.sqrt(wdx * wdx + wdy * wdy);
+      if (wdist < BOAT_WHIRLPOOL.r && wdist > 0.1) {
+        const strength = (1 - wdist / BOAT_WHIRLPOOL.r);
+        d.x -= (wdx / wdist) * BOAT_WHIRLPOOL.pull * strength * dt;
+        d.y -= (wdy / wdist) * BOAT_WHIRLPOOL.pull * strength * dt;
+        d.angle += BOAT_WHIRLPOOL.spin * strength * dt;
+      }
+
+      // === Kollisioner ===
+      for (const obs of BOAT_OBSTACLES) {
+        const odx = d.x - obs.x;
+        const ody = d.y - obs.y;
+        const odist = Math.sqrt(odx * odx + ody * ody);
+        if (odist < obs.r && odist > 0.01) {
+          // Knuffa ut båten
+          const push = obs.r - odist + 0.5;
+          d.x += (odx / odist) * push;
+          d.y += (ody / odist) * push;
+          d.speed = 0;
+          if (!d.crashing) {
+            d.crashing = true;
+            setCrashMsg(obs.msg);
+            setTimeout(() => {
+              setCrashMsg(null);
+              d.crashing = false;
+            }, 1400);
+          }
+        }
+      }
+
+      // === Mål-kontroll ===
+      if (!completed) {
+        const targ = d.phase === "to_lighthouse" ? BOAT_TARGETS.lighthouse
+                   : d.phase === "to_harbor" ? BOAT_TARGETS.harbor : null;
+        if (targ) {
+          const tdx = d.x - targ.x;
+          const tdy = d.y - targ.y;
+          if (Math.sqrt(tdx * tdx + tdy * tdy) < targ.r) {
+            if (d.phase === "to_lighthouse") {
+              d.phase = "to_harbor";
+              setPhase("to_harbor");
+              setArrivedAtLighthouse(true);
+              d.speed = 0;
+              d.target = null;
+              setTargetMarker(null);
+            } else if (d.phase === "to_harbor") {
+              d.phase = "done";
+              setCompleted(true);
+              d.speed = 0;
+              d.target = null;
+              setTargetMarker(null);
+            }
+          }
+        }
+      }
+
+      // Skriv state → React (för rendering)
+      setBoat({ x: d.x, y: d.y, angle: d.angle });
+
+      raf = requestAnimationFrame(loop);
+    }
+
+    raf = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(raf);
+  }, [completed]);
+
+  // Aktuellt mål för visuell markör
+  const currentTarget = phase === "to_lighthouse" ? BOAT_TARGETS.lighthouse
+                      : phase === "to_harbor" ? BOAT_TARGETS.harbor : null;
+
+  return (
+    <div className="td-boat-game td-fade-in">
+      <div className="td-boat-topbar">
+        <button className="td-btn td-btn-small" onClick={onBack}>← Lämna båten</button>
+        <div className="td-boat-status">
+          {phase === "to_lighthouse" && "🎯 Lämna paketet vid fyren"}
+          {phase === "to_harbor" && !completed && "🎯 Tillbaka till hamnen"}
+          {completed && "★ Klart!"}
+        </div>
+        <div style={{ width: 130 }} />
+      </div>
+
+      <div className="td-boat-stage-wrap">
+        <div
+          ref={stageRef}
+          className="td-boat-stage"
+          style={{ backgroundImage: `url(${ASSETS.vik})` }}
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          onPointerCancel={handlePointerUp}
+        >
+          {/* Mål-markör */}
+          {currentTarget && !completed && (
+            <div
+              className="td-boat-target-marker"
+              style={{ left: `${currentTarget.x}%`, top: `${currentTarget.y}%` }}
+            >
+              <span>★</span>
+            </div>
+          )}
+
+          {/* Pekar-cirkel — visar vart spelaren styr */}
+          {targetMarker && (
+            <div
+              className="td-boat-pointer"
+              style={{ left: `${targetMarker.x}%`, top: `${targetMarker.y}%` }}
+            />
+          )}
+
+          {/* Båten */}
+          <img
+            ref={boatRef}
+            src={ASSETS.eka}
+            className="td-boat-sprite"
+            alt=""
+            style={{
+              left: `${boat.x}%`,
+              top: `${boat.y}%`,
+              transform: `translate(-50%, -50%) rotate(${boat.angle}deg)`,
+            }}
+          />
+
+          {/* Krasch-meddelande */}
+          {crashMsg && (
+            <div className="td-boat-crash">{crashMsg}</div>
+          )}
+
+          {/* Anlände till fyren — kort dialog */}
+          {arrivedAtLighthouse && phase === "to_harbor" && !completed && (
+            <div className="td-boat-arrival-overlay"
+                 onClick={() => setArrivedAtLighthouse(false)}>
+              <div className="td-boat-arrival-card">
+                <div className="td-stamp">FYREN</div>
+                <p>
+                  Du anlände till fyren! Fyrvaktaren tar emot paketet med
+                  ett leende. <em>"Tack, unga sjöman! Här är ett brev till
+                  Falk — ta det tillbaka säkert."</em>
+                </p>
+                <button className="td-btn td-btn-gold">▸ Sätt segel hemåt</button>
+              </div>
+            </div>
+          )}
+
+          {/* Klart-overlay */}
+          {completed && (
+            <div className="td-boat-arrival-overlay">
+              <div className="td-boat-arrival-card td-boat-success">
+                <div className="td-stamp">✦ Framme! ✦</div>
+                <p>
+                  Du seglade hela vägen tillbaka till hamnen!
+                  Kapten Falk väntar på dig med en överraskning...
+                </p>
+                <button className="td-btn td-btn-big td-btn-gold"
+                        onClick={onComplete}>
+                  ★ Möt Kapten Falk
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="td-boat-hint">
+        {phase === "to_lighthouse" && !targetMarker && "Håll ner musen eller fingret där du vill att båten ska åka"}
+        {phase === "to_harbor" && !targetMarker && !completed && "Hitta hem igen!"}
+        {targetMarker && "Släpp för att stanna"}
+      </div>
+    </div>
   );
 }
 
@@ -2698,7 +3010,195 @@ function Styles() {
         100% { left: 105%; top: 18%; }
       }
 
-      /* === EKAN — startknapp === */
+      /* === BÅTSPELET === */
+      .td-boat-game {
+        position: fixed;
+        inset: 0;
+        background: #1a1208;
+        display: flex;
+        flex-direction: column;
+      }
+      .td-boat-topbar {
+        background: var(--cream);
+        border-bottom: 3px solid var(--ink);
+        padding: 10px 16px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        z-index: 5;
+      }
+      .td-boat-status {
+        background: var(--gold);
+        border: 2.5px solid var(--ink);
+        padding: 6px 18px;
+        font-weight: bold;
+        font-size: 15px;
+        letter-spacing: 0.5px;
+        box-shadow: 3px 3px 0 var(--ink);
+        transform: rotate(-1deg);
+      }
+      .td-boat-stage-wrap {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        padding: 12px;
+      }
+      .td-boat-stage {
+        position: relative;
+        aspect-ratio: 3 / 4;
+        max-height: 100%;
+        height: 100%;
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
+        border: 4px solid var(--ink);
+        border-radius: 6px;
+        box-shadow: 0 0 30px rgba(0, 0, 0, 0.6);
+        cursor: pointer;
+        touch-action: none;
+        user-select: none;
+        -webkit-user-select: none;
+      }
+
+      /* === BÅTEN (sprite) === */
+      .td-boat-sprite {
+        position: absolute;
+        width: 5.5%;
+        height: auto;
+        pointer-events: none;
+        z-index: 10;
+        filter: drop-shadow(2px 4px 4px rgba(0, 0, 0, 0.5));
+        will-change: transform, left, top;
+        /* Övergångar gör båten mjukare även om vi uppdaterar varje frame */
+        transition: transform 0.06s linear;
+      }
+
+      /* === MÅL-MARKÖR (fyren / hamnen) === */
+      .td-boat-target-marker {
+        position: absolute;
+        transform: translate(-50%, -50%);
+        width: 60px;
+        height: 60px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 36px;
+        color: var(--gold);
+        text-shadow:
+          0 0 10px rgba(253, 201, 77, 0.9),
+          0 0 20px rgba(253, 201, 77, 0.6),
+          2px 2px 0 var(--ink);
+        pointer-events: none;
+        z-index: 5;
+        animation: tdBoatTargetPulse 1.5s ease-in-out infinite;
+      }
+      @keyframes tdBoatTargetPulse {
+        0%, 100% { transform: translate(-50%, -50%) scale(1); }
+        50% { transform: translate(-50%, -50%) scale(1.25); }
+      }
+
+      /* === PEKAR-CIRKEL (där spelaren håller) === */
+      .td-boat-pointer {
+        position: absolute;
+        transform: translate(-50%, -50%);
+        width: 36px;
+        height: 36px;
+        border: 3px dashed var(--gold);
+        border-radius: 50%;
+        pointer-events: none;
+        z-index: 8;
+        animation: tdBoatPointerSpin 2s linear infinite;
+        background: radial-gradient(circle,
+          rgba(253, 201, 77, 0.25) 0%,
+          rgba(253, 201, 77, 0) 70%);
+        box-shadow: 0 0 12px rgba(253, 201, 77, 0.5);
+      }
+      @keyframes tdBoatPointerSpin {
+        from { transform: translate(-50%, -50%) rotate(0deg); }
+        to { transform: translate(-50%, -50%) rotate(360deg); }
+      }
+
+      /* === KRASCH-MEDDELANDE === */
+      .td-boat-crash {
+        position: absolute;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: var(--red);
+        color: var(--cream);
+        border: 3px solid var(--ink);
+        padding: 10px 24px;
+        font-family: 'Georgia', serif;
+        font-weight: bold;
+        font-size: 18px;
+        box-shadow: 4px 4px 0 var(--ink);
+        z-index: 20;
+        animation: tdBoatCrashIn 0.3s ease-out, tdBoatCrashShake 0.15s ease-in-out 3;
+        pointer-events: none;
+      }
+      @keyframes tdBoatCrashIn {
+        from { opacity: 0; transform: translateX(-50%) translateY(-20px) scale(0.7); }
+        to { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+      }
+      @keyframes tdBoatCrashShake {
+        0%, 100% { transform: translateX(-50%) translateY(0); }
+        25% { transform: translateX(calc(-50% - 4px)) translateY(0); }
+        75% { transform: translateX(calc(-50% + 4px)) translateY(0); }
+      }
+
+      /* === HINT-TEXT === */
+      .td-boat-hint {
+        background: rgba(40, 30, 18, 0.85);
+        color: var(--cream);
+        padding: 10px 20px;
+        text-align: center;
+        font-style: italic;
+        font-size: 14px;
+        border-top: 2px solid var(--ink);
+        min-height: 20px;
+      }
+
+      /* === ANLÄND-OVERLAY (fyren och hamnen) === */
+      .td-boat-arrival-overlay {
+        position: absolute;
+        inset: 0;
+        background: rgba(40, 30, 18, 0.75);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 50;
+        animation: tdFadeIn 0.4s ease;
+        padding: 20px;
+      }
+      .td-boat-arrival-card {
+        background: var(--cream);
+        border: 4px solid var(--ink);
+        border-radius: 12px;
+        padding: 28px;
+        max-width: 460px;
+        width: 100%;
+        text-align: center;
+        box-shadow: 10px 10px 0 var(--ink);
+        animation: tdDetailIn 0.4s ease;
+      }
+      .td-boat-arrival-card p {
+        font-size: 17px;
+        line-height: 1.5;
+        margin: 16px 0 24px;
+      }
+      .td-boat-arrival-card em {
+        color: var(--red);
+        display: block;
+        margin-top: 8px;
+      }
+      .td-boat-success {
+        background: var(--gold);
+      }
+
+      /* === EKAN — startknapp (i hamnen — kvar för bakåtkompatibilitet) === */
       .td-boat-launch {
         position: absolute;
         right: 4%; bottom: 15%;
