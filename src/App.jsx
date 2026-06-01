@@ -29,6 +29,10 @@ const ASSETS = {
   lasse: "/tidsdetektiverna/lasse.jpg",
   berit: "/tidsdetektiverna/berit.jpg",
   framling: "/tidsdetektiverna/framling.jpg",
+  falkFull: "/tidsdetektiverna/falk_full.png",
+  lasseFull: "/tidsdetektiverna/lasse_full.png",
+  beritFull: "/tidsdetektiverna/berit_full.png",
+  framlingFull: "/tidsdetektiverna/framling_full.png",
   vik: "/tidsdetektiverna/vik.jpg",
   eka: "/tidsdetektiverna/eka.png",
 };
@@ -1023,20 +1027,20 @@ function HarborScene({ foundItems, setDialog, onPickUpItem, onStartMission }) {
 
       {/* === KLICKBARA KARAKTÄRER === */}
 
-      {/* Falk — står på kajen i mitten, framför bommen */}
+      {/* Falk — huvudpersonen, central på kajen, mest framträdande */}
       <HarborCharacter
-        style={{ left: "45%", top: "55%", width: "10%", height: "30%" }}
-        portrait={ASSETS.falk}
+        style={{ left: "38%", bottom: "4%", height: "56%", aspectRatio: "793 / 1983" }}
+        image={ASSETS.falkFull}
         label="Kapten Falk"
         onClick={() => talkTo("falk")}
         primary
         smoking
       />
 
-      {/* Lasse — gömmer sig till vänster vid hamnkaptenens hus */}
+      {/* Lasse — luggsligen vid hamnkaptenens hus, kikar nervöst */}
       <HarborCharacter
-        style={{ left: "16%", top: "58%", width: "9%", height: "26%" }}
-        portrait={ASSETS.lasse}
+        style={{ left: "6%", bottom: "4%", height: "48%", aspectRatio: "793 / 1983" }}
+        image={ASSETS.lasseFull}
         label="???"
         onClick={() => talkTo("lasse")}
         suspicious
@@ -1044,16 +1048,16 @@ function HarborScene({ foundItems, setDialog, onPickUpItem, onStartMission }) {
 
       {/* Berit — vid lådorna på högra delen av kajen */}
       <HarborCharacter
-        style={{ left: "62%", top: "55%", width: "9%", height: "28%" }}
-        portrait={ASSETS.berit}
+        style={{ left: "53%", bottom: "4%", height: "50%", aspectRatio: "887 / 1774" }}
+        image={ASSETS.beritFull}
         label="Berit"
         onClick={() => talkTo("berit")}
       />
 
-      {/* Främlingen — vid kanten av kajen, lite avsides */}
+      {/* Främlingen — mellan Lasse och Falk, lite längre bort (mindre) */}
       <HarborCharacter
-        style={{ left: "30%", top: "58%", width: "8%", height: "26%" }}
-        portrait={ASSETS.framling}
+        style={{ left: "23%", bottom: "8%", height: "42%", aspectRatio: "793 / 1983" }}
+        image={ASSETS.framlingFull}
         label="?"
         onClick={() => talkTo("framling")}
         mystery
@@ -1069,9 +1073,9 @@ function HarborScene({ foundItems, setDialog, onPickUpItem, onStartMission }) {
 }
 
 // ============================================================
-// HarborCharacter — klickbar karaktär med liten porträtt-knapp
+// HarborCharacter — full-body karaktär som står på kajen
 // ============================================================
-function HarborCharacter({ style, portrait, label, onClick, primary, suspicious, mystery, smoking }) {
+function HarborCharacter({ style, image, label, onClick, primary, suspicious, mystery, smoking }) {
   return (
     <button
       className={`td-harbor-character ${primary ? "td-harbor-primary" : ""} ${suspicious ? "td-harbor-suspicious" : ""} ${mystery ? "td-harbor-mystery" : ""}`}
@@ -1080,9 +1084,7 @@ function HarborCharacter({ style, portrait, label, onClick, primary, suspicious,
       aria-label={label}
     >
       <span className="td-harbor-character-glow" />
-      <span className="td-harbor-character-portrait">
-        <img src={portrait} alt={label} />
-      </span>
+      <img src={image} alt={label} className="td-harbor-character-img" />
       {smoking && (
         <span className="td-harbor-smoke" aria-hidden="true">
           <span className="td-harbor-smoke-puff td-harbor-smoke-1" />
@@ -1301,17 +1303,43 @@ function BoatGame({ onComplete, onBack }) {
         d.angle += BOAT_WHIRLPOOL.spin * strength * dt;
       }
 
-      // === Kollisioner ===
+      // === Kollisioner med sliding response ===
       for (const obs of BOAT_OBSTACLES) {
         const odx = d.x - obs.x;
         const ody = d.y - obs.y;
         const odist = Math.sqrt(odx * odx + ody * ody);
         if (odist < obs.r && odist > 0.01) {
-          // Knuffa ut båten
-          const push = obs.r - odist + 0.5;
-          d.x += (odx / odist) * push;
-          d.y += (ody / odist) * push;
-          d.speed = 0;
+          // Normal mot kollisionen (riktning från hinder till båt)
+          const nx = odx / odist;
+          const ny = ody / odist;
+
+          // Knuffa ut båten helt utanför hindret + lite marginal
+          const push = obs.r - odist + 1.2;
+          d.x += nx * push;
+          d.y += ny * push;
+
+          // Beräkna båtens hastighetsvektor
+          const ang = (d.angle * Math.PI) / 180;
+          const vx = Math.sin(ang) * d.speed;
+          const vy = -Math.cos(ang) * d.speed;
+
+          // Projektion av hastighet på normalen
+          const vDotN = vx * nx + vy * ny;
+
+          // Om båten åkte INTO hindret, ta bort den komponenten
+          // så båten glider TANGENTIELLT längs hindret istället för att stanna
+          if (vDotN < 0) {
+            const tx = vx - nx * vDotN;
+            const ty = vy - ny * vDotN;
+            const slidingSpeed = Math.sqrt(tx * tx + ty * ty) * 0.6;
+            if (slidingSpeed > 0.3) {
+              d.angle = (Math.atan2(tx, -ty) * 180) / Math.PI;
+              d.speed = slidingSpeed;
+            } else {
+              d.speed = 0;
+            }
+          }
+
           if (!d.crashing) {
             d.crashing = true;
             setCrashMsg(obs.msg);
@@ -1320,6 +1348,7 @@ function BoatGame({ onComplete, onBack }) {
               d.crashing = false;
             }, 1400);
           }
+          break; // bara EN kollision per frame
         }
       }
 
@@ -2831,6 +2860,7 @@ function Styles() {
       }
 
       /* === HAMNENS KARAKTÄRER === */
+      /* === HAMNENS KARAKTÄRER (full-body) === */
       .td-harbor-character {
         position: absolute;
         background: transparent;
@@ -2838,39 +2868,47 @@ function Styles() {
         cursor: pointer;
         padding: 0;
         z-index: 4;
-        display: flex;
-        align-items: flex-end;
-        justify-content: center;
-        transition: transform 0.2s ease;
         animation: tdHarborBreathe 3.5s ease-in-out infinite;
+        filter: drop-shadow(3px 6px 6px rgba(0, 0, 0, 0.4));
+        transition: transform 0.2s ease;
       }
       @keyframes tdHarborBreathe {
         0%, 100% { transform: translateY(0); }
         50% { transform: translateY(-3px); }
       }
       .td-harbor-character:hover {
-        transform: scale(1.05) translateY(-4px);
+        transform: scale(1.04) translateY(-4px);
         animation-play-state: paused;
+        z-index: 6;
       }
       .td-harbor-character:focus { outline: none; }
       .td-harbor-character:focus-visible {
         outline: 3px dashed rgba(253, 201, 77, 0.7);
-        outline-offset: -3px;
-        border-radius: 12px;
+        outline-offset: 4px;
+        border-radius: 8px;
       }
 
+      /* Bilden — fyller hela containern */
+      .td-harbor-character-img {
+        width: 100%;
+        height: 100%;
+        display: block;
+        object-fit: contain;
+        pointer-events: none;
+      }
+
+      /* Mark under karaktären — gulden glöd vid fötterna */
       .td-harbor-character-glow {
         position: absolute;
-        bottom: -10%;
+        bottom: -3%;
         left: 50%;
         transform: translateX(-50%);
-        width: 110%;
-        height: 30%;
+        width: 100%;
+        height: 12%;
         background: radial-gradient(
           ellipse at center,
-          rgba(253, 201, 77, 0.5) 0%,
-          rgba(253, 201, 77, 0.15) 50%,
-          rgba(253, 201, 77, 0) 100%
+          rgba(253, 201, 77, 0.6) 0%,
+          rgba(253, 201, 77, 0) 70%
         );
         pointer-events: none;
         opacity: 0;
@@ -2880,36 +2918,15 @@ function Styles() {
         opacity: 1;
       }
 
-      .td-harbor-character-portrait {
-        position: relative;
-        width: 80%;
-        aspect-ratio: 1 / 1;
-        border-radius: 50%;
-        overflow: hidden;
-        border: 3px solid var(--ink);
-        background: var(--cream);
-        box-shadow: 3px 3px 0 var(--ink), 0 0 15px rgba(0, 0, 0, 0.4);
-        transition: box-shadow 0.25s ease, border-color 0.25s ease;
-        margin-bottom: 15%;
-      }
-      .td-harbor-character-portrait img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        display: block;
-      }
-      .td-harbor-character:hover .td-harbor-character-portrait {
-        box-shadow: 4px 4px 0 var(--ink), 0 0 25px rgba(253, 201, 77, 0.7);
-      }
-
+      /* Namnskylt under karaktären */
       .td-harbor-character-tag {
         position: absolute;
-        bottom: 0;
+        bottom: -28px;
         left: 50%;
         transform: translateX(-50%) rotate(-2deg);
         background: var(--cream);
         border: 2px solid var(--ink);
-        padding: 2px 10px;
+        padding: 3px 10px;
         font-weight: bold;
         font-size: 12px;
         color: var(--ink);
@@ -2919,41 +2936,44 @@ function Styles() {
         pointer-events: none;
       }
 
-      /* Specialvarianter */
-      .td-harbor-primary .td-harbor-character-portrait {
-        border-color: var(--gold);
-        animation: tdHarborPrimaryPulse 2s ease-in-out infinite;
-      }
+      /* === Specialvarianter === */
+      /* Falk — huvudpersonen får gulden ring och pulserar */
       .td-harbor-primary .td-harbor-character-tag {
         background: var(--gold);
       }
+      .td-harbor-primary .td-harbor-character-glow {
+        opacity: 0.6;
+        animation: tdHarborPrimaryPulse 2.5s ease-in-out infinite;
+      }
       @keyframes tdHarborPrimaryPulse {
-        0%, 100% { box-shadow: 3px 3px 0 var(--ink), 0 0 15px rgba(253, 201, 77, 0.4); }
-        50% { box-shadow: 3px 3px 0 var(--ink), 0 0 25px rgba(253, 201, 77, 0.8); }
+        0%, 100% { opacity: 0.5; }
+        50% { opacity: 0.95; }
       }
 
-      .td-harbor-suspicious .td-harbor-character-portrait {
-        filter: brightness(0.85);
-        animation: tdLasseNervous 4s ease-in-out infinite;
+      /* Lasse — kikar nervöst åt sidan */
+      .td-harbor-suspicious .td-harbor-character-img {
+        animation: tdLasseNervous 5s ease-in-out infinite;
+        transform-origin: bottom center;
       }
       @keyframes tdLasseNervous {
         0%, 40%, 100% { transform: rotate(0deg); }
-        50%, 60% { transform: rotate(-4deg); }
-        70%, 80% { transform: rotate(4deg); }
+        50%, 60% { transform: rotate(-3deg); }
+        70%, 80% { transform: rotate(3deg); }
       }
       .td-harbor-suspicious .td-harbor-character-tag {
         background: #d4c098;
         font-style: italic;
       }
 
-      .td-harbor-mystery .td-harbor-character-portrait {
-        border-color: #5a4a7a;
-        filter: brightness(0.9) saturate(0.8);
-        animation: tdMysterySway 6s ease-in-out infinite;
+      /* Främlingen — svajande mystiskt */
+      .td-harbor-mystery .td-harbor-character-img {
+        animation: tdMysterySway 7s ease-in-out infinite;
+        transform-origin: bottom center;
+        filter: brightness(0.95) saturate(0.85);
       }
       @keyframes tdMysterySway {
-        0%, 100% { transform: rotate(-2deg); }
-        50% { transform: rotate(2deg); }
+        0%, 100% { transform: rotate(-1.5deg); }
+        50% { transform: rotate(1.5deg); }
       }
       .td-harbor-mystery .td-harbor-character-tag {
         background: #c4b6d4;
@@ -2963,12 +2983,12 @@ function Styles() {
       /* === FALKS PIPRÖK === */
       .td-harbor-smoke {
         position: absolute;
-        left: 65%;
-        top: 50%;
+        left: 62%;
+        top: 12%;
         width: 30px;
-        height: 60px;
+        height: 70px;
         pointer-events: none;
-        z-index: 2;
+        z-index: 5;
       }
       .td-harbor-smoke-puff {
         position: absolute;
