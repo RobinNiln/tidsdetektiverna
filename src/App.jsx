@@ -992,14 +992,17 @@ function HarborScene({ foundItems, setDialog, onPickUpItem, onStartMission }) {
          style={{ backgroundImage: `url(${ASSETS.hamn})` }}>
 
       {/* === LEVANDE BAKGRUNDSELEMENT === */}
-      {/* Vattenglitter över havet — flera punkter med olika fördröjning */}
-      <div className="td-harbor-shimmer" style={{ left: "55%", top: "48%" }} />
-      <div className="td-harbor-shimmer" style={{ left: "68%", top: "44%", animationDelay: "0.6s" }} />
-      <div className="td-harbor-shimmer" style={{ left: "78%", top: "50%", animationDelay: "1.2s" }} />
-      <div className="td-harbor-shimmer" style={{ left: "85%", top: "46%", animationDelay: "1.9s" }} />
-      <div className="td-harbor-shimmer" style={{ left: "62%", top: "53%", animationDelay: "0.3s" }} />
-      <div className="td-harbor-shimmer" style={{ left: "90%", top: "55%", animationDelay: "2.5s" }} />
-      <div className="td-harbor-shimmer" style={{ left: "73%", top: "57%", animationDelay: "1.5s" }} />
+      {/* Vattenglitter — bara på faktiska vatten-områden i bilden */}
+      {/* Hav i fjärran (mellan klippor och horisont) */}
+      <div className="td-harbor-shimmer" style={{ left: "45%", top: "38%" }} />
+      <div className="td-harbor-shimmer" style={{ left: "55%", top: "36%", animationDelay: "0.6s" }} />
+      <div className="td-harbor-shimmer" style={{ left: "65%", top: "37%", animationDelay: "1.2s" }} />
+      <div className="td-harbor-shimmer" style={{ left: "78%", top: "35%", animationDelay: "1.9s" }} />
+      <div className="td-harbor-shimmer" style={{ left: "88%", top: "37%", animationDelay: "0.9s" }} />
+      {/* Vatten höger nere (vid ekan/båten) */}
+      <div className="td-harbor-shimmer" style={{ left: "82%", top: "85%", animationDelay: "0.3s" }} />
+      <div className="td-harbor-shimmer" style={{ left: "92%", top: "82%", animationDelay: "2.5s" }} />
+      <div className="td-harbor-shimmer" style={{ left: "88%", top: "92%", animationDelay: "1.5s" }} />
 
       {/* Lyktornas glöd — uppe vid hamnkaptenens hus */}
       <div className="td-harbor-lantern" style={{ left: "8%", top: "33%" }} />
