@@ -1153,11 +1153,29 @@ function BoatGame({ onComplete, onBack }) {
   const [completed, setCompleted] = useState(false);
   const [trail, setTrail] = useState([]);
 
+  // Zoom-nivå för kameran — högre = närmare båten, men mindre översikt
+  const ZOOM = 2;
+
+  // Beräkna kamerans position så att båten är i mitten av viewport
+  // (eller så nära mitten som möjligt utan att visa utanför kartan)
+  function getWorldOffset(bx, by) {
+    let wL = 50 - ZOOM * bx;
+    let wT = 50 - ZOOM * by;
+    wL = Math.max(100 - ZOOM * 100, Math.min(0, wL));
+    wT = Math.max(100 - ZOOM * 100, Math.min(0, wT));
+    return { wL, wT };
+  }
+
   function eventToPos(e) {
-    const rect = stageRef.current.getBoundingClientRect();
-    const x = ((e.clientX - rect.left) / rect.width) * 100;
-    const y = ((e.clientY - rect.top) / rect.height) * 100;
-    return { x, y };
+    const vpRect = stageRef.current.getBoundingClientRect();
+    const vpX = ((e.clientX - vpRect.left) / vpRect.width) * 100;
+    const vpY = ((e.clientY - vpRect.top) / vpRect.height) * 100;
+    // Konvertera viewport-koordinater till world-koordinater (vikens 0-100)
+    const data = dataRef.current;
+    const { wL, wT } = getWorldOffset(data.x, data.y);
+    const worldX = (vpX - wL) / ZOOM;
+    const worldY = (vpY - wT) / ZOOM;
+    return { x: worldX, y: worldY };
   }
 
   function handlePointerDown(e) {
@@ -1327,6 +1345,9 @@ function BoatGame({ onComplete, onBack }) {
   const currentTarget = phase === "to_lighthouse" ? BOAT_TARGETS.lighthouse
                       : phase === "to_harbor" ? BOAT_TARGETS.harbor : null;
 
+  // Kamerans position
+  const { wL, wT } = getWorldOffset(boat.x, boat.y);
+
   return (
     <div className="td-boat-game td-fade-in">
       <div className="td-boat-topbar">
@@ -1343,53 +1364,64 @@ function BoatGame({ onComplete, onBack }) {
         <div
           ref={stageRef}
           className="td-boat-stage"
-          style={{ backgroundImage: `url(${ASSETS.vik})` }}
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
           onPointerCancel={handlePointerUp}
         >
-          {/* Mål-markör */}
-          {currentTarget && !completed && (
-            <div
-              className="td-boat-target-marker"
-              style={{ left: `${currentTarget.x}%`, top: `${currentTarget.y}%` }}
-            >
-              <span>★</span>
-            </div>
-          )}
-
-          {/* Pekar-cirkel — visar vart spelaren styr */}
-          {targetMarker && (
-            <div
-              className="td-boat-pointer"
-              style={{ left: `${targetMarker.x}%`, top: `${targetMarker.y}%` }}
-            />
-          )}
-
-          {/* Båtens spår i vattnet */}
-          {trail.map((p) => (
-            <div
-              key={p.id}
-              className="td-boat-trail"
-              style={{ left: `${p.x}%`, top: `${p.y}%` }}
-            />
-          ))}
-
-          {/* Båten */}
-          <img
-            ref={boatRef}
-            src={ASSETS.eka}
-            className="td-boat-sprite"
-            alt=""
+          {/* World — själva spelytan, större än viewport, följer båten */}
+          <div
+            className="td-boat-world"
             style={{
-              left: `${boat.x}%`,
-              top: `${boat.y}%`,
-              transform: `translate(-50%, -50%) rotate(${boat.angle}deg)`,
+              left: `${wL}%`,
+              top: `${wT}%`,
+              width: `${ZOOM * 100}%`,
+              height: `${ZOOM * 100}%`,
+              backgroundImage: `url(${ASSETS.vik})`,
             }}
-          />
+          >
+            {/* Mål-markör */}
+            {currentTarget && !completed && (
+              <div
+                className="td-boat-target-marker"
+                style={{ left: `${currentTarget.x}%`, top: `${currentTarget.y}%` }}
+              >
+                <span>★</span>
+              </div>
+            )}
 
-          {/* Krasch-meddelande */}
+            {/* Pekar-cirkel — visar vart spelaren styr */}
+            {targetMarker && (
+              <div
+                className="td-boat-pointer"
+                style={{ left: `${targetMarker.x}%`, top: `${targetMarker.y}%` }}
+              />
+            )}
+
+            {/* Båtens spår i vattnet */}
+            {trail.map((p) => (
+              <div
+                key={p.id}
+                className="td-boat-trail"
+                style={{ left: `${p.x}%`, top: `${p.y}%` }}
+              />
+            ))}
+
+            {/* Båten */}
+            <img
+              ref={boatRef}
+              src={ASSETS.eka}
+              className="td-boat-sprite"
+              alt=""
+              style={{
+                left: `${boat.x}%`,
+                top: `${boat.y}%`,
+                transform: `translate(-50%, -50%) rotate(${boat.angle}deg)`,
+              }}
+            />
+          </div>
+
+          {/* Krasch-meddelande (ligger i viewport, inte i world) */}
           {crashMsg && (
             <div className="td-boat-crash">{crashMsg}</div>
           )}
@@ -3084,9 +3116,7 @@ function Styles() {
         aspect-ratio: 3 / 4;
         max-height: 100%;
         height: 100%;
-        background-size: cover;
-        background-position: center;
-        background-repeat: no-repeat;
+        background: #2a3a4a;
         border: 3px solid var(--ink);
         border-radius: 4px;
         box-shadow: 0 0 30px rgba(0, 0, 0, 0.7);
@@ -3094,6 +3124,17 @@ function Styles() {
         touch-action: none;
         user-select: none;
         -webkit-user-select: none;
+        overflow: hidden;
+      }
+
+      /* === WORLD — den faktiska kartan som rullar med båten === */
+      .td-boat-world {
+        position: absolute;
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
+        transition: left 0.15s ease-out, top 0.15s ease-out;
+        will-change: left, top;
       }
 
       /* === BÅTEN (sprite) === */
