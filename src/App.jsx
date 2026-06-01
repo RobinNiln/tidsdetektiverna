@@ -1141,6 +1141,8 @@ function BoatGame({ onComplete, onBack }) {
     target: null,        // {x, y} dit spelaren pekar
     phase: "to_lighthouse",
     crashing: false,
+    lastTrailTime: 0,
+    nextTrailId: 0,
   });
 
   const [boat, setBoat] = useState({ x: 48, y: 84, angle: 0 });
@@ -1149,6 +1151,7 @@ function BoatGame({ onComplete, onBack }) {
   const [crashMsg, setCrashMsg] = useState(null);
   const [arrivedAtLighthouse, setArrivedAtLighthouse] = useState(false);
   const [completed, setCompleted] = useState(false);
+  const [trail, setTrail] = useState([]);
 
   function eventToPos(e) {
     const rect = stageRef.current.getBoundingClientRect();
@@ -1291,6 +1294,25 @@ function BoatGame({ onComplete, onBack }) {
         }
       }
 
+      // === BÅTENS SPÅR ===
+      // Skapa en ny trail-bubbla bakom båten om den rör sig
+      if (d.speed > 1.5 && !completed) {
+        const now = performance.now();
+        if (now - d.lastTrailTime > 90) {
+          d.lastTrailTime = now;
+          // Position bakom båten (motsatt riktning av framdriften)
+          const rad2 = (d.angle * Math.PI) / 180;
+          const backX = d.x - Math.sin(rad2) * 2.8;
+          const backY = d.y + Math.cos(rad2) * 2.8;
+          const id = d.nextTrailId++;
+          setTrail((prev) => [...prev, { id, x: backX, y: backY }]);
+          // Ta bort efter animation klar
+          setTimeout(() => {
+            setTrail((prev) => prev.filter((p) => p.id !== id));
+          }, 2500);
+        }
+      }
+
       // Skriv state → React (för rendering)
       setBoat({ x: d.x, y: d.y, angle: d.angle });
 
@@ -1344,6 +1366,15 @@ function BoatGame({ onComplete, onBack }) {
               style={{ left: `${targetMarker.x}%`, top: `${targetMarker.y}%` }}
             />
           )}
+
+          {/* Båtens spår i vattnet */}
+          {trail.map((p) => (
+            <div
+              key={p.id}
+              className="td-boat-trail"
+              style={{ left: `${p.x}%`, top: `${p.y}%` }}
+            />
+          ))}
 
           {/* Båten */}
           <img
@@ -3021,21 +3052,22 @@ function Styles() {
       .td-boat-topbar {
         background: var(--cream);
         border-bottom: 3px solid var(--ink);
-        padding: 10px 16px;
+        padding: 6px 14px;
         display: flex;
         align-items: center;
         justify-content: space-between;
-        gap: 16px;
+        gap: 12px;
         z-index: 5;
+        min-height: 44px;
       }
       .td-boat-status {
         background: var(--gold);
-        border: 2.5px solid var(--ink);
-        padding: 6px 18px;
+        border: 2px solid var(--ink);
+        padding: 4px 14px;
         font-weight: bold;
-        font-size: 15px;
+        font-size: 13px;
         letter-spacing: 0.5px;
-        box-shadow: 3px 3px 0 var(--ink);
+        box-shadow: 2px 2px 0 var(--ink);
         transform: rotate(-1deg);
       }
       .td-boat-stage-wrap {
@@ -3044,7 +3076,8 @@ function Styles() {
         align-items: center;
         justify-content: center;
         overflow: hidden;
-        padding: 12px;
+        padding: 4px;
+        background: #1a1208;
       }
       .td-boat-stage {
         position: relative;
@@ -3054,9 +3087,9 @@ function Styles() {
         background-size: cover;
         background-position: center;
         background-repeat: no-repeat;
-        border: 4px solid var(--ink);
-        border-radius: 6px;
-        box-shadow: 0 0 30px rgba(0, 0, 0, 0.6);
+        border: 3px solid var(--ink);
+        border-radius: 4px;
+        box-shadow: 0 0 30px rgba(0, 0, 0, 0.7);
         cursor: pointer;
         touch-action: none;
         user-select: none;
@@ -3066,14 +3099,34 @@ function Styles() {
       /* === BÅTEN (sprite) === */
       .td-boat-sprite {
         position: absolute;
-        width: 5.5%;
+        width: 8.5%;
         height: auto;
         pointer-events: none;
         z-index: 10;
-        filter: drop-shadow(2px 4px 4px rgba(0, 0, 0, 0.5));
+        filter: drop-shadow(2px 4px 6px rgba(0, 0, 0, 0.6));
         will-change: transform, left, top;
-        /* Övergångar gör båten mjukare även om vi uppdaterar varje frame */
-        transition: transform 0.06s linear;
+        transition: transform 0.05s linear;
+      }
+
+      /* === BÅTENS SPÅR I VATTNET === */
+      .td-boat-trail {
+        position: absolute;
+        transform: translate(-50%, -50%);
+        width: 8px;
+        height: 8px;
+        background: radial-gradient(circle,
+          rgba(255, 255, 255, 0.7) 0%,
+          rgba(220, 240, 255, 0.4) 40%,
+          rgba(255, 255, 255, 0) 75%);
+        border-radius: 50%;
+        pointer-events: none;
+        z-index: 6;
+        animation: tdTrailFade 2.5s ease-out forwards;
+      }
+      @keyframes tdTrailFade {
+        0% { opacity: 0.9; transform: translate(-50%, -50%) scale(0.4); }
+        30% { opacity: 0.85; }
+        100% { opacity: 0; transform: translate(-50%, -50%) scale(2.5); }
       }
 
       /* === MÅL-MARKÖR (fyren / hamnen) === */
@@ -3151,14 +3204,14 @@ function Styles() {
 
       /* === HINT-TEXT === */
       .td-boat-hint {
-        background: rgba(40, 30, 18, 0.85);
+        background: rgba(40, 30, 18, 0.9);
         color: var(--cream);
-        padding: 10px 20px;
+        padding: 5px 14px;
         text-align: center;
         font-style: italic;
-        font-size: 14px;
-        border-top: 2px solid var(--ink);
-        min-height: 20px;
+        font-size: 12px;
+        border-top: 1px solid var(--ink);
+        min-height: 14px;
       }
 
       /* === ANLÄND-OVERLAY (fyren och hamnen) === */
