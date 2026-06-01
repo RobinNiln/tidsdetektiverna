@@ -937,8 +937,8 @@ const HARBOR_DIALOGS = {
     portrait: "berit",
     name: "Berit",
     initial: "Hej! Jag är Berit, hamnens starkaste arm. Ska du segla med Falks eka? Då måste jag varna dig — viken är FULL av rev under ytan. Håll dig till de djupare partierna. Och virveln vid mittpunkten? Närma dig inte den! Min farbror gjorde det en gång. Han kom hem... men håret blev grått över en natt.",
-    second: "Stockarna som driver i viken är gamla telegrafstolpar från ett vrak från 1923. De är tyngre än de ser ut. Krocka inte med dem, då ringer det i öronen i en vecka.",
-    third: "Fyrvaktaren är ensam där ute, vet du. Han har inte besökt fastlandet på sju år. Säger han åtminstone. När du kommer fram, vinka åt honom från min sida. Han brukar vinka tillbaka.",
+    second: "Det finns ett SJÖODJUR i norra viken. Stort, grönt, ganska gulligt faktiskt — men det är så pass dumt att det kan slå omkull en båt om man kommer för nära. Och piratskeppet uppe vid de norra klipporna? Det är förvisso övergivet, men ändå. Akta sig!",
+    third: "Stockarna som driver i viken är gamla telegrafstolpar från ett vrak från 1923. Tyngre än de ser ut. Krocka inte. Och hajfena du kanske ser? Den är bara en delfin som ser ut som haj. Men vi säger inte det till turisterna.",
   },
   framling: {
     portrait: "framling",
@@ -1093,67 +1093,75 @@ function HarborCharacter({ style, image, label, onClick, primary, suspicious, my
 // Spelvärldens konstanter (alla i procent av vikens storlek)
 const BOAT_TARGETS = {
   lighthouse: { x: 80, y: 11, r: 7 },
-  harbor: { x: 48, y: 88, r: 5 },
+  harbor: { x: 43, y: 90, r: 5 },
 };
 
-const BOAT_WHIRLPOOL = { x: 42, y: 32, r: 9, pull: 10, spin: 90 };
+const BOAT_WHIRLPOOL = { x: 43, y: 44, r: 9, pull: 10, spin: 90 };
 
 const BOAT_OBSTACLES = [
-  // === Större öar i mitten ===
-  { x: 23, y: 38, r: 9, msg: "AJ! En ö i vägen!" },
-  { x: 62, y: 55, r: 9, msg: "AJ! Pang i ön!" },
+  // === Stora öar i mitten ===
+  { x: 23, y: 44, r: 9, msg: "AJ! En ö i vägen!" },
+  { x: 66, y: 58, r: 10, msg: "AJ! Pang i ön!" },
 
-  // === Rev (mörkare områden i vattnet) ===
-  { x: 35, y: 25, r: 5, msg: "AJ! Ett rev!" },
-  { x: 48, y: 22, r: 4, msg: "AJ! Stenar under ytan!" },
-  { x: 75, y: 30, r: 4, msg: "AJ! Rev!" },
-  { x: 32, y: 55, r: 5, msg: "AJ! Grunt vatten!" },
-  { x: 78, y: 42, r: 4, msg: "AJ! Rev!" },
-  { x: 30, y: 78, r: 5, msg: "AJ! Stenar!" },
-  { x: 42, y: 75, r: 4, msg: "AJ! Rev under båten!" },
-  { x: 55, y: 70, r: 4, msg: "AJ! Vass sten!" },
-  { x: 75, y: 70, r: 5, msg: "AJ! Klippor!" },
+  // === Sjöodjur & andra varelser ===
+  { x: 53, y: 13, r: 6, msg: "OJ! Ett sjöodjur!" },
+  { x: 49, y: 30, r: 3.5, msg: "Sjöormens unge!" },
+  { x: 38, y: 51, r: 2.5, msg: "En säl ploppade upp!" },
+  { x: 44, y: 63, r: 3, msg: "En hajfena! Bort, bort!" },
+
+  // === Piratskepp i fjärran ===
+  { x: 29, y: 27, r: 5, msg: "OJ! Ett piratskepp!" },
+
+  // === Mindre rev och stenar ===
+  { x: 35, y: 21, r: 4, msg: "AJ! Ett rev!" },
+  { x: 28, y: 18, r: 3, msg: "AJ! Stenar!" },
+  { x: 73, y: 33, r: 4, msg: "AJ! Klippor!" },
+  { x: 32, y: 53, r: 4, msg: "AJ! Grunt vatten!" },
+  { x: 78, y: 45, r: 3, msg: "AJ! Stenar!" },
+  { x: 32, y: 80, r: 4, msg: "AJ! Stenar under ytan!" },
+  { x: 25, y: 73, r: 4, msg: "AJ! Klippor!" },
+  { x: 55, y: 74, r: 3, msg: "AJ! Vass sten!" },
+  { x: 78, y: 70, r: 4, msg: "AJ! Stenar!" },
 
   // === Flytande stockar ===
-  { x: 43, y: 28, r: 2.5, msg: "AJ! En flytande stock!" },
-  { x: 62, y: 38, r: 2.5, msg: "AJ! En stock!" },
-  { x: 75, y: 42, r: 2.5, msg: "AJ! En stock!" },
-  { x: 50, y: 55, r: 2.5, msg: "AJ! En stock!" },
-  { x: 43, y: 62, r: 2.5, msg: "AJ! En stock!" },
+  { x: 46, y: 24, r: 2.5, msg: "AJ! En flytande stock!" },
+  { x: 71, y: 37, r: 2.5, msg: "AJ! En stock!" },
+  { x: 48, y: 63, r: 2.5, msg: "AJ! En stock!" },
+  { x: 38, y: 82, r: 2.5, msg: "AJ! En stock!" },
+  { x: 72, y: 77, r: 2.5, msg: "AJ! En stock!" },
 
   // === Vänster strand (uppifrån ner) ===
   { x: 7, y: 12, r: 5, msg: "AJ! Stranden!" },
-  { x: 6, y: 22, r: 4, msg: "AJ! Klippor vid stranden!" },
-  { x: 6, y: 32, r: 4, msg: "AJ! Stranden!" },
-  { x: 6, y: 45, r: 4, msg: "AJ! Stenig strand!" },
-  { x: 8, y: 58, r: 4, msg: "AJ! Stranden!" },
-  { x: 6, y: 70, r: 4, msg: "AJ! Stranden!" },
-  { x: 9, y: 82, r: 4, msg: "AJ! Strandkanten!" },
+  { x: 6, y: 22, r: 4, msg: "AJ! Klippor!" },
+  { x: 6, y: 34, r: 4, msg: "AJ! Stranden!" },
+  { x: 6, y: 48, r: 4, msg: "AJ! Stenig strand!" },
+  { x: 8, y: 60, r: 4, msg: "AJ! Stranden!" },
+  { x: 6, y: 72, r: 4, msg: "AJ! Stranden!" },
+  { x: 9, y: 84, r: 4, msg: "AJ! Strandkanten!" },
 
   // === Höger strand ===
-  { x: 92, y: 25, r: 4, msg: "AJ! Klippor!" },
-  { x: 93, y: 35, r: 4, msg: "AJ! Stranden!" },
-  { x: 92, y: 48, r: 4, msg: "AJ! Stranden!" },
-  { x: 93, y: 60, r: 4, msg: "AJ! Stranden!" },
-  { x: 92, y: 72, r: 4, msg: "AJ! Stranden!" },
-  { x: 91, y: 84, r: 4, msg: "AJ! Strandkanten!" },
+  { x: 93, y: 22, r: 4, msg: "AJ! Klippor!" },
+  { x: 94, y: 35, r: 4, msg: "AJ! Stranden!" },
+  { x: 93, y: 50, r: 4, msg: "AJ! Stranden!" },
+  { x: 93, y: 62, r: 4, msg: "AJ! Stranden!" },
+  { x: 92, y: 75, r: 4, msg: "AJ! Stranden!" },
+  { x: 91, y: 86, r: 4, msg: "AJ! Strandkanten!" },
 
-  // === Övre strand (utöver fyrön) ===
-  { x: 14, y: 4, r: 4, msg: "AJ! Stranden!" },
-  { x: 28, y: 3, r: 4, msg: "AJ! Stranden!" },
-  { x: 45, y: 4, r: 4, msg: "AJ! Stranden!" },
-  { x: 60, y: 3, r: 4, msg: "AJ! Stranden!" },
+  // === Övre strand (utöver fyrön och sjöodjuret) ===
+  { x: 16, y: 4, r: 4, msg: "AJ! Stranden!" },
+  { x: 30, y: 3, r: 4, msg: "AJ! Stranden!" },
+  { x: 42, y: 4, r: 3, msg: "AJ! Stranden!" },
+  { x: 63, y: 4, r: 4, msg: "AJ! Stranden!" },
 
   // === Nedre strand (utöver bryggan) ===
   { x: 18, y: 92, r: 4, msg: "AJ! Stranden!" },
-  { x: 30, y: 93, r: 4, msg: "AJ! Stranden!" },
-  { x: 65, y: 93, r: 4, msg: "AJ! Stranden!" },
-  { x: 80, y: 92, r: 4, msg: "AJ! Stranden!" },
+  { x: 28, y: 94, r: 4, msg: "AJ! Stranden!" },
+  { x: 62, y: 94, r: 4, msg: "AJ! Stranden!" },
+  { x: 78, y: 92, r: 4, msg: "AJ! Stranden!" },
 
-  // === Bryggan i hamnen — hindrar att köra in i sidorna av bryggan ===
-  // (men hamn-målet vid (48, 88) ligger framför bryggan så man kan nå det)
-  { x: 38, y: 91, r: 3, msg: "AJ! Bryggan!" },
-  { x: 58, y: 91, r: 3, msg: "AJ! Bryggan!" },
+  // === Bryggan i hamnen ===
+  { x: 34, y: 92, r: 3, msg: "AJ! Bryggan!" },
+  { x: 53, y: 92, r: 3, msg: "AJ! Bryggan!" },
 ];
 
 function BoatGame({ onComplete, onBack }) {
@@ -1257,12 +1265,12 @@ function BoatGame({ onComplete, onBack }) {
           d.angle += turn;
 
           // Acceleration — bara om vi är någotsånär rätt riktad
-          const maxSpeed = 6; // procent/sek (puttrande gammal eka)
+          const maxSpeed = 4; // procent/sek (puttrande gammal eka)
           const aimedOk = Math.abs(diff) < 60;
           if (aimedOk) {
-            d.speed = Math.min(maxSpeed, d.speed + 4 * dt);
+            d.speed = Math.min(maxSpeed, d.speed + 2.5 * dt);
           } else {
-            d.speed = Math.max(0, d.speed - 3 * dt);
+            d.speed = Math.max(0, d.speed - 2 * dt);
           }
         } else {
           // Vi är nästan vid målet — sakta in
