@@ -1064,6 +1064,7 @@ function HarborCharacter({ style, portrait, label, onClick, primary, suspicious,
 }
 
 
+function TaggedHotspot({ style, tagPosition, tagRotation = -2, onClick, label,
                           primary, treasure, ariaLabel }) {
   return (
     <button
