@@ -2996,53 +2996,53 @@ function Styles() {
         display: flex;
         align-items: center;
         justify-content: center;
-        animation: tdHideawayBob 3s ease-in-out infinite;
+        animation: tdHideawayBob 3.5s ease-in-out infinite;
       }
+      /* Mjuk glöd bakom prylen — syns bara vid hover/fokus */
       .td-hideaway-glint {
         position: absolute;
-        inset: -40%;
+        inset: -25%;
         border-radius: 50%;
         background: radial-gradient(
           circle at center,
-          rgba(253, 201, 77, 0.7) 0%,
-          rgba(253, 201, 77, 0.35) 40%,
+          rgba(253, 201, 77, 0.55) 0%,
+          rgba(253, 201, 77, 0.22) 45%,
           rgba(253, 201, 77, 0) 70%
         );
-        animation: tdGlintPulse 2.2s ease-in-out infinite;
+        opacity: 0;
+        transition: opacity 0.25s ease;
         pointer-events: none;
       }
+      .td-hideaway:hover .td-hideaway-glint,
+      .td-hideaway:focus-visible .td-hideaway-glint {
+        opacity: 1;
+        animation: tdGlintPulse 2.6s ease-in-out infinite;
+      }
+      /* Bara prylen (emojin) — ingen bricka, ligger som ett föremål i miljön */
       .td-hideaway-icon {
         position: relative;
-        width: 100%;
-        height: 100%;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 22px;
+        font-size: 28px;
         line-height: 1;
-        background: var(--cream);
-        border: 2.5px solid var(--ink);
-        border-radius: 50%;
-        box-shadow: 2px 2px 0 var(--ink);
+        filter:
+          drop-shadow(0 3px 2px rgba(0, 0, 0, 0.45))
+          drop-shadow(0 0 1px rgba(0, 0, 0, 0.5));
         transition: transform 0.2s ease;
       }
       .td-hideaway:hover .td-hideaway-icon,
       .td-hideaway:focus-visible .td-hideaway-icon {
-        transform: scale(1.18);
+        transform: scale(1.22);
       }
       .td-hideaway:focus { outline: none; }
-      .td-hideaway:focus-visible {
-        outline: 3px dashed rgba(253, 201, 77, 0.9);
-        outline-offset: 3px;
-        border-radius: 50%;
-      }
       @keyframes tdGlintPulse {
-        0%, 100% { transform: scale(0.8); opacity: 0.5; }
-        50% { transform: scale(1.2); opacity: 1; }
+        0%, 100% { transform: scale(0.85); opacity: 0.55; }
+        50% { transform: scale(1.1); opacity: 0.9; }
       }
       @keyframes tdHideawayBob {
         0%, 100% { margin-top: 0; }
-        50% { margin-top: -4px; }
+        50% { margin-top: -3px; }
       }
 
       .td-paper-tag {
