@@ -561,7 +561,12 @@ function MapView({ completed, stars, allDone, hovered, setHovered, onPick, onRes
           aria-pressed={magnifierOn}
           title={magnifierOn ? "Stäng glaset" : "Förstoringsglas"}
         >
-          <span className="td-magnifier-icon">🔍</span>
+          <img
+            className="td-magnifier-img"
+            src={`${import.meta.env.BASE_URL}glas.png`}
+            alt=""
+            aria-hidden="true"
+          />
         </button>
 
         {/* === GÖMD SVG-KATT === */}
@@ -2303,7 +2308,7 @@ function Styles() {
         background: var(--cream);
         border: 3px solid var(--ink);
         border-radius: 14px;
-        padding: 0;
+        padding: 8px;
         font-family: 'Georgia', serif;
         font-weight: bold;
         color: var(--ink);
@@ -2325,6 +2330,14 @@ function Styles() {
         background: var(--gold);
       }
       .td-magnifier-icon { font-size: 38px; line-height: 1; }
+      .td-magnifier-img {
+        display: block;
+        max-width: 100%;
+        max-height: 100%;
+        width: auto;
+        height: auto;
+        object-fit: contain;
+      }
       .td-magnifier-label { letter-spacing: 0.5px; }
 
       /* === FÖRSTORINGSGLAS — själva linsen som följer musen === */
@@ -3358,28 +3371,37 @@ function Styles() {
         top: 14px;
         right: 16px;
         z-index: 100;
-        background: transparent;
-        border: none;
-        padding: 0;
+        width: 76px; height: 76px;
+        background: var(--cream);
+        border: 3px solid var(--ink);
+        border-radius: 14px;
+        padding: 6px;
         cursor: pointer;
-        transition: transform 0.15s ease;
-        display: block;
+        box-shadow: 4px 4px 0 var(--ink);
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
         line-height: 0;
       }
       .td-inventory-btn:hover {
-        transform: scale(1.06);
+        transform: translate(-2px, -2px);
+        box-shadow: 6px 6px 0 var(--ink);
       }
       .td-inventory-btn:hover .td-inventory-bag-img {
         animation: tdBagWobble 0.6s ease-in-out;
       }
       .td-inventory-btn:active {
-        transform: scale(0.95);
+        transform: translate(2px, 2px);
+        box-shadow: 2px 2px 0 var(--ink);
       }
       .td-inventory-bag-img {
         display: block;
-        width: 76px;
+        max-width: 100%;
+        max-height: 100%;
+        width: auto;
         height: auto;
-        filter: drop-shadow(3px 3px 4px rgba(58, 42, 23, 0.45));
+        object-fit: contain;
       }
       @keyframes tdBagWobble {
         0%, 100% { transform: rotate(0deg); }
@@ -3388,8 +3410,8 @@ function Styles() {
       }
       .td-inventory-count {
         position: absolute;
-        top: -6px;
-        right: -6px;
+        top: -8px;
+        right: -8px;
         background: var(--red);
         color: var(--cream);
         border: 2.5px solid var(--ink);
