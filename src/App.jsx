@@ -1292,17 +1292,9 @@ function HarborScene({ foundItems, setDialog, onPickUpItem, onStartMission }) {
         smoking
       />
 
-      {/* Berit — mitten av bryggan, mellanstor */}
-      <HarborCharacter
-        style={{ left: "50%", bottom: "8%", height: "46%", aspectRatio: "793 / 1983", zIndex: 12 }}
-        image={ASSETS.beritFull}
-        label="Berit"
-        onClick={() => talkTo("berit")}
-      />
-
       {/* Lasse — precis framför hamnkontoret, mindre (en bit bak) */}
       <HarborCharacter
-        style={{ left: "12%", bottom: "24%", height: "38%", aspectRatio: "793 / 1983", zIndex: 10 }}
+        style={{ left: "11%", bottom: "26%", height: "38%", aspectRatio: "793 / 1983", zIndex: 10 }}
         image={ASSETS.lasseFull}
         label="???"
         onClick={() => talkTo("lasse")}
@@ -1311,7 +1303,7 @@ function HarborScene({ foundItems, setDialog, onPickUpItem, onStartMission }) {
 
       {/* Främlingen — LÄNGST BAK på bryggan, minst, mystisk */}
       <HarborCharacter
-        style={{ left: "54%", bottom: "34%", height: "29%", aspectRatio: "793 / 1983", zIndex: 8 }}
+        style={{ left: "48%", bottom: "33%", height: "30%", aspectRatio: "793 / 1983", zIndex: 8 }}
         image={ASSETS.framlingFull}
         label="?"
         onClick={() => talkTo("framling")}
