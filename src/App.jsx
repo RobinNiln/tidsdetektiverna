@@ -1282,9 +1282,9 @@ function HarborScene({ foundItems, setDialog, onPickUpItem, onStartMission }) {
 
       {/* === KLICKBARA KARAKTÄRER === */}
 
-      {/* Falk — huvudpersonen, närmast viewern, STÖRST */}
+      {/* Falk — LÄNGST FRAM, nära kameran, störst */}
       <HarborCharacter
-        style={{ left: "30%", bottom: "6%", height: "60%", aspectRatio: "793 / 1983" }}
+        style={{ left: "28%", bottom: "0%", height: "66%", aspectRatio: "793 / 1983", zIndex: 14 }}
         image={ASSETS.falkFull}
         label="Kapten Falk"
         onClick={() => talkTo("falk")}
@@ -1292,26 +1292,26 @@ function HarborScene({ foundItems, setDialog, onPickUpItem, onStartMission }) {
         smoking
       />
 
-      {/* Berit — UPP på bryggan, mitten-höger, lite mindre för perspektiv */}
+      {/* Berit — mitten av bryggan, mellanstor */}
       <HarborCharacter
-        style={{ left: "63%", bottom: "12%", height: "46%", aspectRatio: "793 / 1983" }}
+        style={{ left: "50%", bottom: "8%", height: "46%", aspectRatio: "793 / 1983", zIndex: 12 }}
         image={ASSETS.beritFull}
         label="Berit"
         onClick={() => talkTo("berit")}
       />
 
-      {/* Lasse — på bryggan, tydligt nedanför och till höger om Falk */}
+      {/* Lasse — precis framför hamnkontoret, mindre (en bit bak) */}
       <HarborCharacter
-        style={{ left: "42%", bottom: "0%", height: "34%", aspectRatio: "793 / 1983" }}
+        style={{ left: "12%", bottom: "24%", height: "38%", aspectRatio: "793 / 1983", zIndex: 10 }}
         image={ASSETS.lasseFull}
         label="???"
         onClick={() => talkTo("lasse")}
         suspicious
       />
 
-      {/* Främlingen — fristående mitt på bryggdäcket, väl ifrån Berit, mystisk */}
+      {/* Främlingen — LÄNGST BAK på bryggan, minst, mystisk */}
       <HarborCharacter
-        style={{ left: "52%", bottom: "4%", height: "40%", aspectRatio: "793 / 1983" }}
+        style={{ left: "54%", bottom: "34%", height: "29%", aspectRatio: "793 / 1983", zIndex: 8 }}
         image={ASSETS.framlingFull}
         label="?"
         onClick={() => talkTo("framling")}
