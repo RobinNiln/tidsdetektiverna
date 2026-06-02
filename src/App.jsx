@@ -71,6 +71,58 @@ const ITEM_DATA = {
     obtainedFrom: "Skattjakten",
     description: "Den ultimata utmärkelsen för en ung detektiv. Du löste mysteriet med Tidsmaskinen!",
   },
+
+  // === SAMLARPRYLAR (mojänger) — Hamnen ===
+  "harbor:shell": {
+    name: "Den spiralvridna snäckan",
+    icon: "🐚",
+    obtainedFrom: "Gömd i Hamnen",
+    description: "En stor snäcka med en perfekt spiral. Håller du den mot örat hör du havet — fast Berit säger att det bara är ditt eget blod som susar. Du tror ändå att det är havet.",
+  },
+  "harbor:hook": {
+    name: "Den rostiga fiskkroken",
+    icon: "🪝",
+    obtainedFrom: "Gömd i Hamnen",
+    description: "En böjd järnkrok, alldeles orange av rost. Lasse påstår att den fångat 'en fisk så stor som en eka', men Lasse påstår ju mycket. Den luktar fortfarande svagt av tång.",
+  },
+  "harbor:compass": {
+    name: "Den knäppta kompassen",
+    icon: "🧭",
+    obtainedFrom: "Gömd i Hamnen",
+    description: "En liten mässingskompass vars nål snurrar runt, runt utan att stanna. Trasig? Eller pekar den mot något som inte är norr? Falk rynkar pannan varje gång han ser den.",
+  },
+  "harbor:coin": {
+    name: "Det gröna myntet",
+    icon: "🪙",
+    obtainedFrom: "Gömd i Hamnen",
+    description: "Ett gammalt mynt helt överdraget med grön ärg. Man kan nästan ana ett ansikte och några bokstäver, men de är för slitna att läsa. Hur länge har det legat här?",
+  },
+
+  // === SAMLARPRYLAR (mojänger) — Pusselverkstaden ===
+  "puzzle:nut": {
+    name: "Den sexkantiga muttern",
+    icon: "🔩",
+    obtainedFrom: "Gömd i Pusselverkstaden",
+    description: "En tung mässingsmutter, mycket större än vanliga. Klonk har säkert tappat den. Eller också är den en pusselbit till något — i den här verkstaden vet man aldrig.",
+  },
+  "puzzle:magnet": {
+    name: "Den envisa magneten",
+    icon: "🧲",
+    obtainedFrom: "Gömd i Pusselverkstaden",
+    description: "En hästskoformad magnet som vägrar släppa taget om allt av järn. Den fastnade i din ficka och du fick brottas loss den. Klonk säger att den är 'opålitlig men lojal'.",
+  },
+  "puzzle:marble": {
+    name: "Den blå glaskulan",
+    icon: "🔮",
+    obtainedFrom: "Gömd i Pusselverkstaden",
+    description: "En klar glaskula med en virvel av blått fruset inuti. Håller du upp den mot ljuset ser världen bakom den upp-och-ner. Klonk vet inte var den kom ifrån, och det stör honom.",
+  },
+  "puzzle:feather": {
+    name: "Den mekaniska fjädern",
+    icon: "🪶",
+    obtainedFrom: "Gömd i Pusselverkstaden",
+    description: "En fjäder gjord helt av tunn koppartråd, formad som en riktig fågelfjäder. Den fjädrar lätt mellan fingrarna. Vem gör en sådan sak? Klonk ler hemlighetsfullt men säger inget.",
+  },
 };
 
 
@@ -1062,6 +1114,40 @@ function PuzzleWorkshopScene({ completed, foundItems, setDialog, onPickUpItem,
           {klonkSurprised ? "!!" : "!"}
         </span>
       </button>
+      {/* === GÖMDA SAMLARPRYLAR === */}
+      <Hideaway
+        x={60} y={90} size={4}
+        found={foundItems.includes("puzzle:nut")}
+        icon="🔩"
+        hint="Något ligger på arbetsbänken..."
+        foundText="En tung sexkantig mutter låg bland kugghjulen! Du stoppar den i väskan."
+        onFind={(t) => { onPickUpItem("puzzle:nut"); setDialog(t); }}
+      />
+      <Hideaway
+        x={38} y={45} size={4}
+        found={foundItems.includes("puzzle:magnet")}
+        icon="🧲"
+        hint="Något sitter fast i byrålådan..."
+        foundText="Du drog ut en byrålåda och hittade en envis liten magnet!"
+        onFind={(t) => { onPickUpItem("puzzle:magnet"); setDialog(t); }}
+      />
+      <Hideaway
+        x={41} y={22} size={4}
+        found={foundItems.includes("puzzle:marble")}
+        icon="🔮"
+        hint="Något glimmar på hyllan..."
+        foundText="En blå glaskula låg i en kruka högt upp på hyllan! Vacker."
+        onFind={(t) => { onPickUpItem("puzzle:marble"); setDialog(t); }}
+      />
+      <Hideaway
+        x={73} y={62} size={4}
+        found={foundItems.includes("puzzle:feather")}
+        icon="🪶"
+        hint="Något sticker ut vid maskinen..."
+        foundText="Bakom en kuggdriven lucka hittade du en fjäder av koppartråd!"
+        onFind={(t) => { onPickUpItem("puzzle:feather"); setDialog(t); }}
+      />
+
       <div className="td-scene-hint">Klicka på något som intresserar dig</div>
     </div>
   );
@@ -1209,9 +1295,9 @@ function HarborScene({ foundItems, setDialog, onPickUpItem, onStartMission }) {
         suspicious
       />
 
-      {/* Främlingen — vid huset, längst bort */}
+      {/* Främlingen — fristående mitt på bryggan, mystisk */}
       <HarborCharacter
-        style={{ left: "9%", bottom: "20%", height: "32%", aspectRatio: "793 / 1983" }}
+        style={{ left: "44%", bottom: "8%", height: "44%", aspectRatio: "793 / 1983" }}
         image={ASSETS.framlingFull}
         label="?"
         onClick={() => talkTo("framling")}
@@ -1219,6 +1305,40 @@ function HarborScene({ foundItems, setDialog, onPickUpItem, onStartMission }) {
       />
 
       {/* === EKAN — Falks dialog startar båtspelet === */}
+
+      {/* === GÖMDA SAMLARPRYLAR === */}
+      <Hideaway
+        x={4} y={84} size={4}
+        found={foundItems.includes("harbor:shell")}
+        icon="🐚"
+        hint="Något ligger i gräset..."
+        foundText="Du hittade en spiralvriden snäcka i gräset! Den lägger du i väskan."
+        onFind={(t) => { onPickUpItem("harbor:shell"); setDialog(t); }}
+      />
+      <Hideaway
+        x={14} y={72} size={4}
+        found={foundItems.includes("harbor:hook")}
+        icon="🪝"
+        hint="Något glimmar vid trälådan..."
+        foundText="En rostig fiskkrok låg fastkrokad i nätet! Nu är den din."
+        onFind={(t) => { onPickUpItem("harbor:hook"); setDialog(t); }}
+      />
+      <Hideaway
+        x={60} y={50} size={4}
+        found={foundItems.includes("harbor:compass")}
+        icon="🧭"
+        hint="Något ligger bland tunnorna..."
+        foundText="Du hittade en liten kompass bakom tunnorna! Nålen snurrar konstigt."
+        onFind={(t) => { onPickUpItem("harbor:compass"); setDialog(t); }}
+      />
+      <Hideaway
+        x={33} y={80} size={4}
+        found={foundItems.includes("harbor:coin")}
+        icon="🪙"
+        hint="Något glimmar mellan plankorna..."
+        foundText="Ett grönt mynt satt fastklämt mellan två plankor! Du petar loss det."
+        onFind={(t) => { onPickUpItem("harbor:coin"); setDialog(t); }}
+      />
 
       <div className="td-scene-hint">
         Prata med folket på hamnen
@@ -1750,6 +1870,27 @@ function TaggedHotspot({ style, tagPosition, tagRotation = -2, onClick, label,
             style={{ ...tagPosition, transform: `translateX(-50%) rotate(${tagRotation}deg)` }}>
         {label}
       </span>
+    </button>
+  );
+}
+
+// ============================================================
+// GÖMSTÄLLE — klickbar plats där en samlarpryl ligger gömd
+// Visas bara om prylen inte redan hittats. När man klickar
+// "hittar" man prylen (läggs i väskan) och markören försvinner.
+// ============================================================
+function Hideaway({ x, y, size = 4, found, icon, hint, foundText, onFind }) {
+  if (found) return null;
+  return (
+    <button
+      className="td-hideaway"
+      style={{ left: `${x}%`, top: `${y}%`, width: `${size}%` }}
+      onClick={() => onFind(foundText)}
+      aria-label={hint}
+      title={hint}
+    >
+      <span className="td-hideaway-glint" />
+      <span className="td-hideaway-icon">{icon}</span>
     </button>
   );
 }
@@ -2809,6 +2950,66 @@ function Styles() {
       .td-tagged:focus-visible {
         outline: 3px dashed rgba(253, 201, 77, 0.7);
         outline-offset: -3px;
+      }
+
+      /* === GÖMSTÄLLE — samlarpryl-markör === */
+      .td-hideaway {
+        position: absolute;
+        aspect-ratio: 1 / 1;
+        transform: translate(-50%, -50%);
+        background: transparent;
+        border: none;
+        padding: 0;
+        cursor: pointer;
+        z-index: 4;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+      }
+      .td-hideaway-glint {
+        position: absolute;
+        inset: 0;
+        border-radius: 50%;
+        background: radial-gradient(
+          circle at center,
+          rgba(253, 201, 77, 0.55) 0%,
+          rgba(253, 201, 77, 0.25) 45%,
+          rgba(253, 201, 77, 0) 70%
+        );
+        animation: tdGlintPulse 2.2s ease-in-out infinite;
+        pointer-events: none;
+      }
+      .td-hideaway-icon {
+        position: relative;
+        font-size: 0;
+        line-height: 1;
+        opacity: 0;
+        transition: opacity 0.2s ease, font-size 0.2s ease, transform 0.2s ease;
+        filter: drop-shadow(1px 1px 1px rgba(0,0,0,0.4));
+      }
+      .td-hideaway:hover .td-hideaway-icon,
+      .td-hideaway:focus-visible .td-hideaway-icon {
+        opacity: 1;
+        font-size: 26px;
+        transform: scale(1.1);
+      }
+      .td-hideaway:hover .td-hideaway-glint {
+        background: radial-gradient(
+          circle at center,
+          rgba(253, 201, 77, 0.75) 0%,
+          rgba(253, 201, 77, 0.35) 50%,
+          rgba(253, 201, 77, 0) 72%
+        );
+      }
+      .td-hideaway:focus { outline: none; }
+      .td-hideaway:focus-visible {
+        outline: 3px dashed rgba(253, 201, 77, 0.8);
+        outline-offset: 2px;
+      }
+      @keyframes tdGlintPulse {
+        0%, 100% { transform: scale(0.85); opacity: 0.55; }
+        50% { transform: scale(1.15); opacity: 1; }
       }
 
       .td-paper-tag {
