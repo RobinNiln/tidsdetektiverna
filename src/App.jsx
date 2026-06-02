@@ -1300,18 +1300,18 @@ function HarborScene({ foundItems, setDialog, onPickUpItem, onStartMission }) {
         onClick={() => talkTo("berit")}
       />
 
-      {/* Lasse — på bryggan, framför huset, åt vänster */}
+      {/* Lasse — på bryggan, tydligt nedanför och till höger om Falk */}
       <HarborCharacter
-        style={{ left: "15%", bottom: "14%", height: "38%", aspectRatio: "793 / 1983" }}
+        style={{ left: "42%", bottom: "0%", height: "34%", aspectRatio: "793 / 1983" }}
         image={ASSETS.lasseFull}
         label="???"
         onClick={() => talkTo("lasse")}
         suspicious
       />
 
-      {/* Främlingen — fristående mitt på det breda bryggdäcket, mystisk */}
+      {/* Främlingen — fristående mitt på bryggdäcket, väl ifrån Berit, mystisk */}
       <HarborCharacter
-        style={{ left: "48%", bottom: "10%", height: "44%", aspectRatio: "793 / 1983" }}
+        style={{ left: "52%", bottom: "4%", height: "40%", aspectRatio: "793 / 1983" }}
         image={ASSETS.framlingFull}
         label="?"
         onClick={() => talkTo("framling")}
