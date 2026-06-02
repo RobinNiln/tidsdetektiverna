@@ -1284,7 +1284,7 @@ function HarborScene({ foundItems, setDialog, onPickUpItem, onStartMission }) {
 
       {/* Falk — huvudpersonen, närmast viewern, STÖRST */}
       <HarborCharacter
-        style={{ left: "40%", bottom: "2%", height: "68%", aspectRatio: "793 / 1983" }}
+        style={{ left: "30%", bottom: "6%", height: "60%", aspectRatio: "793 / 1983" }}
         image={ASSETS.falkFull}
         label="Kapten Falk"
         onClick={() => talkTo("falk")}
@@ -1292,26 +1292,26 @@ function HarborScene({ foundItems, setDialog, onPickUpItem, onStartMission }) {
         smoking
       />
 
-      {/* Berit — UPP på bryggan, lite mindre för perspektiv */}
+      {/* Berit — UPP på bryggan, mitten-höger, lite mindre för perspektiv */}
       <HarborCharacter
-        style={{ left: "62%", bottom: "8%", height: "50%", aspectRatio: "793 / 1983" }}
+        style={{ left: "63%", bottom: "12%", height: "46%", aspectRatio: "793 / 1983" }}
         image={ASSETS.beritFull}
         label="Berit"
         onClick={() => talkTo("berit")}
       />
 
-      {/* Lasse — HELT NY PLATS: på själva bryggan, mellan huset och Falk */}
+      {/* Lasse — på bryggan, framför huset, åt vänster */}
       <HarborCharacter
-        style={{ left: "25%", bottom: "12%", height: "40%", aspectRatio: "793 / 1983" }}
+        style={{ left: "15%", bottom: "14%", height: "38%", aspectRatio: "793 / 1983" }}
         image={ASSETS.lasseFull}
         label="???"
         onClick={() => talkTo("lasse")}
         suspicious
       />
 
-      {/* Främlingen — fristående på bryggan, en bit till höger om Falk, mystisk */}
+      {/* Främlingen — fristående mitt på det breda bryggdäcket, mystisk */}
       <HarborCharacter
-        style={{ left: "50%", bottom: "6%", height: "42%", aspectRatio: "793 / 1983" }}
+        style={{ left: "48%", bottom: "10%", height: "44%", aspectRatio: "793 / 1983" }}
         image={ASSETS.framlingFull}
         label="?"
         onClick={() => talkTo("framling")}
