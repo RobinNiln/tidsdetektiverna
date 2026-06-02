@@ -37,6 +37,11 @@ const ASSETS = {
   framlingFull: "/tidsdetektiverna/framling_full.png",
   vik: "/tidsdetektiverna/vik.jpg",
   eka: "/tidsdetektiverna/eka.png",
+  // Bokgränden
+  bokgrandenGata: "/tidsdetektiverna/bokgranden_gata.jpg",
+  bokaffaren: "/tidsdetektiverna/bokaffaren.jpg",
+  hattaffaren: "/tidsdetektiverna/hattaffaren.jpg",
+  varldsaffaren: "/tidsdetektiverna/varldsaffaren.jpg",
 };
 
 // ============================================================
@@ -124,6 +129,14 @@ const ITEM_DATA = {
     icon: "🪶",
     obtainedFrom: "Gömd i Pusselverkstaden",
     description: "En fjäder gjord helt av tunn koppartråd, formad som en riktig fågelfjäder. Den fjädrar lätt mellan fingrarna. Vem gör en sådan sak? Klonk ler hemlighetsfullt men säger inget.",
+  },
+
+  // === BOKGRÄNDEN ===
+  "reading:hat": {
+    name: "Den vackra hatten",
+    icon: "🎩",
+    obtainedFrom: "Hattmakaren i Bokgränden",
+    description: "En elegant hatt med en mjuk fjäder och ett siden-band. Hattmakaren tyckte att en riktig detektiv borde ha en ordentlig hatt. Den sitter perfekt och får dig att känna dig minst tio centimeter längre.",
   },
 };
 
@@ -858,6 +871,12 @@ function InteriorView({ locationKey, completed, foundItems, dialog, setDialog,
   } else if (locationKey === "harbor") {
     scene = (
       <HarborScene foundItems={foundItems}
+        setDialog={setDialog} onPickUpItem={onPickUpItem}
+        onStartMission={onStartMission} />
+    );
+  } else if (locationKey === "reading") {
+    scene = (
+      <BokgrandenScene completed={completed} foundItems={foundItems}
         setDialog={setDialog} onPickUpItem={onPickUpItem}
         onStartMission={onStartMission} />
     );
@@ -1898,6 +1917,242 @@ function Hideaway({ x, y, size = 4, found, icon, hint, foundText, onFind }) {
       <span className="td-hideaway-glint" />
       <span className="td-hideaway-icon">{icon}</span>
     </button>
+  );
+}
+
+// ============================================================
+// BOKGRÄNDEN — gata med tre butiker man klickar in i
+// ============================================================
+const READING_TEXT = `Den gamla klockan på torget hade slutat slå. Varje morgon brukade den ringa sex slag när solen gick upp, men nu var den helt tyst. Mira märkte att fågeln som bodde i klocktornet hade flugit sin väg. Utan fågelns sång vaknade inte klockmästaren, och utan klockmästaren ringde inte klockan.`;
+
+const READING_QUESTIONS = [
+  {
+    q: "Hur många slag brukade klockan slå på morgonen?",
+    options: ["Tre slag", "Sex slag", "Tolv slag"],
+    correct: 1,
+  },
+  {
+    q: "Vem hade flugit sin väg?",
+    options: ["Fågeln i klocktornet", "Klockmästaren", "Mira"],
+    correct: 0,
+  },
+  {
+    q: "Varför ringde inte klockan längre?",
+    options: [
+      "Den var sönder för alltid",
+      "Klockmästaren vaknade inte utan fågelns sång",
+      "Solen gick inte upp",
+    ],
+    correct: 1,
+  },
+];
+
+// Föremål som ska matchas mot rätt världsdel i världsbutiken
+const WORLD_ITEMS = [
+  { id: "mask", icon: "🎭", name: "Afrikansk mask", region: "afrika" },
+  { id: "buddha", icon: "🧘", name: "Buddha-staty", region: "asien" },
+  { id: "totem", icon: "🗿", name: "Totem-figur", region: "amerika" },
+  { id: "vase", icon: "🏺", name: "Antik vas", region: "europa" },
+];
+const WORLD_REGIONS = [
+  { id: "europa", name: "Europa" },
+  { id: "afrika", name: "Afrika" },
+  { id: "asien", name: "Asien" },
+  { id: "amerika", name: "Amerika" },
+];
+
+function BokgrandenScene({ completed, foundItems, setDialog, onPickUpItem, onStartMission }) {
+  const [shop, setShop] = useState(null); // null = gata, annars "bok"/"hatt"/"varld"
+
+  if (shop === "bok") {
+    return <BokaffarShop alreadyDone={completed} onComplete={onStartMission}
+      onBack={() => setShop(null)} />;
+  }
+  if (shop === "hatt") {
+    return <HattaffarShop hatFound={foundItems.includes("reading:hat")}
+      onPickUpItem={onPickUpItem} setDialog={setDialog}
+      onBack={() => setShop(null)} />;
+  }
+  if (shop === "varld") {
+    return <VarldsaffarShop onBack={() => setShop(null)} setDialog={setDialog} />;
+  }
+
+  // GATAN — tre klickbara butiker
+  return (
+    <div className="td-scene-image td-fade-in"
+         style={{ backgroundImage: `url(${ASSETS.bokgrandenGata})` }}>
+      <button className="td-shop-hotspot" style={{ left: "2%", top: "28%", width: "28%", height: "55%" }}
+        onClick={() => setShop("bok")} aria-label="Gå in i bokbutiken">
+        <span className="td-shop-label" style={{ top: "-6%" }}>📖 Bokbutiken</span>
+      </button>
+      <button className="td-shop-hotspot" style={{ left: "35%", top: "18%", width: "24%", height: "62%" }}
+        onClick={() => setShop("hatt")} aria-label="Gå in i hattmakaren">
+        <span className="td-shop-label" style={{ top: "-4%" }}>🎩 Hattmakaren</span>
+      </button>
+      <button className="td-shop-hotspot" style={{ left: "76%", top: "30%", width: "23%", height: "52%" }}
+        onClick={() => setShop("varld")} aria-label="Gå in i världsbutiken">
+        <span className="td-shop-label" style={{ top: "-6%" }}>🌍 Världsbutiken</span>
+      </button>
+      <div className="td-scene-hint">Klicka på en butik för att gå in</div>
+    </div>
+  );
+}
+
+// --- BOKBUTIKEN: läsförståelse ---
+function BokaffarShop({ alreadyDone, onComplete, onBack }) {
+  const [step, setStep] = useState("intro"); // intro -> reading -> q0/q1/q2 -> done
+  const [qIndex, setQIndex] = useState(0);
+  const [wrong, setWrong] = useState(false);
+
+  function answer(i) {
+    if (i === READING_QUESTIONS[qIndex].correct) {
+      setWrong(false);
+      if (qIndex + 1 < READING_QUESTIONS.length) {
+        setQIndex(qIndex + 1);
+      } else {
+        setStep("done");
+      }
+    } else {
+      setWrong(true);
+    }
+  }
+
+  return (
+    <div className="td-scene-image td-fade-in"
+         style={{ backgroundImage: `url(${ASSETS.bokaffaren})` }}>
+      <button className="td-shop-back td-btn td-btn-small" onClick={onBack}>← Ut på gatan</button>
+
+      <div className="td-shop-panel">
+        {step === "intro" && (
+          <>
+            <div className="td-shop-speaker">📚 Mira</div>
+            <p>Välkommen till bokbutiken, unga detektiv! Jag har hittat en mystisk text. Läs den noga — sedan ställer jag tre frågor. Klarar du dem får du något värdefullt.</p>
+            <button className="td-btn td-btn-big" onClick={() => setStep("reading")}>Visa texten</button>
+          </>
+        )}
+        {step === "reading" && (
+          <>
+            <div className="td-shop-speaker">📖 Läs noga</div>
+            <p className="td-reading-text">{READING_TEXT}</p>
+            <button className="td-btn td-btn-big" onClick={() => setStep("q")}>Jag har läst klart →</button>
+          </>
+        )}
+        {step === "q" && (
+          <>
+            <div className="td-shop-speaker">Fråga {qIndex + 1} av {READING_QUESTIONS.length}</div>
+            <p>{READING_QUESTIONS[qIndex].q}</p>
+            <div className="td-answer-list">
+              {READING_QUESTIONS[qIndex].options.map((opt, i) => (
+                <button key={i} className="td-btn td-answer-btn" onClick={() => answer(i)}>{opt}</button>
+              ))}
+            </div>
+            {wrong && <p className="td-wrong-hint">Inte riktigt — läs texten igen och försök på nytt!</p>}
+          </>
+        )}
+        {step === "done" && (
+          <>
+            <div className="td-shop-speaker">⭐ Bra jobbat!</div>
+            <p>Du läste och förstod precis rätt! Här är din belöning — och en stjärna för Bokgränden.</p>
+            <button className="td-btn td-btn-big" onClick={onComplete}>Ta emot belöningen ★</button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// --- HATTMAKAREN: ger en hatt ---
+function HattaffarShop({ hatFound, onPickUpItem, setDialog, onBack }) {
+  return (
+    <div className="td-scene-image td-fade-in"
+         style={{ backgroundImage: `url(${ASSETS.hattaffaren})` }}>
+      <button className="td-shop-back td-btn td-btn-small" onClick={onBack}>← Ut på gatan</button>
+      <div className="td-shop-panel">
+        <div className="td-shop-speaker">🎩 Hattmakaren</div>
+        {hatFound ? (
+          <p>Den där hatten klär dig verkligen! En riktig detektiv-look.</p>
+        ) : (
+          <>
+            <p>Aha, en blivande detektiv! Vet du vad varje stor detektiv behöver? En ordentlig hatt! Här — ta den här. Den är min present till dig.</p>
+            <button className="td-btn td-btn-big" onClick={() => {
+              onPickUpItem("reading:hat");
+              setDialog("Du fick Den vackra hatten! Den ligger nu i väskan.");
+            }}>Ta emot hatten 🎩</button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// --- VÄRLDSBUTIKEN: matcha föremål till världsdel ---
+function VarldsaffarShop({ onBack, setDialog }) {
+  const [placed, setPlaced] = useState({});   // itemId -> regionId
+  const [selected, setSelected] = useState(null);
+  const [wrong, setWrong] = useState(null);
+
+  const allDone = WORLD_ITEMS.every((it) => placed[it.id] === it.region);
+
+  function tryPlace(regionId) {
+    if (!selected) return;
+    const item = WORLD_ITEMS.find((i) => i.id === selected);
+    if (item.region === regionId) {
+      setPlaced({ ...placed, [item.id]: regionId });
+      setSelected(null);
+      setWrong(null);
+    } else {
+      setWrong(regionId);
+      setTimeout(() => setWrong(null), 600);
+    }
+  }
+
+  const remaining = WORLD_ITEMS.filter((it) => !placed[it.id]);
+
+  return (
+    <div className="td-scene-image td-fade-in"
+         style={{ backgroundImage: `url(${ASSETS.varldsaffaren})` }}>
+      <button className="td-shop-back td-btn td-btn-small" onClick={onBack}>← Ut på gatan</button>
+      <div className="td-world-game">
+        <div className="td-world-instructions">
+          🌍 Etiketterna har ramlat av! Välj ett föremål och placera det på rätt världsdel.
+        </div>
+        {!allDone ? (
+          <>
+            <div className="td-world-items">
+              {remaining.map((it) => (
+                <button key={it.id}
+                  className={`td-world-item ${selected === it.id ? "td-world-item-sel" : ""}`}
+                  onClick={() => setSelected(it.id)}>
+                  <span className="td-world-item-icon">{it.icon}</span>
+                  <span>{it.name}</span>
+                </button>
+              ))}
+            </div>
+            <div className="td-world-regions">
+              {WORLD_REGIONS.map((r) => {
+                const here = WORLD_ITEMS.find((it) => placed[it.id] === r.id);
+                return (
+                  <button key={r.id}
+                    className={`td-world-region ${wrong === r.id ? "td-world-wrong" : ""} ${here ? "td-world-filled" : ""}`}
+                    onClick={() => tryPlace(r.id)}>
+                    <span className="td-world-region-name">{r.name}</span>
+                    {here && <span className="td-world-region-icon">{here.icon}</span>}
+                  </button>
+                );
+              })}
+            </div>
+          </>
+        ) : (
+          <div className="td-world-done">
+            <p>🎉 Alla föremål på rätt plats! Du är en riktig världsresenär.</p>
+            <button className="td-btn td-btn-big" onClick={() => {
+              setDialog("Världsbutikens ägare applåderar: 'Imponerande! Du kan din geografi.'");
+              onBack();
+            }}>Klar!</button>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -3036,6 +3291,133 @@ function Styles() {
         0%, 100% { margin-top: 0; }
         50% { margin-top: -3px; }
       }
+
+      /* === BOKGRÄNDEN === */
+      .td-shop-hotspot {
+        position: absolute;
+        background: transparent;
+        border: 3px dashed transparent;
+        border-radius: 12px;
+        cursor: pointer;
+        z-index: 5;
+        transition: background 0.2s, border-color 0.2s;
+        display: flex;
+        align-items: flex-start;
+        justify-content: center;
+      }
+      .td-shop-hotspot:hover, .td-shop-hotspot:focus-visible {
+        background: rgba(253, 201, 77, 0.18);
+        border-color: rgba(253, 201, 77, 0.85);
+        outline: none;
+      }
+      .td-shop-label {
+        position: absolute;
+        background: var(--cream);
+        border: 2.5px solid var(--ink);
+        border-radius: 8px;
+        padding: 4px 12px;
+        font-family: 'Georgia', serif;
+        font-weight: bold;
+        font-size: 15px;
+        color: var(--ink);
+        white-space: nowrap;
+        opacity: 0;
+        transform: translateY(6px);
+        transition: opacity 0.2s, transform 0.2s;
+        box-shadow: 2px 2px 0 var(--ink);
+        pointer-events: none;
+      }
+      .td-shop-hotspot:hover .td-shop-label,
+      .td-shop-hotspot:focus-visible .td-shop-label {
+        opacity: 1;
+        transform: translateY(0);
+      }
+      .td-shop-back {
+        position: absolute;
+        top: 14px; left: 14px;
+        z-index: 20;
+      }
+      .td-shop-panel {
+        position: absolute;
+        right: 4%;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 360px;
+        max-width: 44%;
+        background: var(--cream);
+        border: 3px solid var(--ink);
+        border-radius: 14px;
+        padding: 20px 22px;
+        box-shadow: 5px 5px 0 var(--ink);
+        z-index: 15;
+        font-family: 'Georgia', serif;
+        color: var(--ink);
+      }
+      .td-shop-speaker {
+        font-weight: bold;
+        font-size: 18px;
+        margin-bottom: 10px;
+        border-bottom: 2px solid var(--ink);
+        padding-bottom: 6px;
+      }
+      .td-shop-panel p { line-height: 1.5; margin: 0 0 16px; }
+      .td-reading-text {
+        background: #fff9ec;
+        border-left: 4px solid var(--gold);
+        padding: 12px 14px;
+        font-style: italic;
+        border-radius: 4px;
+      }
+      .td-answer-list { display: flex; flex-direction: column; gap: 8px; }
+      .td-answer-btn { text-align: left; }
+      .td-wrong-hint { color: var(--red); font-size: 14px; margin-top: 10px; }
+
+      /* Världsbutikens matcha-spel */
+      .td-world-game {
+        position: absolute;
+        left: 50%; bottom: 4%;
+        transform: translateX(-50%);
+        width: 90%;
+        max-width: 760px;
+        background: rgba(253, 243, 216, 0.94);
+        border: 3px solid var(--ink);
+        border-radius: 14px;
+        padding: 16px;
+        box-shadow: 4px 4px 0 var(--ink);
+        z-index: 15;
+        font-family: 'Georgia', serif;
+        color: var(--ink);
+      }
+      .td-world-instructions { font-weight: bold; text-align: center; margin-bottom: 12px; }
+      .td-world-items { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-bottom: 14px; }
+      .td-world-item {
+        display: flex; flex-direction: column; align-items: center; gap: 4px;
+        background: var(--cream); border: 2.5px solid var(--ink); border-radius: 10px;
+        padding: 8px 12px; cursor: pointer; font-family: 'Georgia', serif;
+        font-size: 13px; font-weight: bold; transition: transform 0.15s;
+      }
+      .td-world-item-icon { font-size: 30px; }
+      .td-world-item:hover { transform: translateY(-3px); }
+      .td-world-item-sel { background: var(--gold); box-shadow: 0 0 0 3px var(--ink); }
+      .td-world-regions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+      .td-world-region {
+        min-width: 120px; min-height: 64px;
+        background: #e9dcc0; border: 2.5px dashed var(--ink); border-radius: 10px;
+        padding: 8px; cursor: pointer; font-family: 'Georgia', serif;
+        font-weight: bold; display: flex; flex-direction: column; align-items: center;
+        justify-content: center; gap: 4px; transition: background 0.2s;
+      }
+      .td-world-region:hover { background: #f0e6cf; }
+      .td-world-filled { background: #d4e6c8; border-style: solid; }
+      .td-world-region-icon { font-size: 28px; }
+      .td-world-wrong { animation: tdWorldShake 0.3s; background: #f0c0bc; }
+      @keyframes tdWorldShake {
+        0%,100% { transform: translateX(0); }
+        25% { transform: translateX(-6px); }
+        75% { transform: translateX(6px); }
+      }
+      .td-world-done { text-align: center; }
+      .td-world-done p { font-size: 18px; font-weight: bold; margin-bottom: 12px; }
 
       .td-paper-tag {
         position: absolute;
