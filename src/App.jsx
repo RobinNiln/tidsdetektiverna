@@ -1284,7 +1284,7 @@ function HarborScene({ foundItems, setDialog, onPickUpItem, onStartMission }) {
 
       {/* Falk — LÄNGST FRAM, nära kameran, störst */}
       <HarborCharacter
-        style={{ left: "28%", bottom: "0%", height: "66%", aspectRatio: "793 / 1983", zIndex: 14 }}
+        style={{ left: "28%", bottom: "-6%", height: "74%", aspectRatio: "793 / 1983", zIndex: 14 }}
         image={ASSETS.falkFull}
         label="Kapten Falk"
         onClick={() => talkTo("falk")}
@@ -1292,18 +1292,18 @@ function HarborScene({ foundItems, setDialog, onPickUpItem, onStartMission }) {
         smoking
       />
 
-      {/* Lasse — precis framför hamnkontoret, mindre (en bit bak) */}
+      {/* Lasse — närmare kameran, framför hamnkontoret */}
       <HarborCharacter
-        style={{ left: "11%", bottom: "26%", height: "38%", aspectRatio: "793 / 1983", zIndex: 10 }}
+        style={{ left: "13%", bottom: "11%", height: "47%", aspectRatio: "793 / 1983", zIndex: 10 }}
         image={ASSETS.lasseFull}
         label="???"
         onClick={() => talkTo("lasse")}
         suspicious
       />
 
-      {/* Främlingen — LÄNGST BAK på bryggan, minst, mystisk */}
+      {/* Främlingen — på bryggdäcket längst bak, vid lådorna, minst, mystisk */}
       <HarborCharacter
-        style={{ left: "48%", bottom: "33%", height: "30%", aspectRatio: "793 / 1983", zIndex: 8 }}
+        style={{ left: "53%", bottom: "28%", height: "30%", aspectRatio: "793 / 1983", zIndex: 8 }}
         image={ASSETS.framlingFull}
         label="?"
         onClick={() => talkTo("framling")}
