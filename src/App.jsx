@@ -25,6 +25,8 @@ const ASSETS = {
   leaf3: "/tidsdetektiverna/leaf3.png",
   // Hamnen
   hamn: "/tidsdetektiverna/hamn.jpg",
+  hamnVideo: "/tidsdetektiverna/hamn.mp4",
+  hamnPoster: "/tidsdetektiverna/hamn_poster.jpg",
   falk: "/tidsdetektiverna/falk.jpg",
   lasse: "/tidsdetektiverna/lasse.jpg",
   berit: "/tidsdetektiverna/berit.jpg",
@@ -1245,8 +1247,20 @@ function HarborScene({ foundItems, setDialog, onPickUpItem, onStartMission }) {
   }
 
   return (
-    <div className="td-scene-image"
-         style={{ backgroundImage: `url(${ASSETS.hamn})` }}>
+    <div className="td-scene-image td-scene-video-wrap">
+
+      {/* Levande bakgrund: loopande video med rörligt vatten.
+          poster visas direkt medan videon laddar så scenen aldrig är tom. */}
+      <video
+        className="td-scene-video"
+        src={ASSETS.hamnVideo}
+        poster={ASSETS.hamnPoster}
+        autoPlay
+        loop
+        muted
+        playsInline
+        aria-hidden="true"
+      />
 
       {/* === LEVANDE BAKGRUNDSELEMENT === */}
       {/* Lyktornas glöd — uppe vid hamnkaptenens hus */}
@@ -1295,9 +1309,9 @@ function HarborScene({ foundItems, setDialog, onPickUpItem, onStartMission }) {
         suspicious
       />
 
-      {/* Främlingen — fristående mitt på bryggan, mystisk */}
+      {/* Främlingen — fristående på bryggan, en bit till höger om Falk, mystisk */}
       <HarborCharacter
-        style={{ left: "44%", bottom: "8%", height: "44%", aspectRatio: "793 / 1983" }}
+        style={{ left: "50%", bottom: "6%", height: "42%", aspectRatio: "793 / 1983" }}
         image={ASSETS.framlingFull}
         label="?"
         onClick={() => talkTo("framling")}
@@ -1324,7 +1338,7 @@ function HarborScene({ foundItems, setDialog, onPickUpItem, onStartMission }) {
         onFind={(t) => { onPickUpItem("harbor:hook"); setDialog(t); }}
       />
       <Hideaway
-        x={60} y={50} size={4}
+        x={63} y={54} size={4}
         found={foundItems.includes("harbor:compass")}
         icon="🧭"
         hint="Något ligger bland tunnorna..."
@@ -2804,6 +2818,23 @@ function Styles() {
         background-color: #1a1208;
       }
       .td-scene-shake { animation: tdSceneShake 0.1s ease-in-out infinite; }
+
+      /* Video-bakgrund (rörligt vatten i hamnen) */
+      .td-scene-video-wrap { overflow: hidden; }
+      .td-scene-video {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: center;
+        z-index: 0;
+        pointer-events: none;
+      }
+      .td-scene-video-wrap > *:not(.td-scene-video) {
+        position: relative;
+        z-index: 1;
+      }
       @keyframes tdSceneShake {
         0%, 100% { transform: translate(0, 0); }
         25% { transform: translate(-2px, 1px); }
@@ -2965,16 +2996,16 @@ function Styles() {
         display: flex;
         align-items: center;
         justify-content: center;
-        border-radius: 50%;
+        animation: tdHideawayBob 3s ease-in-out infinite;
       }
       .td-hideaway-glint {
         position: absolute;
-        inset: 0;
+        inset: -40%;
         border-radius: 50%;
         background: radial-gradient(
           circle at center,
-          rgba(253, 201, 77, 0.55) 0%,
-          rgba(253, 201, 77, 0.25) 45%,
+          rgba(253, 201, 77, 0.7) 0%,
+          rgba(253, 201, 77, 0.35) 40%,
           rgba(253, 201, 77, 0) 70%
         );
         animation: tdGlintPulse 2.2s ease-in-out infinite;
@@ -2982,34 +3013,36 @@ function Styles() {
       }
       .td-hideaway-icon {
         position: relative;
-        font-size: 0;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 22px;
         line-height: 1;
-        opacity: 0;
-        transition: opacity 0.2s ease, font-size 0.2s ease, transform 0.2s ease;
-        filter: drop-shadow(1px 1px 1px rgba(0,0,0,0.4));
+        background: var(--cream);
+        border: 2.5px solid var(--ink);
+        border-radius: 50%;
+        box-shadow: 2px 2px 0 var(--ink);
+        transition: transform 0.2s ease;
       }
       .td-hideaway:hover .td-hideaway-icon,
       .td-hideaway:focus-visible .td-hideaway-icon {
-        opacity: 1;
-        font-size: 26px;
-        transform: scale(1.1);
-      }
-      .td-hideaway:hover .td-hideaway-glint {
-        background: radial-gradient(
-          circle at center,
-          rgba(253, 201, 77, 0.75) 0%,
-          rgba(253, 201, 77, 0.35) 50%,
-          rgba(253, 201, 77, 0) 72%
-        );
+        transform: scale(1.18);
       }
       .td-hideaway:focus { outline: none; }
       .td-hideaway:focus-visible {
-        outline: 3px dashed rgba(253, 201, 77, 0.8);
-        outline-offset: 2px;
+        outline: 3px dashed rgba(253, 201, 77, 0.9);
+        outline-offset: 3px;
+        border-radius: 50%;
       }
       @keyframes tdGlintPulse {
-        0%, 100% { transform: scale(0.85); opacity: 0.55; }
-        50% { transform: scale(1.15); opacity: 1; }
+        0%, 100% { transform: scale(0.8); opacity: 0.5; }
+        50% { transform: scale(1.2); opacity: 1; }
+      }
+      @keyframes tdHideawayBob {
+        0%, 100% { margin-top: 0; }
+        50% { margin-top: -4px; }
       }
 
       .td-paper-tag {
