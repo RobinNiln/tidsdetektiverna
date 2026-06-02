@@ -84,7 +84,71 @@ function InventoryButton({ count, onClick }) {
       onClick={onClick}
       aria-label={`Öppna väskan, ${count} saker`}
     >
-      <span className="td-inventory-icon">🎒</span>
+      <span className="td-inventory-bag">
+        <svg viewBox="0 0 100 100" className="td-inventory-bag-svg" aria-hidden="true">
+          {/* Bärrem bakom väskan */}
+          <path
+            d="M 22 40 Q 12 18 30 12 M 78 40 Q 88 18 70 12"
+            fill="none"
+            stroke="#5a3d22"
+            strokeWidth="5"
+            strokeLinecap="round"
+          />
+          {/* Väskans kropp - sliten läder */}
+          <path
+            d="M 20 38 Q 18 36 22 35 L 78 35 Q 82 36 80 38 L 84 82 Q 84 90 76 90 L 24 90 Q 16 90 16 82 Z"
+            fill="#8a5a2b"
+            stroke="var(--ink)"
+            strokeWidth="3"
+            strokeLinejoin="round"
+          />
+          {/* Skugga/slitage i nederkant */}
+          <path
+            d="M 18 70 Q 50 78 82 70 L 84 82 Q 84 90 76 90 L 24 90 Q 16 90 16 82 Z"
+            fill="#6f4520"
+            opacity="0.55"
+          />
+          {/* Locket */}
+          <path
+            d="M 16 34 Q 14 28 22 28 L 78 28 Q 86 28 84 34 L 86 56 Q 86 60 80 60 L 20 60 Q 14 60 14 56 Z"
+            fill="#a06a35"
+            stroke="var(--ink)"
+            strokeWidth="3"
+            strokeLinejoin="round"
+          />
+          {/* Söm-streck längs locket */}
+          <path
+            d="M 22 53 L 78 53"
+            fill="none"
+            stroke="#5a3d22"
+            strokeWidth="1.6"
+            strokeDasharray="3 3"
+            strokeLinecap="round"
+          />
+          {/* Rem ner från locket till spännet */}
+          <rect x="44" y="52" width="12" height="22" rx="2"
+            fill="#7a5024" stroke="var(--ink)" strokeWidth="2.5" />
+          {/* Spänne */}
+          <rect x="42" y="66" width="16" height="11" rx="2.5"
+            fill="var(--gold)" stroke="var(--ink)" strokeWidth="2.5" />
+          <rect x="47" y="69" width="6" height="5" rx="1"
+            fill="none" stroke="var(--ink)" strokeWidth="2" />
+          {/* Blå patch nere till vänster */}
+          <rect x="24" y="74" width="15" height="13" rx="2"
+            fill="var(--blue)" stroke="var(--ink)" strokeWidth="2"
+            transform="rotate(-8 31 80)" />
+          <rect x="26" y="76" width="11" height="9" rx="1"
+            fill="none" stroke="var(--cream)" strokeWidth="1.2"
+            strokeDasharray="2.5 2.5" transform="rotate(-8 31 80)" />
+          {/* Röd patch nere till höger */}
+          <rect x="61" y="73" width="14" height="12" rx="2"
+            fill="var(--red)" stroke="var(--ink)" strokeWidth="2"
+            transform="rotate(7 68 79)" />
+          <rect x="63" y="75" width="10" height="8" rx="1"
+            fill="none" stroke="var(--cream)" strokeWidth="1.2"
+            strokeDasharray="2.5 2.5" transform="rotate(7 68 79)" />
+        </svg>
+      </span>
       {count > 0 && <span className="td-inventory-count">{count}</span>}
     </button>
   );
@@ -3345,49 +3409,67 @@ function Styles() {
       /* === VÄSKAN (INVENTORY) === */
       .td-inventory-btn {
         position: fixed;
-        top: 12px;
+        top: 14px;
         right: 16px;
         z-index: 100;
         background: var(--cream);
         border: 3px solid var(--ink);
-        padding: 8px 14px;
-        font-size: 22px;
-        font-family: 'Georgia', serif;
-        font-weight: bold;
+        padding: 8px;
         cursor: pointer;
         box-shadow: 4px 4px 0 var(--ink);
         transition: transform 0.15s ease, box-shadow 0.15s ease;
         display: flex;
         align-items: center;
-        gap: 6px;
-        border-radius: 4px;
+        justify-content: center;
+        border-radius: 10px;
+        line-height: 0;
       }
       .td-inventory-btn:hover {
         transform: translate(-2px, -2px);
         box-shadow: 6px 6px 0 var(--ink);
       }
+      .td-inventory-btn:hover .td-inventory-bag {
+        animation: tdBagWobble 0.6s ease-in-out;
+      }
       .td-inventory-btn:active {
         transform: translate(2px, 2px);
         box-shadow: 2px 2px 0 var(--ink);
       }
-      .td-inventory-icon {
-        font-size: 24px;
-        line-height: 1;
+      .td-inventory-bag {
+        display: block;
+        width: 64px;
+        height: 64px;
+      }
+      .td-inventory-bag-svg {
+        width: 100%;
+        height: 100%;
+        display: block;
+        filter: drop-shadow(2px 2px 0 rgba(58, 42, 23, 0.25));
+      }
+      @keyframes tdBagWobble {
+        0%, 100% { transform: rotate(0deg); }
+        25% { transform: rotate(-6deg); }
+        75% { transform: rotate(6deg); }
       }
       .td-inventory-count {
+        position: absolute;
+        top: -8px;
+        right: -8px;
         background: var(--red);
         color: var(--cream);
-        border: 2px solid var(--ink);
+        border: 2.5px solid var(--ink);
         border-radius: 999px;
-        min-width: 24px;
-        height: 24px;
-        padding: 0 6px;
+        min-width: 28px;
+        height: 28px;
+        padding: 0 7px;
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        font-size: 13px;
+        font-size: 15px;
         font-weight: bold;
         line-height: 1;
+        font-family: 'Georgia', serif;
+        box-shadow: 2px 2px 0 var(--ink);
       }
 
       .td-inventory-overlay {
