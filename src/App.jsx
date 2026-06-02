@@ -753,9 +753,16 @@ function HoverLabel({ hotspot, done, allDone }) {
   let status;
   if (isFinale) status = allDone ? "✦ Redo att öppnas" : "Låst tills alla stjärnor hittats";
   else status = done ? "★ Klart" : "Inte klart";
+
+  // Om hotspoten ligger långt till höger får kortet inte plats till höger om den.
+  // Då visar vi kortet till vänster om hotspoten istället.
+  const flipLeft = hotspot.x + hotspot.w > 68;
+  const posStyle = flipLeft
+    ? { right: `${100 - hotspot.x + 1}%`, top: `${Math.max(8, hotspot.y - 2)}%` }
+    : { left: `${hotspot.x + hotspot.w + 1}%`, top: `${Math.max(8, hotspot.y - 2)}%` };
+
   return (
-    <div className="td-hover-card"
-      style={{ left: `${hotspot.x + hotspot.w + 1}%`, top: `${Math.max(8, hotspot.y - 2)}%` }}>
+    <div className="td-hover-card" style={posStyle}>
       {characterSrc && (
         <div className="td-hover-character"><img src={characterSrc} alt={hotspot.characterName} /></div>
       )}
