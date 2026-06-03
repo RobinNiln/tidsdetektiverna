@@ -3438,8 +3438,8 @@ function Styles() {
         justify-content: center;
       }
       .td-shop-hotspot:hover, .td-shop-hotspot:focus-visible {
-        background: rgba(253, 201, 77, 0.08);
-        border-color: rgba(253, 201, 77, 0.4);
+        background: transparent;
+        border-color: transparent;
         outline: none;
       }
       .td-shop-label {
@@ -4806,7 +4806,7 @@ function Styles() {
         padding: 22px 24px 18px;
         box-shadow: 6px 6px 0 var(--ink);
         max-width: 600px; width: calc(100% - 40px);
-        z-index: 10;
+        z-index: 60;
         animation: tdBubbleIn 0.25s ease;
       }
       .td-dialog-bubble::before {
