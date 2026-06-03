@@ -2348,6 +2348,8 @@ function VarldsaffarShop({ onBack, setDialog }) {
 function CaveScene({ completed, foundItems, setDialog, onPickUpItem, onStartMission }) {
   const [room, setRoom] = useState("ingang");   // ingang -> sjo -> pelare -> verkstad
   const [detour, setDetour] = useState(null);   // vilken fel-väg/återvändsgränd man tittar på
+  const [riddleOpen, setRiddleOpen] = useState(false);
+  const [riddleWrong, setRiddleWrong] = useState(false);
 
   // En liten återvändsgränd-ruta (fel väg) — visar text + ev. gömd pryl, sen backa
   function Detour({ title, text, item, itemText, bg, onBack }) {
@@ -2498,21 +2500,58 @@ function CaveScene({ completed, foundItems, setDialog, onPickUpItem, onStartMiss
       <button className="td-shop-figure td-shop-figure-btn"
         style={{ left: "55%", bottom: "2%", height: "74%", aspectRatio: "750 / 1932" }}
         aria-label="Prata med Professor Ugglemark"
-        onClick={() => setDialog({
-          name: "Professor Ugglemark",
-          portrait: ASSETS.ugglemarkFull,
-          lines: [
-            "Va? Besök?! Här nere? Det var länge sedan någon hittade ända hit...",
-            "Jag är Professor Ugglemark. För många, många år sedan var jag med och byggde stadens allra första tidsmaskin.",
-            "Men maskinen gick sönder, och en del av den var för farlig. Jag gömde mig här med den sista delen — för att skydda den.",
-            "Främlingen i hamnen... ja, jag vet om honom. Han har letat efter mig i åratal. Men han ville ha delen av fel anledning.",
-            "Men DU — en riktig liten detektiv som löste alla ledtrådar och hittade ända hit! Dig kan jag lita på.",
-            "Här, ta den sista nyckeln. Nu kan tidsmaskinen äntligen lagas — på rätt sätt.",
-          ],
-          action: { label: "Ta emot den sista nyckeln ★", onClick: () => { setDialog(null); onStartMission(); } },
-        })}>
+        onClick={() => {
+          if (caveDone) {
+            setDialog({
+              name: "Professor Ugglemark",
+              portrait: ASSETS.ugglemarkFull,
+              lines: [
+                "Tack än en gång, lilla detektiv! Med den sista nyckeln kan tidsmaskinen äntligen lagas.",
+                "Hälsa de andra i Tidsstaden från den gamle uppfinnaren!",
+              ],
+            });
+          } else {
+            setDialog({
+              name: "Professor Ugglemark",
+              portrait: ASSETS.ugglemarkFull,
+              lines: [
+                "Va? Besök?! Här nere? Det var länge sedan någon hittade ända hit...",
+                "Jag är Professor Ugglemark. För många, många år sedan var jag med och byggde stadens allra första tidsmaskin.",
+                "Men maskinen gick sönder, och en del av den var för farlig. Jag gömde mig här med den sista delen — för att skydda den.",
+                "Främlingen i hamnen... ja, jag vet om honom. Han har letat efter mig i åratal. Men han ville ha delen av fel anledning.",
+                "Du verkar vara en riktig liten detektiv. Men innan jag ger dig den sista nyckeln måste jag vara säker. Lös min gåta!",
+              ],
+              action: { label: "Jag är redo för gåtan →", onClick: () => { setDialog(null); setRiddleOpen(true); setRiddleWrong(false); } },
+            });
+          }
+        }}>
         <img src={ASSETS.ugglemarkFull} alt="Professor Ugglemark" />
       </button>
+
+      {riddleOpen && !caveDone && (
+        <div className="td-cave-detour td-cave-riddle">
+          <button className="td-dialog-close" onClick={() => setRiddleOpen(false)} aria-label="Stäng">✕</button>
+          <div className="td-shop-speaker">🦉 Professor Ugglemarks gåta</div>
+          <p className="td-riddle-text"><i>"Jag talar utan mun och hörs utan öron. Jag har ingen kropp, men jag vaknar när du ropar i grottan. Vad är jag?"</i></p>
+          <div className="td-answer-list">
+            <button className="td-btn td-answer-btn" onClick={() => setRiddleWrong(true)}>En fladdermus</button>
+            <button className="td-btn td-answer-btn" onClick={() => {
+              setRiddleOpen(false);
+              setDialog({
+                name: "Professor Ugglemark",
+                portrait: ASSETS.ugglemarkFull,
+                lines: [
+                  "Ett EKO! Precis rätt! Du är sannerligen en klurig detektiv.",
+                  "Här, ta den sista nyckeln. Nu kan tidsmaskinen äntligen lagas — på rätt sätt.",
+                ],
+                action: { label: "Ta emot den sista nyckeln ★", onClick: () => { setDialog(null); onStartMission(); } },
+              });
+            }}>Ett eko</button>
+            <button className="td-btn td-answer-btn" onClick={() => setRiddleWrong(true)}>Vinden</button>
+          </div>
+          {riddleWrong && <p className="td-wrong-hint">Inte riktigt... Tänk på vad som svarar dig när du ropar i en grotta. Försök igen!</p>}
+        </div>
+      )}
 
       <div className="td-cave-clue td-cave-clue-final">
         {caveDone
@@ -3935,6 +3974,14 @@ function Styles() {
       }
       .td-cave-detour-onimg .td-shop-speaker { color: #fff; }
       .td-cave-detour-onimg .td-cave-found { color: #d8c9a8; }
+      .td-riddle-text {
+        background: #fff9ec;
+        border-left: 4px solid var(--gold);
+        padding: 12px 14px;
+        border-radius: 4px;
+        font-size: 17px;
+      }
+      .td-cave-riddle .td-answer-list { margin-top: 8px; }
 
       .td-paper-tag {
         position: absolute;
