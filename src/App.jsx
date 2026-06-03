@@ -2112,6 +2112,7 @@ function HattaffarShop({ hatFound, onPickUpItem, setDialog, onBack }) {
 
 // --- VÄRLDSBUTIKEN: matcha föremål till världsdel ---
 function VarldsaffarShop({ onBack, setDialog }) {
+  const [started, setStarted] = useState(false);
   const [placed, setPlaced] = useState({});   // itemId -> regionId
   const [selected, setSelected] = useState(null);
   const [wrong, setWrong] = useState(null);
@@ -2133,12 +2134,33 @@ function VarldsaffarShop({ onBack, setDialog }) {
 
   const remaining = WORLD_ITEMS.filter((it) => !placed[it.id]);
 
+  // INTRO: butiken med klickbar karta på väggen
+  if (!started) {
+    return (
+      <div className="td-scene-image td-fade-in"
+           style={{ backgroundImage: `url(${ASSETS.varldsaffaren})` }}>
+        <button className="td-shop-back td-btn td-btn-small" onClick={onBack}>← Ut på gatan</button>
+        <img src={ASSETS.varldskvinnaFull} alt="Världshandlerskan" className="td-shop-figure"
+          style={{ left: "60%", bottom: "0%", height: "60%", aspectRatio: "656 / 1896" }} />
+
+        {/* Klickbar världskarta på väggen */}
+        <button className="td-shop-hotspot" style={{ left: "28%", top: "16%", width: "34%", height: "32%" }}
+          onClick={() => setStarted(true)} aria-label="Undersök världskartan">
+          <span className="td-shop-label" style={{ top: "-12%" }}>🗺️ Undersök kartan</span>
+        </button>
+
+        <div className="td-shop-panel" style={{ left: "4%", right: "auto", top: "auto", bottom: "6%", transform: "none" }}>
+          <div className="td-shop-speaker">🧣 Världshandlerskan</div>
+          <p>Välkommen, lilla detektiv! Etiketterna på mina föremål har ramlat av. Klicka på den stora <b>världskartan</b> på väggen, så hjälps vi åt att lista ut varifrån sakerna kommer.</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="td-scene-image td-fade-in"
          style={{ backgroundImage: `url(${ASSETS.varldsaffaren})` }}>
       <button className="td-shop-back td-btn td-btn-small" onClick={onBack}>← Ut på gatan</button>
-      <img src={ASSETS.varldskvinnaFull} alt="Världshandlerskan" className="td-shop-figure"
-        style={{ left: "3%", bottom: "30%", height: "62%", aspectRatio: "656 / 1896" }} />
       <div className="td-world-game">
         <div className="td-world-instructions">
           🌍 Etiketterna har ramlat av! Välj ett föremål och placera det på rätt världsdel.
