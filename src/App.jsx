@@ -54,6 +54,10 @@ const ASSETS = {
   grottaPelare: "/tidsdetektiverna/grotta_pelare.jpg",
   grottaVerkstad: "/tidsdetektiverna/grotta_verkstad.jpg",
   ugglemarkFull: "/tidsdetektiverna/ugglemark_full.png",
+  // Grottans fel-vägar (där man hittar en pryl)
+  grottaVind: "/tidsdetektiverna/grotta_vind.jpg",
+  grottaStrand: "/tidsdetektiverna/grotta_strand.jpg",
+  grottaHjort: "/tidsdetektiverna/grotta_hjort.jpg",
 };
 
 // ============================================================
@@ -2346,8 +2350,29 @@ function CaveScene({ completed, foundItems, setDialog, onPickUpItem, onStartMiss
   const [detour, setDetour] = useState(null);   // vilken fel-väg/återvändsgränd man tittar på
 
   // En liten återvändsgränd-ruta (fel väg) — visar text + ev. gömd pryl, sen backa
-  function Detour({ title, text, item, itemText, onBack }) {
+  function Detour({ title, text, item, itemText, bg, onBack }) {
     const found = item ? foundItems.includes(item) : true;
+    // Om en bakgrundsbild finns visar vi den i helbild med en panel ovanpå.
+    if (bg) {
+      return (
+        <div className="td-scene-image td-fade-in td-cave-detour-scene"
+             style={{ backgroundImage: `url(${bg})` }}>
+          <button className="td-shop-back td-btn td-btn-small" onClick={onBack}>← Backa tillbaka</button>
+          <div className="td-cave-detour td-cave-detour-onimg">
+            <div className="td-shop-speaker">{title}</div>
+            <p>{text}</p>
+            {item && !found && (
+              <button className="td-btn td-btn-big" onClick={() => {
+                onPickUpItem(item);
+                setDialog(itemText);
+              }}>Plocka upp {ITEM_DATA[item].icon}</button>
+            )}
+            {item && found && <p className="td-cave-found">Du har redan hittat det som fanns här.</p>}
+          </div>
+        </div>
+      );
+    }
+    // Annars: vanlig textruta (för fel-vägar utan pryl).
     return (
       <div className="td-cave-detour">
         <button className="td-dialog-close" onClick={onBack} aria-label="Backa">✕</button>
@@ -2382,6 +2407,7 @@ function CaveScene({ completed, foundItems, setDialog, onPickUpItem, onStartMiss
 
         {detour === "vind" && (
           <Detour title="🦇 Vindens gång"
+            bg={ASSETS.grottaVind}
             text="Du hör vinden vina och fladdermöss fladdra! Det här är fel väg — men något ligger och glittrar bland stenarna."
             item="cave:lantern"
             itemText="Du hittade Den slocknade lyktan bland stenarna! Den ligger nu i väskan."
@@ -2414,6 +2440,7 @@ function CaveScene({ completed, foundItems, setDialog, onPickUpItem, onStartMiss
 
         {detour === "strand" && (
           <Detour title="✨ Strandkanten"
+            bg={ASSETS.grottaStrand}
             text="Du följer den glittrande strandkanten. Vattnet lyser turkost — och där, mellan kristallerna, ligger något alldeles speciellt!"
             item="cave:crystal"
             itemText="Du hittade Den lysande kristallen! Den lyser svagt blått i väskan."
@@ -2446,6 +2473,7 @@ function CaveScene({ completed, foundItems, setDialog, onPickUpItem, onStartMiss
 
         {detour === "hjort" && (
           <Detour title="🦌 Hjortens pelare"
+            bg={ASSETS.grottaHjort}
             text="Den här pelaren visar djur och skogar — vacker, men inget kugghjul. Bakom den ligger dock något uråldrigt och halvt begravt i sten..."
             item="cave:fossil"
             itemText="Du hittade Det uråldriga fossilet bakom pelaren! Det ligger nu i väskan."
@@ -3898,6 +3926,15 @@ function Styles() {
       .td-cave-detour p { line-height: 1.5; margin: 0 0 16px; }
       .td-cave-detour .td-btn { margin: 0 6px; }
       .td-cave-found { font-style: italic; color: #7a6a4a; }
+      /* Detour-vy med bakgrundsbild: panelen läggs ovanpå med mörk bakgrund */
+      .td-cave-detour-onimg {
+        background: rgba(28, 20, 10, 0.82);
+        border-color: var(--cream);
+        color: var(--cream);
+        box-shadow: 5px 5px 0 rgba(0,0,0,0.45);
+      }
+      .td-cave-detour-onimg .td-shop-speaker { color: #fff; }
+      .td-cave-detour-onimg .td-cave-found { color: #d8c9a8; }
 
       .td-paper-tag {
         position: absolute;
