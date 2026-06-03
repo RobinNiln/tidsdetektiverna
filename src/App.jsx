@@ -47,6 +47,7 @@ const ASSETS = {
   miraFull: "/tidsdetektiverna/mira_full.png",
   hattmakareFull: "/tidsdetektiverna/hattmakare_full.png",
   varldskvinnaFull: "/tidsdetektiverna/varldskvinna_full.png",
+  varldskarta: "/tidsdetektiverna/varldskarta.jpg",
 };
 
 // ============================================================
@@ -1960,14 +1961,10 @@ const WORLD_ITEMS = [
   { id: "vase", icon: "🏺", name: "Antik vas", region: "europa" },
 ];
 const WORLD_REGIONS = [
-  { id: "amerika", name: "Amerika", cx: 38, cy: 55,
-    path: "M30 18 Q44 16 46 30 Q40 40 44 52 Q52 66 42 84 Q34 96 30 86 Q36 70 30 60 Q24 48 30 40 Q22 30 30 18 Z" },
-  { id: "europa", name: "Europa", cx: 96, cy: 33,
-    path: "M86 22 Q104 18 108 28 Q104 40 96 44 Q86 44 84 36 Q80 28 86 22 Z" },
-  { id: "afrika", name: "Afrika", cx: 100, cy: 70,
-    path: "M88 48 Q110 46 112 60 Q108 78 100 92 Q92 84 90 70 Q84 58 88 48 Z" },
-  { id: "asien", name: "Asien", cx: 145, cy: 42,
-    path: "M114 20 Q150 14 172 26 Q176 42 160 50 Q140 54 124 48 Q112 40 114 20 Z" },
+  { id: "amerika", name: "Amerika", cx: 22, cy: 55, rx: 18, ry: 40 },
+  { id: "europa", name: "Europa", cx: 52, cy: 30, rx: 10, ry: 16 },
+  { id: "afrika", name: "Afrika", cx: 56, cy: 62, rx: 12, ry: 24 },
+  { id: "asien", name: "Asien", cx: 76, cy: 38, rx: 18, ry: 26 },
 ];
 
 function BokgrandenScene({ completed, foundItems, setDialog, onPickUpItem, onStartMission }) {
@@ -2174,25 +2171,25 @@ function VarldsaffarShop({ onBack, setDialog }) {
               : "🌍 Välj ett föremål och placera det på rätt världsdel på kartan."}
         </div>
 
-        {/* KARTAN ÄR SPELPLANEN */}
-        <div className="td-map-board">
-          <svg viewBox="0 0 200 110" className="td-map-svg" aria-label="Världskarta">
-            {/* hav */}
-            <rect x="0" y="0" width="200" height="110" rx="6" className="td-map-sea" />
-            {WORLD_REGIONS.map((r) => {
-              const here = WORLD_ITEMS.find((it) => placed[it.id] === r.id);
-              const isWrong = wrong === r.id;
-              return (
-                <g key={r.id}
-                   className={`td-map-region ${here ? "td-map-filled" : ""} ${isWrong ? "td-map-wrong" : ""} ${selected ? "td-map-active" : ""}`}
-                   onClick={() => tryPlace(r.id)}>
-                  <path d={r.path} className="td-map-land" />
-                  <text x={r.cx} y={r.cy} className="td-map-name" textAnchor="middle">{r.name}</text>
-                  {here && <text x={r.cx} y={r.cy + 11} className="td-map-icon" textAnchor="middle">{here.icon}</text>}
-                </g>
-              );
-            })}
-          </svg>
+        {/* KARTAN ÄR SPELPLANEN — riktiga kartan från butiken */}
+        <div className="td-map-board" style={{ backgroundImage: `url(${ASSETS.varldskarta})` }}>
+          {WORLD_REGIONS.map((r) => {
+            const here = WORLD_ITEMS.find((it) => placed[it.id] === r.id);
+            const isWrong = wrong === r.id;
+            return (
+              <button key={r.id}
+                className={`td-map-zone ${here ? "td-map-filled" : ""} ${isWrong ? "td-map-wrong" : ""} ${selected ? "td-map-active" : ""}`}
+                style={{
+                  left: `${r.cx - r.rx}%`, top: `${r.cy - r.ry}%`,
+                  width: `${r.rx * 2}%`, height: `${r.ry * 2}%`,
+                }}
+                onClick={() => tryPlace(r.id)}
+                aria-label={r.name}>
+                <span className="td-map-zone-label">{r.name}</span>
+                {here && <span className="td-map-zone-icon">{here.icon}</span>}
+              </button>
+            );
+          })}
         </div>
 
         {!allDone ? (
@@ -3491,31 +3488,46 @@ function Styles() {
       .td-world-done { text-align: center; }
       .td-world-done p { font-size: 18px; font-weight: bold; margin-bottom: 12px; }
 
-      /* Kart-spelplanen */
-      .td-world-game-map { max-width: 680px; }
+      /* Kart-spelplanen — riktiga kartan med klickzoner */
+      .td-world-game-map { max-width: 640px; }
       .td-map-board {
+        position: relative;
         width: 100%;
+        aspect-ratio: 485 / 249;
         margin: 0 auto 14px;
-        background: #cfe0e6;
+        background-size: cover;
+        background-position: center;
         border: 3px solid var(--ink);
         border-radius: 10px;
         overflow: hidden;
-        box-shadow: inset 0 0 0 2px rgba(58,42,23,0.15);
+        box-shadow: inset 0 0 0 2px rgba(58,42,23,0.2);
       }
-      .td-map-svg { width: 100%; height: auto; display: block; }
-      .td-map-sea { fill: #bcd4dc; }
-      .td-map-land { fill: #d8c08a; stroke: var(--ink); stroke-width: 1.2; transition: fill 0.2s; }
-      .td-map-name {
-        font-family: 'Georgia', serif; font-size: 7px; font-weight: bold;
-        fill: var(--ink); pointer-events: none;
+      .td-map-zone {
+        position: absolute;
+        background: transparent;
+        border: 2px dashed transparent;
+        border-radius: 50%;
+        cursor: pointer;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        transition: background 0.2s, border-color 0.2s;
       }
-      .td-map-icon { font-size: 11px; pointer-events: none; }
-      .td-map-region { cursor: pointer; }
-      .td-map-region:hover .td-map-land { fill: #e6cf9a; }
-      .td-map-active .td-map-land { stroke-dasharray: 3 2; }
-      .td-map-active:hover .td-map-land { fill: var(--gold); }
-      .td-map-filled .td-map-land { fill: #a9cf94; }
-      .td-map-wrong .td-map-land { fill: #e0a59c; animation: tdWorldShake 0.3s; }
+      .td-map-zone-label {
+        font-family: 'Georgia', serif;
+        font-weight: bold;
+        font-size: 14px;
+        color: var(--ink);
+        text-shadow: 0 0 4px rgba(253,243,216,0.9), 0 0 4px rgba(253,243,216,0.9);
+        pointer-events: none;
+      }
+      .td-map-zone-icon { font-size: 26px; pointer-events: none; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.4)); }
+      .td-map-zone:hover { background: rgba(253,201,77,0.25); }
+      .td-map-active { border-color: rgba(253,201,77,0.7); }
+      .td-map-active:hover { background: rgba(253,201,77,0.45); }
+      .td-map-filled { background: rgba(95,168,96,0.4); border-color: rgba(95,168,96,0.8); border-style: solid; }
+      .td-map-wrong { background: rgba(192,57,43,0.4); animation: tdWorldShake 0.3s; }
 
       .td-paper-tag {
         position: absolute;
