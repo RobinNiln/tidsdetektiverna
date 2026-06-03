@@ -2497,8 +2497,8 @@ function CaveScene({ completed, foundItems, setDialog, onPickUpItem, onStartMiss
          style={{ backgroundImage: `url(${ASSETS.grottaVerkstad})` }}>
       <button className="td-shop-back td-btn td-btn-small" onClick={() => { setRoom("pelare"); setDetour(null); }}>← Tillbaka</button>
 
-      <button className="td-shop-figure td-shop-figure-btn"
-        style={{ left: "55%", bottom: "2%", height: "74%", aspectRatio: "750 / 1932" }}
+      <button className="td-shop-figure td-shop-figure-btn td-ugglemark-center"
+        style={{ left: "50%", bottom: "2%", height: "74%", aspectRatio: "750 / 1932" }}
         aria-label="Prata med Professor Ugglemark"
         onClick={() => {
           if (caveDone) {
@@ -3769,6 +3769,10 @@ function Styles() {
       }
       .td-shop-figure-btn:hover { transform: scale(1.03); }
       .td-shop-figure-btn:active { transform: scale(0.99); }
+      /* Ugglemark centrerad på golvet — behåll centrering även vid hover */
+      .td-ugglemark-center { transform: translateX(-50%); }
+      .td-ugglemark-center:hover { transform: translateX(-50%) scale(1.03); }
+      .td-ugglemark-center:active { transform: translateX(-50%) scale(0.99); }
       .td-dialog-close {
         position: absolute;
         top: 8px; right: 10px;
