@@ -501,6 +501,11 @@ export default function App() {
       completeMission("cave");
       // stannar kvar i grottan (verkstaden) som nu visar "klar"-läget
     }
+    else if (activeLocation === "clock") {
+      pickUpItem("clock:hand");
+      completeMission("clock");
+      // stannar kvar i klocktornet som nu visar "klar"-läget
+    }
     else setView("mission");
   }
   function backToInterior() { setView("interior"); }
@@ -989,6 +994,10 @@ function InteriorView({ locationKey, completed, foundItems, dialog, setDialog,
       <CaveScene completed={completed} foundItems={foundItems}
         setDialog={setDialog} onPickUpItem={onPickUpItem}
         onStartMission={onStartMission} />
+    );
+  } else if (locationKey === "clock") {
+    scene = (
+      <ClockTowerScene completed={completed} onStartMission={onStartMission} />
     );
   } else {
     scene = <ComingSoonScene title={hotspot.title} onStartMission={onStartMission} />;
@@ -2563,6 +2572,21 @@ function CaveScene({ completed, foundItems, setDialog, onPickUpItem, onStartMiss
   );
 }
 
+function ClockTowerScene({ completed, onStartMission }) {
+  return (
+    <div className="td-scene-image td-fade-in"
+         style={{ backgroundImage: `url(${ASSETS.klocktornBg})` }}>
+      <div className="td-clocktower-panel">
+        <ClockMission
+          alreadyDone={completed.clock}
+          onComplete={onStartMission}
+          onBack={() => {}}
+        />
+      </div>
+    </div>
+  );
+}
+
 function ComingSoonScene({ title, onStartMission }) {
   return (
     <div className="td-coming-soon">
@@ -2941,7 +2965,7 @@ function ClockMission({ alreadyDone, onComplete, onBack }) {
 
   if (alreadyDone || allDone) {
     return (
-      <div className="td-clock-stage" style={{ backgroundImage: `url(${ASSETS.klocktornBg})` }}>
+      <div className="td-clock-panel">
         <p className="td-mission-text">
           <em>"Tack, lilla detektiv!"</em> Professor Tickelton stryker sig om
           mustaschen. Tornets klocka tickar nu i takt igen.
@@ -2955,7 +2979,7 @@ function ClockMission({ alreadyDone, onComplete, onBack }) {
   const showNext = feedback?.type === "success" && round < ROUNDS.length - 1;
 
   return (
-    <div className="td-clock-stage" style={{ backgroundImage: `url(${ASSETS.klocktornBg})` }}>
+    <div className="td-clock-panel">
       <p className="td-mission-text">
         <em>"Mina klockor är i oordning!"</em> {target.text}{" "}
         <strong>{target.label}</strong>.
@@ -5504,23 +5528,20 @@ function Styles() {
       }
 
       .td-clock { display: block; width: 180px; margin: 10px auto 20px; }
-      .td-clock-stage {
-        position: relative;
-        margin: -20px -24px;
-        padding: 24px;
-        background-size: cover;
-        background-position: center;
-        border-radius: 0 0 12px 12px;
+      /* Klocktornet: panel centrerad i rummet, tornbilden syns runtomkring */
+      .td-clocktower-panel {
+        position: absolute;
+        top: 50%; left: 50%;
+        transform: translate(-50%, -50%);
+        width: min(440px, 90%);
+        background: rgba(253, 243, 216, 0.94);
+        border: 3px solid var(--ink);
+        border-radius: 16px;
+        box-shadow: 6px 6px 0 rgba(0,0,0,0.35);
+        padding: 22px 24px;
+        z-index: 10;
       }
-      /* Ljus slöja så den mörka texten syns mot bilden */
-      .td-clock-stage::before {
-        content: "";
-        position: absolute; inset: 0;
-        background: rgba(253, 243, 216, 0.78);
-        border-radius: inherit;
-        z-index: 0;
-      }
-      .td-clock-stage > * { position: relative; z-index: 1; }
+      .td-clock-panel { text-align: center; }
       .td-clock-draggable { width: 220px; touch-action: none; }
       .td-clock-draggable circle[style*="grab"] { cursor: grab; }
       .td-clock-locked { opacity: 0.9; }
