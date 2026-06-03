@@ -616,7 +616,7 @@ function CharacterPortrait({ src, name }) {
 // KARTAN — Spotlight + Förstoringsglas + Gömd katt
 // ============================================================
 function MapView({ completed, stars, allDone, hovered, setHovered, onPick, onReset }) {
-  const visibleHotspots = ["reading", "clock", "puzzle", "harbor"];
+  const visibleHotspots = ["reading", "clock", "puzzle", "harbor", "cave"];
   const mapRef = useRef(null);
 
   // === Förstoringsglas-läge ===
