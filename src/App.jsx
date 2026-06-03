@@ -863,6 +863,55 @@ function StarRow({ filled = 0 }) {
   );
 }
 
+// ============================================================
+// DialogBubble — enhetlig konversation för HELA spelet
+// Stöder: sträng, { text, name, portrait, action },
+// och flerstegs { name, portrait, lines: [...], action }
+// Alltid: "Nästa →" mellan repliker, tydlig "Stäng ✕"-knapp.
+// ============================================================
+function DialogBubble({ dialog, onClose }) {
+  const [step, setStep] = useState(0);
+
+  // Normalisera alla format till { name, portrait, lines[], action }
+  let name, portrait, lines, action;
+  if (typeof dialog === "string") {
+    lines = [dialog];
+  } else {
+    name = dialog.name;
+    portrait = dialog.portrait;
+    action = dialog.action;
+    lines = dialog.lines || (dialog.text != null ? [dialog.text] : [""]);
+  }
+
+  const isLast = step >= lines.length - 1;
+
+  return (
+    <div className="td-dialog-bubble">
+      <button className="td-dialog-close" onClick={onClose} aria-label="Stäng samtalet">✕</button>
+      <div className="td-dialog-header">
+        {portrait && (
+          <div className="td-dialog-portrait"><img src={portrait} alt={name || ""} /></div>
+        )}
+        {name && <strong className="td-dialog-name">{name}</strong>}
+      </div>
+      <p>{lines[step]}</p>
+      <div className="td-dialog-buttons">
+        {!isLast ? (
+          <button className="td-btn td-btn-gold" onClick={() => setStep(step + 1)}>
+            Nästa →
+          </button>
+        ) : action ? (
+          <button className="td-btn td-btn-gold" onClick={action.onClick}>
+            {action.label}
+          </button>
+        ) : (
+          <button className="td-btn" onClick={onClose}>Stäng</button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function InteriorView({ locationKey, completed, foundItems, dialog, setDialog,
                         onPickUpItem, onStartMission, onBack,
                         detailView, setDetailView }) {
@@ -898,38 +947,7 @@ function InteriorView({ locationKey, completed, foundItems, dialog, setDialog,
       </div>
       <div className="td-interior-stage">{scene}</div>
       {dialog && (
-        <div className="td-dialog-bubble"
-             onClick={typeof dialog === "object" && dialog.action ? null : () => setDialog(null)}>
-          {typeof dialog === "object" ? (
-            <>
-              <div className="td-dialog-header">
-                {dialog.portrait && (
-                  <div className="td-dialog-portrait">
-                    <img src={dialog.portrait} alt={dialog.name || ""} />
-                  </div>
-                )}
-                {dialog.name && <strong className="td-dialog-name">{dialog.name}</strong>}
-              </div>
-              <p>{dialog.text}</p>
-              {dialog.action ? (
-                <button className="td-btn td-btn-gold"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          dialog.action.onClick();
-                        }}>
-                  {dialog.action.label}
-                </button>
-              ) : (
-                <div className="td-dialog-tip">Klicka för att stänga</div>
-              )}
-            </>
-          ) : (
-            <>
-              <p>{dialog}</p>
-              <div className="td-dialog-tip">Klicka för att stänga</div>
-            </>
-          )}
-        </div>
+        <DialogBubble dialog={dialog} onClose={() => setDialog(null)} />
       )}
       {detailView && (
         <DetailOverlay type={detailView} onClose={() => setDetailView(null)} />
@@ -1972,7 +1990,7 @@ function BokgrandenScene({ completed, foundItems, setDialog, onPickUpItem, onSta
 
   if (shop === "bok") {
     return <BokaffarShop alreadyDone={completed} onComplete={onStartMission}
-      onBack={() => setShop(null)} />;
+      setDialog={setDialog} onBack={() => setShop(null)} />;
   }
   if (shop === "hatt") {
     return <HattaffarShop hatFound={foundItems.includes("reading:hat")}
@@ -2000,18 +2018,34 @@ function BokgrandenScene({ completed, foundItems, setDialog, onPickUpItem, onSta
         <span className="td-shop-label" style={{ top: "-9%" }}>🌍 Världsbutiken</span>
       </button>
 
-      {/* Gatufigurer — liv och rörelse, klickbara med dialog */}
+      {/* Gatufigurer — liv och rörelse, klickbara med samtal */}
       <HarborCharacter
         style={{ left: "38%", bottom: "2%", height: "40%", aspectRatio: "696 / 1844", zIndex: 6 }}
         image={ASSETS.gubbeFull}
         label="Gamle Gustav"
-        onClick={() => setDialog("Gamle Gustav: 'En sån fin dag för en promenad! Visste du att bokhandlerskan Mira känner till alla hemligheter i den här gränden?'")}
+        onClick={() => setDialog({
+          name: "Gamle Gustav",
+          portrait: ASSETS.gubbeFull,
+          lines: [
+            "En sån fin dag för en promenad i gränden!",
+            "Jag har bott här i hela mitt liv. Den här lilla gränden gömmer fler hemligheter än du tror.",
+            "Bokhandlerskan Mira där borta — hon har läst varenda bok i sin affär. Fråga henne om du kör fast.",
+          ],
+        })}
       />
       <HarborCharacter
         style={{ left: "62%", bottom: "0%", height: "38%", aspectRatio: "715 / 1889", zIndex: 6 }}
         image={ASSETS.blomsterFull}
         label="Blomster-Lina"
-        onClick={() => setDialog("Blomster-Lina: 'Färska blommor! Letar du efter något mystiskt? Gå in i världsbutiken — där finns saker från hela jorden.'")}
+        onClick={() => setDialog({
+          name: "Blomster-Lina",
+          portrait: ASSETS.blomsterFull,
+          lines: [
+            "Färska blommor! Vill du köpa en bukett?",
+            "Jag säljer blommor här varje dag. Man ser allt möjligt folk komma och gå.",
+            "Letar du efter något mystiskt? Då ska du gå in i världsbutiken — där finns saker från hela jorden!",
+          ],
+        })}
       />
 
       <div className="td-scene-hint">Klicka på en butik för att gå in</div>
@@ -2020,8 +2054,8 @@ function BokgrandenScene({ completed, foundItems, setDialog, onPickUpItem, onSta
 }
 
 // --- BOKBUTIKEN: läsförståelse ---
-function BokaffarShop({ alreadyDone, onComplete, onBack }) {
-  const [step, setStep] = useState("intro"); // intro -> reading -> q0/q1/q2 -> done
+function BokaffarShop({ alreadyDone, onComplete, setDialog, onBack }) {
+  const [step, setStep] = useState("intro"); // intro -> reading -> q -> done
   const [qIndex, setQIndex] = useState(0);
   const [wrong, setWrong] = useState(false);
 
@@ -2043,15 +2077,28 @@ function BokaffarShop({ alreadyDone, onComplete, onBack }) {
          style={{ backgroundImage: `url(${ASSETS.bokaffaren})` }}>
       <button className="td-shop-back td-btn td-btn-small" onClick={onBack}>← Ut på gatan</button>
 
-      <img src={ASSETS.miraFull} alt="Mira" className="td-shop-figure"
-        style={{ left: "8%", bottom: "0%", height: "82%", aspectRatio: "631 / 1813" }} />
+      <button className="td-shop-figure td-shop-figure-btn"
+        style={{ left: "8%", bottom: "0%", height: "82%", aspectRatio: "631 / 1813" }}
+        aria-label="Prata med Mira"
+        onClick={() => setDialog({
+          name: "Mira",
+          portrait: ASSETS.miraFull,
+          lines: [
+            "Åh, en ung detektiv! Så roligt att få besök i min lilla bokbutik.",
+            "Jag älskar böcker mer än något annat. Varje bok är ett nytt mysterium att lösa.",
+            "Vill du prova ett läsuppdrag? Då kan du förtjäna en av de tre nycklarna. Tryck på skylten så börjar vi!",
+          ],
+        })}>
+        <img src={ASSETS.miraFull} alt="Mira" />
+      </button>
 
       <div className="td-shop-panel">
+        <button className="td-dialog-close" onClick={onBack} aria-label="Stäng">✕</button>
         {step === "intro" && (
           <>
             <div className="td-shop-speaker">📚 Mira</div>
             <p>Välkommen till bokbutiken, unga detektiv! Jag har hittat en mystisk text. Läs den noga — sedan ställer jag tre frågor. Klarar du dem får du något värdefullt.</p>
-            <button className="td-btn td-btn-big" onClick={() => setStep("reading")}>Visa texten</button>
+            <button className="td-btn td-btn-big" onClick={() => setStep("reading")}>Visa texten →</button>
           </>
         )}
         {step === "reading" && (
@@ -2091,9 +2138,22 @@ function HattaffarShop({ hatFound, onPickUpItem, setDialog, onBack }) {
     <div className="td-scene-image td-fade-in"
          style={{ backgroundImage: `url(${ASSETS.hattaffaren})` }}>
       <button className="td-shop-back td-btn td-btn-small" onClick={onBack}>← Ut på gatan</button>
-      <img src={ASSETS.hattmakareFull} alt="Hattmakaren" className="td-shop-figure"
-        style={{ left: "6%", bottom: "0%", height: "86%", aspectRatio: "768 / 1914" }} />
+      <button className="td-shop-figure td-shop-figure-btn"
+        style={{ left: "6%", bottom: "0%", height: "86%", aspectRatio: "768 / 1914" }}
+        aria-label="Prata med hattmakaren"
+        onClick={() => setDialog({
+          name: "Hattmakaren",
+          portrait: ASSETS.hattmakareFull,
+          lines: [
+            "Goddag, goddag! Välkommen till stadens finaste hattaffär.",
+            "Jag har sytt hattar åt kungar, sjökaptener och till och med en riktig upptäcktsresande.",
+            "En detektiv utan hatt är som en bok utan ord! Låt mig se vad jag har åt dig...",
+          ],
+        })}>
+        <img src={ASSETS.hattmakareFull} alt="Hattmakaren" />
+      </button>
       <div className="td-shop-panel">
+        <button className="td-dialog-close" onClick={onBack} aria-label="Stäng">✕</button>
         <div className="td-shop-speaker">🎩 Hattmakaren</div>
         {hatFound ? (
           <p>Den där hatten klär dig verkligen! En riktig detektiv-look.</p>
@@ -2141,8 +2201,20 @@ function VarldsaffarShop({ onBack, setDialog }) {
       <div className="td-scene-image td-fade-in"
            style={{ backgroundImage: `url(${ASSETS.varldsaffaren})` }}>
         <button className="td-shop-back td-btn td-btn-small" onClick={onBack}>← Ut på gatan</button>
-        <img src={ASSETS.varldskvinnaFull} alt="Världshandlerskan" className="td-shop-figure"
-          style={{ left: "60%", bottom: "0%", height: "60%", aspectRatio: "656 / 1896" }} />
+        <button className="td-shop-figure td-shop-figure-btn"
+          style={{ left: "60%", bottom: "0%", height: "60%", aspectRatio: "656 / 1896" }}
+          aria-label="Prata med världshandlerskan"
+          onClick={() => setDialog({
+            name: "Världshandlerskan",
+            portrait: ASSETS.varldskvinnaFull,
+            lines: [
+              "Välkommen, lilla resenär! Stig på i min butik full av under.",
+              "Jag har rest över hela jorden och samlat skatter — masker, statyer, vaser från fjärran länder.",
+              "Men oj, etiketterna har ramlat av! Klicka på kartan så hjälps vi åt att lista ut varifrån sakerna kommer.",
+            ],
+          })}>
+          <img src={ASSETS.varldskvinnaFull} alt="Världshandlerskan" />
+        </button>
 
         {/* Klickbar världskarta på väggen */}
         <button className="td-shop-hotspot" style={{ left: "28%", top: "16%", width: "34%", height: "32%" }}
@@ -3405,6 +3477,45 @@ function Styles() {
         z-index: 12;
         filter: drop-shadow(0 6px 8px rgba(0,0,0,0.35));
         pointer-events: none;
+      }
+      .td-shop-figure-btn {
+        background: transparent;
+        border: none;
+        padding: 0;
+        cursor: pointer;
+        pointer-events: auto;
+        transition: transform 0.15s ease;
+      }
+      .td-shop-figure-btn img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        object-position: bottom;
+        display: block;
+      }
+      .td-shop-figure-btn:hover { transform: scale(1.03); }
+      .td-shop-figure-btn:active { transform: scale(0.99); }
+      .td-dialog-close {
+        position: absolute;
+        top: 8px; right: 10px;
+        width: 30px; height: 30px;
+        background: var(--cream);
+        border: 2px solid var(--ink);
+        border-radius: 50%;
+        font-size: 15px;
+        font-weight: bold;
+        color: var(--ink);
+        cursor: pointer;
+        line-height: 1;
+        z-index: 5;
+        transition: background 0.15s, transform 0.15s;
+      }
+      .td-dialog-close:hover { background: var(--red); color: var(--cream); transform: scale(1.1); }
+      .td-dialog-buttons {
+        display: flex;
+        gap: 10px;
+        justify-content: flex-end;
+        margin-top: 6px;
       }
       .td-shop-panel {
         position: absolute;
@@ -4692,10 +4803,10 @@ function Styles() {
         position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
         background: var(--cream);
         border: 3px solid var(--ink); border-radius: 12px;
-        padding: 18px 24px;
+        padding: 22px 24px 18px;
         box-shadow: 6px 6px 0 var(--ink);
         max-width: 600px; width: calc(100% - 40px);
-        cursor: pointer; z-index: 10;
+        z-index: 10;
         animation: tdBubbleIn 0.25s ease;
       }
       .td-dialog-bubble::before {
