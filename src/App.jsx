@@ -42,6 +42,11 @@ const ASSETS = {
   bokaffaren: "/tidsdetektiverna/bokaffaren.jpg",
   hattaffaren: "/tidsdetektiverna/hattaffaren.jpg",
   varldsaffaren: "/tidsdetektiverna/varldsaffaren.jpg",
+  gubbeFull: "/tidsdetektiverna/gubbe_full.png",
+  blomsterFull: "/tidsdetektiverna/blomster_full.png",
+  miraFull: "/tidsdetektiverna/mira_full.png",
+  hattmakareFull: "/tidsdetektiverna/hattmakare_full.png",
+  varldskvinnaFull: "/tidsdetektiverna/varldskvinna_full.png",
 };
 
 // ============================================================
@@ -1993,6 +1998,21 @@ function BokgrandenScene({ completed, foundItems, setDialog, onPickUpItem, onSta
         onClick={() => setShop("varld")} aria-label="Gå in i världsbutiken">
         <span className="td-shop-label" style={{ top: "-11%" }}>🌍 Världsbutiken</span>
       </button>
+
+      {/* Gatufigurer — liv och rörelse, klickbara med dialog */}
+      <HarborCharacter
+        style={{ left: "38%", bottom: "2%", height: "40%", aspectRatio: "696 / 1844", zIndex: 6 }}
+        image={ASSETS.gubbeFull}
+        label="Gamle Gustav"
+        onClick={() => setDialog("Gamle Gustav: 'En sån fin dag för en promenad! Visste du att bokhandlerskan Mira känner till alla hemligheter i den här gränden?'")}
+      />
+      <HarborCharacter
+        style={{ left: "62%", bottom: "0%", height: "38%", aspectRatio: "715 / 1889", zIndex: 6 }}
+        image={ASSETS.blomsterFull}
+        label="Blomster-Lina"
+        onClick={() => setDialog("Blomster-Lina: 'Färska blommor! Letar du efter något mystiskt? Gå in i världsbutiken — där finns saker från hela jorden.'")}
+      />
+
       <div className="td-scene-hint">Klicka på en butik för att gå in</div>
     </div>
   );
@@ -2021,6 +2041,9 @@ function BokaffarShop({ alreadyDone, onComplete, onBack }) {
     <div className="td-scene-image td-fade-in"
          style={{ backgroundImage: `url(${ASSETS.bokaffaren})` }}>
       <button className="td-shop-back td-btn td-btn-small" onClick={onBack}>← Ut på gatan</button>
+
+      <img src={ASSETS.miraFull} alt="Mira" className="td-shop-figure"
+        style={{ left: "8%", bottom: "0%", height: "82%", aspectRatio: "631 / 1813" }} />
 
       <div className="td-shop-panel">
         {step === "intro" && (
@@ -2067,6 +2090,8 @@ function HattaffarShop({ hatFound, onPickUpItem, setDialog, onBack }) {
     <div className="td-scene-image td-fade-in"
          style={{ backgroundImage: `url(${ASSETS.hattaffaren})` }}>
       <button className="td-shop-back td-btn td-btn-small" onClick={onBack}>← Ut på gatan</button>
+      <img src={ASSETS.hattmakareFull} alt="Hattmakaren" className="td-shop-figure"
+        style={{ left: "6%", bottom: "0%", height: "86%", aspectRatio: "768 / 1914" }} />
       <div className="td-shop-panel">
         <div className="td-shop-speaker">🎩 Hattmakaren</div>
         {hatFound ? (
@@ -2112,6 +2137,8 @@ function VarldsaffarShop({ onBack, setDialog }) {
     <div className="td-scene-image td-fade-in"
          style={{ backgroundImage: `url(${ASSETS.varldsaffaren})` }}>
       <button className="td-shop-back td-btn td-btn-small" onClick={onBack}>← Ut på gatan</button>
+      <img src={ASSETS.varldskvinnaFull} alt="Världshandlerskan" className="td-shop-figure"
+        style={{ left: "3%", bottom: "30%", height: "62%", aspectRatio: "656 / 1896" }} />
       <div className="td-world-game">
         <div className="td-world-instructions">
           🌍 Etiketterna har ramlat av! Välj ett föremål och placera det på rätt världsdel.
@@ -3336,6 +3363,15 @@ function Styles() {
         position: absolute;
         top: 14px; left: 14px;
         z-index: 20;
+      }
+      .td-shop-figure {
+        position: absolute;
+        width: auto;
+        object-fit: contain;
+        object-position: bottom;
+        z-index: 12;
+        filter: drop-shadow(0 6px 8px rgba(0,0,0,0.35));
+        pointer-events: none;
       }
       .td-shop-panel {
         position: absolute;
