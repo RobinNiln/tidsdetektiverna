@@ -10,6 +10,7 @@ import React, { useState, useEffect, useRef, useMemo } from "react";
 const ASSETS = {
   map: "/tidsdetektiverna/map.jpg",
   tickelton: "/tidsdetektiverna/tickelton.jpg",
+  klocktornBg: "/tidsdetektiverna/klocktorn_inne.jpg",
   mira: "/tidsdetektiverna/mira.jpg",
   klonk: "/tidsdetektiverna/klonk.jpg",
   klonkFull: "/tidsdetektiverna/klonk_full.png",
@@ -2896,35 +2897,186 @@ function ReadingMission({ alreadyDone, onComplete, onBack }) {
 }
 
 function ClockMission({ alreadyDone, onComplete, onBack }) {
-  const [feedback, setFeedback] = useState(null);
-  const choices = [
-    { id: "a", text: "13:30", correct: false },
-    { id: "b", text: "14:30", correct: true },
-    { id: "c", text: "15:00", correct: false },
+  // Tre rundor: bara hela timmar och halvtimmar (lagom för 8 år).
+  // targetHour = timmen 1-12, targetHalf = true om det är "halv".
+  const ROUNDS = [
+    { text: "Ugglan säger att tåget går klockan tre. Ställ den stora klockan på", label: "klockan tre", hour: 3, half: false },
+    { text: "Bagaren öppnar halv sju på morgonen. Ställ klockan på", label: "halv sju", hour: 7, half: true },
+    { text: "Sista uppdraget! Marknaden börjar klockan halv ett. Ställ klockan på", label: "halv ett", hour: 1, half: true },
   ];
-  function pick(c) {
-    if (c.correct) {
-      setFeedback({ type: "success", text: "Snyggt jobbat, detektiv! Klockan är rätt." });
-      if (!alreadyDone) onComplete();
+
+  const [round, setRound] = useState(0);
+  const [feedback, setFeedback] = useState(null);
+  const [allDone, setAllDone] = useState(alreadyDone);
+
+  // Visarnas läge i "steg". Minutvisaren har bara 2 lägen: 0 (heltimme) och 6 (halv).
+  // Timvisaren har 12 lägen (1-12). Vi börjar på en neutral utgångstid.
+  const [handHour, setHandHour] = useState(12); // 1..12
+  const [handHalf, setHandHalf] = useState(false); // false = :00, true = :30
+
+  const target = ROUNDS[round];
+
+  // Rätt om timvisaren pekar på rätt timme OCH minutvisaren på rätt hel/halv.
+  function check() {
+    const correct = handHour === target.hour && handHalf === target.half;
+    if (correct) {
+      if (round < ROUNDS.length - 1) {
+        setFeedback({ type: "success", text: "Rätt! Nästa klocka..." });
+      } else {
+        setFeedback({ type: "success", text: "Alla klockor stämmer! Hör — tornklockan börjar slå igen! 🔔" });
+        setAllDone(true);
+        if (!alreadyDone) onComplete();
+      }
     } else {
-      setFeedback({ type: "error", text: "Inte riktigt. Ledtråd: halv tre betyder 30 minuter innan tre." });
+      setFeedback({ type: "error", text: "Inte riktigt. Den korta visaren pekar på timmen, den långa på 12 (hel) eller 6 (halv). Försök igen!" });
     }
   }
-  return (
-    <>
-      <p className="td-mission-text">
-        <em>"Mina klockor är i oordning!"</em> Professor Tickelton viftar med
-        sin maskin: Ugglan säger att tåget går <strong>halv tre</strong>. Vilken
-        tid är det?
-      </p>
-      <AnalogClock hour={14} minute={30} />
-      <div className="td-choices">
-        {choices.map((c) => (
-          <button key={c.id} className="td-choice" onClick={() => pick(c)}>{c.text}</button>
-        ))}
+
+  function nextRound() {
+    setRound((r) => r + 1);
+    setFeedback(null);
+    setHandHour(12);
+    setHandHalf(false);
+  }
+
+  if (alreadyDone || allDone) {
+    return (
+      <div className="td-clock-stage" style={{ backgroundImage: `url(${ASSETS.klocktornBg})` }}>
+        <p className="td-mission-text">
+          <em>"Tack, lilla detektiv!"</em> Professor Tickelton stryker sig om
+          mustaschen. Tornets klocka tickar nu i takt igen.
+        </p>
+        <DraggableClock hour={target.hour} half={target.half} onChange={() => {}} locked />
+        <Feedback feedback={{ type: "success", text: "Klocktornet är löst." }} done onBack={onBack} />
       </div>
-      <Feedback feedback={feedback} done={alreadyDone || feedback?.type === "success"} onBack={onBack} />
-    </>
+    );
+  }
+
+  const showNext = feedback?.type === "success" && round < ROUNDS.length - 1;
+
+  return (
+    <div className="td-clock-stage" style={{ backgroundImage: `url(${ASSETS.klocktornBg})` }}>
+      <p className="td-mission-text">
+        <em>"Mina klockor är i oordning!"</em> {target.text}{" "}
+        <strong>{target.label}</strong>.
+      </p>
+      <p className="td-clock-hint">Dra visarna med fingret! Liten visare = timme, stor visare = hel eller halv.</p>
+      <DraggableClock
+        hour={handHour}
+        half={handHalf}
+        onChange={(h, half) => { setHandHour(h); setHandHalf(half); }}
+      />
+      <div className="td-clock-readout">
+        Klockan visar nu: <strong>{handHour}:{handHalf ? "30" : "00"}</strong>
+      </div>
+      {!showNext && (
+        <div className="td-choices">
+          <button className="td-choice td-choice-check" onClick={check}>Klart! Kolla klockan</button>
+        </div>
+      )}
+      {feedback && (
+        <div className={`td-feedback td-feedback-${feedback.type}`}>
+          <p>{feedback.text}</p>
+          {showNext && <button className="td-btn td-btn-gold" onClick={nextRound}>Nästa klocka →</button>}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Interaktiv klocka: dra tim- och minutvisaren. Minutvisaren snäpper till hel/halv.
+function DraggableClock({ hour, half, onChange, locked }) {
+  const svgRef = useRef(null);
+  const [dragging, setDragging] = useState(null); // "hour" | "minute" | null
+
+  // Räkna ut vinkeln (i grader, 12 = 0°) från en pekpunkt relativt klockans mitt.
+  function angleFromEvent(e) {
+    const svg = svgRef.current;
+    if (!svg) return 0;
+    const rect = svg.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    const point = e.touches ? e.touches[0] : e;
+    const dx = point.clientX - cx;
+    const dy = point.clientY - cy;
+    let deg = (Math.atan2(dy, dx) * 180) / Math.PI + 90; // 0° rakt upp
+    if (deg < 0) deg += 360;
+    return deg;
+  }
+
+  function handleMove(e) {
+    if (!dragging || locked) return;
+    e.preventDefault();
+    const deg = angleFromEvent(e);
+    if (dragging === "hour") {
+      // Närmaste hela timme: 30° per timme.
+      let h = Math.round(deg / 30) % 12;
+      if (h === 0) h = 12;
+      onChange(h, half);
+    } else {
+      // Minutvisaren snäpper bara till 12 (hel) eller 6 (halv).
+      const newHalf = deg > 90 && deg < 270;
+      onChange(hour, newHalf);
+    }
+  }
+
+  function endDrag() { setDragging(null); }
+
+  // Vinklar för att rita visarna.
+  const minuteDeg = half ? 180 : 0;
+  const hourDeg = (hour % 12) * 30 + (half ? 15 : 0);
+  const rad = (d) => ((d - 90) * Math.PI) / 180;
+  const hourX = 100 + Math.cos(rad(hourDeg)) * 45;
+  const hourY = 100 + Math.sin(rad(hourDeg)) * 45;
+  const minX = 100 + Math.cos(rad(minuteDeg)) * 65;
+  const minY = 100 + Math.sin(rad(minuteDeg)) * 65;
+
+  return (
+    <svg
+      ref={svgRef}
+      className={`td-clock td-clock-draggable ${locked ? "td-clock-locked" : ""}`}
+      viewBox="0 0 200 200"
+      onMouseMove={handleMove}
+      onMouseUp={endDrag}
+      onMouseLeave={endDrag}
+      onTouchMove={handleMove}
+      onTouchEnd={endDrag}
+    >
+      <circle cx="100" cy="100" r="92" fill="#fdf3d8" stroke="#3a2a17" strokeWidth="5" />
+      <circle cx="100" cy="100" r="84" fill="none" stroke="#3a2a17" strokeWidth="1.5" />
+      {[...Array(12)].map((_, i) => {
+        const angle = (i / 12) * 2 * Math.PI - Math.PI / 2;
+        const x1 = 100 + Math.cos(angle) * 75;
+        const y1 = 100 + Math.sin(angle) * 75;
+        const x2 = 100 + Math.cos(angle) * 82;
+        const y2 = 100 + Math.sin(angle) * 82;
+        const tx = 100 + Math.cos(angle) * 65;
+        const ty = 100 + Math.sin(angle) * 65;
+        return (
+          <g key={i}>
+            <line x1={x1} y1={y1} x2={x2} y2={y2} stroke="#3a2a17" strokeWidth="3" />
+            <text x={tx} y={ty + 5} textAnchor="middle" fontSize="14" fontWeight="bold" fill="#3a2a17">
+              {i === 0 ? 12 : i}
+            </text>
+          </g>
+        );
+      })}
+      {/* Timvisaren (kort, brun) — dragbar */}
+      <line x1="100" y1="100" x2={hourX} y2={hourY}
+        stroke="#3a2a17" strokeWidth="6" strokeLinecap="round" />
+      <circle cx={hourX} cy={hourY} r="14" fill="#3a2a17" opacity={locked ? 0 : 0.001}
+        style={{ cursor: locked ? "default" : "grab" }}
+        onMouseDown={() => !locked && setDragging("hour")}
+        onTouchStart={() => !locked && setDragging("hour")} />
+      {/* Minutvisaren (lång, röd) — dragbar */}
+      <line x1="100" y1="100" x2={minX} y2={minY}
+        stroke="#c0392b" strokeWidth="4" strokeLinecap="round" />
+      <circle cx={minX} cy={minY} r="14" fill="#c0392b" opacity={locked ? 0 : 0.001}
+        style={{ cursor: locked ? "default" : "grab" }}
+        onMouseDown={() => !locked && setDragging("minute")}
+        onTouchStart={() => !locked && setDragging("minute")} />
+      <circle cx="100" cy="100" r="5" fill="#3a2a17" />
+    </svg>
   );
 }
 
@@ -5352,6 +5504,35 @@ function Styles() {
       }
 
       .td-clock { display: block; width: 180px; margin: 10px auto 20px; }
+      .td-clock-stage {
+        position: relative;
+        margin: -20px -24px;
+        padding: 24px;
+        background-size: cover;
+        background-position: center;
+        border-radius: 0 0 12px 12px;
+      }
+      /* Ljus slöja så den mörka texten syns mot bilden */
+      .td-clock-stage::before {
+        content: "";
+        position: absolute; inset: 0;
+        background: rgba(253, 243, 216, 0.78);
+        border-radius: inherit;
+        z-index: 0;
+      }
+      .td-clock-stage > * { position: relative; z-index: 1; }
+      .td-clock-draggable { width: 220px; touch-action: none; }
+      .td-clock-draggable circle[style*="grab"] { cursor: grab; }
+      .td-clock-locked { opacity: 0.9; }
+      .td-clock-hint {
+        text-align: center; font-size: 15px; color: #6b5836;
+        font-style: italic; margin: 0 0 4px;
+      }
+      .td-clock-readout {
+        text-align: center; font-size: 18px; color: var(--ink);
+        margin: 0 0 14px;
+      }
+      .td-choice-check { font-size: 18px; }
 
       .td-puzzle-progress {
         display: flex; justify-content: center; gap: 10px;
