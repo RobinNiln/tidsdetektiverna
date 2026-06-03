@@ -48,6 +48,12 @@ const ASSETS = {
   hattmakareFull: "/tidsdetektiverna/hattmakare_full.png",
   varldskvinnaFull: "/tidsdetektiverna/varldskvinna_full.png",
   varldskarta: "/tidsdetektiverna/varldskarta.jpg",
+  // Den glömda grottan
+  grottaIngang: "/tidsdetektiverna/grotta_ingang.jpg",
+  grottaSjo: "/tidsdetektiverna/grotta_sjo.jpg",
+  grottaPelare: "/tidsdetektiverna/grotta_pelare.jpg",
+  grottaVerkstad: "/tidsdetektiverna/grotta_verkstad.jpg",
+  ugglemarkFull: "/tidsdetektiverna/ugglemark_full.png",
 };
 
 // ============================================================
@@ -143,6 +149,32 @@ const ITEM_DATA = {
     icon: "🎩",
     obtainedFrom: "Hattmakaren i Bokgränden",
     description: "En elegant hatt med en mjuk fjäder och ett siden-band. Hattmakaren tyckte att en riktig detektiv borde ha en ordentlig hatt. Den sitter perfekt och får dig att känna dig minst tio centimeter längre.",
+  },
+
+  // === DEN GLÖMDA GROTTAN ===
+  "cave:lantern": {
+    name: "Den slocknade lyktan",
+    icon: "🏮",
+    obtainedFrom: "Gömd i Den glömda grottan",
+    description: "En gammal lykta som slocknade för länge sedan. Glaset är sotigt och oljan slut, men någon har ristat ett litet kugghjul i botten. Vem bar den här genom mörkret en gång?",
+  },
+  "cave:crystal": {
+    name: "Den lysande kristallen",
+    icon: "💎",
+    obtainedFrom: "Gömd i Den glömda grottan",
+    description: "En klar kristall som lyser med ett svagt blått sken helt av sig själv. Den är kall som is men ljuset slocknar aldrig. Professor Ugglemark skulle bli mycket intresserad av den här.",
+  },
+  "cave:fossil": {
+    name: "Det uråldriga fossilet",
+    icon: "🦴",
+    obtainedFrom: "Gömd i Den glömda grottan",
+    description: "Ett fossil av någon varelse som levde för miljontals år sedan, inbäddat i sten. Spiralformen ser nästan ut som ett kugghjul gjort av naturen själv. Tiden gömmer sina hemligheter väl.",
+  },
+  "cave:key": {
+    name: "Den sista nyckeln",
+    icon: "🗝️",
+    obtainedFrom: "Professor Ugglemark",
+    description: "En tung mässingsnyckel format som ett kugghjul. Professor Ugglemark gömde den i grottan i åratal. Med den kan stadens tidsmaskin äntligen lagas — på rätt sätt.",
   },
 };
 
@@ -267,6 +299,13 @@ const HOTSPOTS = {
     character: "falk", characterName: "Kapten Falk",
     x: 1, y: 14, w: 14, h: 32,
     cx: 8, cy: 30,
+    bonus: true, // räknas inte som stjärnuppdrag
+  },
+  cave: {
+    key: "cave", title: "Den glömda grottan", short: "Utforska grottan",
+    character: null,
+    x: 86, y: 30, w: 11, h: 16,
+    cx: 91, cy: 38,
     bonus: true, // räknas inte som stjärnuppdrag
   },
 };
@@ -434,7 +473,7 @@ export default function App() {
   const [view, setView] = useState("start");
   const [activeLocation, setActiveLocation] = useState(null);
   const [completed, setCompleted] = useState({
-    reading: false, clock: false, puzzle: false,
+    reading: false, clock: false, puzzle: false, cave: false,
   });
   const [hovered, setHovered] = useState(null);
   const [foundItems, setFoundItems] = useState([]);
@@ -452,6 +491,11 @@ export default function App() {
   }
   function startMission() {
     if (activeLocation === "harbor") setView("boatgame");
+    else if (activeLocation === "cave") {
+      pickUpItem("cave:key");
+      completeMission("cave");
+      // stannar kvar i grottan (verkstaden) som nu visar "klar"-läget
+    }
     else setView("mission");
   }
   function backToInterior() { setView("interior"); }
@@ -464,7 +508,7 @@ export default function App() {
     if (!foundItems.includes(id)) setFoundItems((p) => [...p, id]);
   }
   function reset() {
-    setCompleted({ reading: false, clock: false, puzzle: false });
+    setCompleted({ reading: false, clock: false, puzzle: false, cave: false });
     setFoundItems([]); setActiveLocation(null);
     setInteriorDialog(null); setDetailView(null); setView("start");
   }
@@ -932,6 +976,12 @@ function InteriorView({ locationKey, completed, foundItems, dialog, setDialog,
   } else if (locationKey === "reading") {
     scene = (
       <BokgrandenScene completed={completed} foundItems={foundItems}
+        setDialog={setDialog} onPickUpItem={onPickUpItem}
+        onStartMission={onStartMission} />
+    );
+  } else if (locationKey === "cave") {
+    scene = (
+      <CaveScene completed={completed} foundItems={foundItems}
         setDialog={setDialog} onPickUpItem={onPickUpItem}
         onStartMission={onStartMission} />
     );
@@ -2288,6 +2338,163 @@ function VarldsaffarShop({ onBack, setDialog }) {
   );
 }
 
+// ============================================================
+// DEN GLÖMDA GROTTAN — vägval med ledtrådar + Professor Ugglemark
+// ============================================================
+function CaveScene({ completed, foundItems, setDialog, onPickUpItem, onStartMission }) {
+  const [room, setRoom] = useState("ingang");   // ingang -> sjo -> pelare -> verkstad
+  const [detour, setDetour] = useState(null);   // vilken fel-väg/återvändsgränd man tittar på
+
+  // En liten återvändsgränd-ruta (fel väg) — visar text + ev. gömd pryl, sen backa
+  function Detour({ title, text, item, itemText, onBack }) {
+    const found = item ? foundItems.includes(item) : true;
+    return (
+      <div className="td-cave-detour">
+        <button className="td-dialog-close" onClick={onBack} aria-label="Backa">✕</button>
+        <div className="td-shop-speaker">{title}</div>
+        <p>{text}</p>
+        {item && !found && (
+          <button className="td-btn td-btn-big" onClick={() => {
+            onPickUpItem(item);
+            setDialog(itemText);
+          }}>Plocka upp {ITEM_DATA[item].icon}</button>
+        )}
+        {item && found && <p className="td-cave-found">Du har redan hittat det som fanns här.</p>}
+        <button className="td-btn" onClick={onBack}>← Backa tillbaka</button>
+      </div>
+    );
+  }
+
+  // === RUM 1: INGÅNGEN ===
+  if (room === "ingang") {
+    return (
+      <div className="td-scene-image td-fade-in"
+           style={{ backgroundImage: `url(${ASSETS.grottaIngang})` }}>
+        <div className="td-cave-clue">🪨 Inristat i stenen: <i>"Följ vattnets sus, inte vindens viskning."</i></div>
+
+        {!detour && (
+          <div className="td-cave-choices">
+            <button className="td-btn td-cave-choice" onClick={() => setDetour("vind")}>← Vänster gång</button>
+            <button className="td-btn td-cave-choice td-cave-choice-fwd" onClick={() => { setRoom("sjo"); setDetour(null); }}>↑ Rakt fram</button>
+            <button className="td-btn td-cave-choice" onClick={() => setDetour("tyst")}>Höger gång →</button>
+          </div>
+        )}
+
+        {detour === "vind" && (
+          <Detour title="🦇 Vindens gång"
+            text="Du hör vinden vina och fladdermöss fladdra! Det här är fel väg — men något ligger och glittrar bland stenarna."
+            item="cave:lantern"
+            itemText="Du hittade Den slocknade lyktan bland stenarna! Den ligger nu i väskan."
+            onBack={() => setDetour(null)} />
+        )}
+        {detour === "tyst" && (
+          <Detour title="🤫 Den tysta gången"
+            text="Det är becksvart och alldeles tyst här inne. Ingen vind, inget vatten. Det här leder ingenstans — ledtråden sa ju att du skulle följa vattnets sus."
+            onBack={() => setDetour(null)} />
+        )}
+      </div>
+    );
+  }
+
+  // === RUM 2: UNDERJORDISKA SJÖN ===
+  if (room === "sjo") {
+    return (
+      <div className="td-scene-image td-fade-in"
+           style={{ backgroundImage: `url(${ASSETS.grottaSjo})` }}>
+        <button className="td-shop-back td-btn td-btn-small" onClick={() => { setRoom("ingang"); setDetour(null); }}>← Tillbaka</button>
+        <div className="td-cave-clue">🪨 På bron står det ristat: <i>"Gå mot ljuset som aldrig slocknar."</i></div>
+
+        {!detour && (
+          <div className="td-cave-choices">
+            <button className="td-btn td-cave-choice" onClick={() => setDetour("strand")}>← Längs stranden</button>
+            <button className="td-btn td-cave-choice td-cave-choice-fwd" onClick={() => { setRoom("pelare"); setDetour(null); }}>↑ Mot ljuset</button>
+            <button className="td-btn td-cave-choice" onClick={() => setDetour("morker")}>Över bron →</button>
+          </div>
+        )}
+
+        {detour === "strand" && (
+          <Detour title="✨ Strandkanten"
+            text="Du följer den glittrande strandkanten. Vattnet lyser turkost — och där, mellan kristallerna, ligger något alldeles speciellt!"
+            item="cave:crystal"
+            itemText="Du hittade Den lysande kristallen! Den lyser svagt blått i väskan."
+            onBack={() => setDetour(null)} />
+        )}
+        {detour === "morker" && (
+          <Detour title="🌑 Bron in i mörkret"
+            text="Bron leder ut i kompakt mörker. Inget ljus alls. Ledtråden sa ju att du skulle gå MOT ljuset, inte bort från det. Bäst att vända."
+            onBack={() => setDetour(null)} />
+        )}
+      </div>
+    );
+  }
+
+  // === RUM 3: STENPELARNAS SAL ===
+  if (room === "pelare") {
+    return (
+      <div className="td-scene-image td-fade-in"
+           style={{ backgroundImage: `url(${ASSETS.grottaPelare})` }}>
+        <button className="td-shop-back td-btn td-btn-small" onClick={() => { setRoom("sjo"); setDetour(null); }}>← Tillbaka</button>
+        <div className="td-cave-clue">🪨 <i>"Tre pelare, men bara en bär uppfinnarens märke — ett kugghjul."</i></div>
+
+        {!detour && (
+          <div className="td-cave-choices">
+            <button className="td-btn td-cave-choice" onClick={() => setDetour("hjort")}>Pelaren med hjorten 🦌</button>
+            <button className="td-btn td-cave-choice" onClick={() => setDetour("sol")}>Pelaren med solen ☀️</button>
+            <button className="td-btn td-cave-choice td-cave-choice-fwd" onClick={() => { setRoom("verkstad"); setDetour(null); }}>Pelaren med kugghjulet ⚙️</button>
+          </div>
+        )}
+
+        {detour === "hjort" && (
+          <Detour title="🦌 Hjortens pelare"
+            text="Den här pelaren visar djur och skogar — vacker, men inget kugghjul. Bakom den ligger dock något uråldrigt och halvt begravt i sten..."
+            item="cave:fossil"
+            itemText="Du hittade Det uråldriga fossilet bakom pelaren! Det ligger nu i väskan."
+            onBack={() => setDetour(null)} />
+        )}
+        {detour === "sol" && (
+          <Detour title="☀️ Solens pelare"
+            text="Den här pelaren visar solen, månen och stjärnorna. Märket är vackert men det är ingen kugghjul. Leta efter uppfinnarens eget märke."
+            onBack={() => setDetour(null)} />
+        )}
+      </div>
+    );
+  }
+
+  // === RUM 4: UPPFINNARENS VERKSTAD ===
+  const caveDone = completed;
+  return (
+    <div className="td-scene-image td-fade-in"
+         style={{ backgroundImage: `url(${ASSETS.grottaVerkstad})` }}>
+      <button className="td-shop-back td-btn td-btn-small" onClick={() => { setRoom("pelare"); setDetour(null); }}>← Tillbaka</button>
+
+      <button className="td-shop-figure td-shop-figure-btn"
+        style={{ left: "55%", bottom: "2%", height: "74%", aspectRatio: "750 / 1932" }}
+        aria-label="Prata med Professor Ugglemark"
+        onClick={() => setDialog({
+          name: "Professor Ugglemark",
+          portrait: ASSETS.ugglemarkFull,
+          lines: [
+            "Va? Besök?! Här nere? Det var länge sedan någon hittade ända hit...",
+            "Jag är Professor Ugglemark. För många, många år sedan var jag med och byggde stadens allra första tidsmaskin.",
+            "Men maskinen gick sönder, och en del av den var för farlig. Jag gömde mig här med den sista delen — för att skydda den.",
+            "Främlingen i hamnen... ja, jag vet om honom. Han har letat efter mig i åratal. Men han ville ha delen av fel anledning.",
+            "Men DU — en riktig liten detektiv som löste alla ledtrådar och hittade ända hit! Dig kan jag lita på.",
+            "Här, ta den sista nyckeln. Nu kan tidsmaskinen äntligen lagas — på rätt sätt.",
+          ],
+          action: { label: "Ta emot den sista nyckeln ★", onClick: () => { setDialog(null); onStartMission(); } },
+        })}>
+        <img src={ASSETS.ugglemarkFull} alt="Professor Ugglemark" />
+      </button>
+
+      <div className="td-cave-clue td-cave-clue-final">
+        {caveDone
+          ? "⚙️ Professor Ugglemarks verkstad. Den sista nyckeln är din."
+          : "⚙️ Du hittade Professor Ugglemarks gömda verkstad! Klicka på honom för att prata."}
+      </div>
+    </div>
+  );
+}
+
 function ComingSoonScene({ title, onStartMission }) {
   return (
     <div className="td-coming-soon">
@@ -3639,6 +3846,58 @@ function Styles() {
       .td-map-active:hover { background: rgba(253,201,77,0.45); }
       .td-map-filled { background: rgba(95,168,96,0.4); border-color: rgba(95,168,96,0.8); border-style: solid; }
       .td-map-wrong { background: rgba(192,57,43,0.4); animation: tdWorldShake 0.3s; }
+
+      /* === DEN GLÖMDA GROTTAN === */
+      .td-cave-clue {
+        position: absolute;
+        top: 16px; left: 50%; transform: translateX(-50%);
+        background: rgba(45, 32, 18, 0.88);
+        color: #f5e6c4;
+        border: 2px solid var(--gold);
+        border-radius: 10px;
+        padding: 10px 20px;
+        font-family: 'Georgia', serif;
+        font-size: 16px;
+        max-width: 80%;
+        text-align: center;
+        z-index: 15;
+        box-shadow: 0 3px 10px rgba(0,0,0,0.5);
+      }
+      .td-cave-clue-final { background: rgba(45,32,18,0.9); border-color: var(--green); }
+      .td-cave-choices {
+        position: absolute;
+        bottom: 8%; left: 50%; transform: translateX(-50%);
+        display: flex; gap: 16px; flex-wrap: wrap; justify-content: center;
+        z-index: 15;
+      }
+      .td-cave-choice {
+        font-size: 17px;
+        padding: 14px 22px;
+        background: rgba(45, 32, 18, 0.92);
+        color: #f5e6c4;
+        border: 2.5px solid var(--gold);
+        box-shadow: 3px 3px 0 rgba(0,0,0,0.4);
+      }
+      .td-cave-choice:hover { background: rgba(70, 50, 28, 0.95); transform: translateY(-2px); }
+      .td-cave-choice-fwd { border-color: var(--green); }
+      .td-cave-detour {
+        position: absolute;
+        bottom: 6%; left: 50%; transform: translateX(-50%);
+        width: 90%; max-width: 560px;
+        background: var(--cream);
+        border: 3px solid var(--ink);
+        border-radius: 14px;
+        padding: 20px 24px;
+        box-shadow: 5px 5px 0 var(--ink);
+        z-index: 16;
+        font-family: 'Georgia', serif;
+        color: var(--ink);
+        text-align: center;
+      }
+      .td-cave-detour .td-shop-speaker { border: none; font-size: 19px; margin-bottom: 8px; }
+      .td-cave-detour p { line-height: 1.5; margin: 0 0 16px; }
+      .td-cave-detour .td-btn { margin: 0 6px; }
+      .td-cave-found { font-style: italic; color: #7a6a4a; }
 
       .td-paper-tag {
         position: absolute;
