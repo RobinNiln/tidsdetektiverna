@@ -1981,17 +1981,17 @@ function BokgrandenScene({ completed, foundItems, setDialog, onPickUpItem, onSta
   return (
     <div className="td-scene-image td-fade-in"
          style={{ backgroundImage: `url(${ASSETS.bokgrandenGata})` }}>
-      <button className="td-shop-hotspot" style={{ left: "2%", top: "28%", width: "28%", height: "55%" }}
+      <button className="td-shop-hotspot" style={{ left: "28%", top: "42%", width: "8%", height: "38%" }}
         onClick={() => setShop("bok")} aria-label="Gå in i bokbutiken">
-        <span className="td-shop-label" style={{ top: "-6%" }}>📖 Bokbutiken</span>
+        <span className="td-shop-label" style={{ top: "-12%" }}>📖 Bokbutiken</span>
       </button>
-      <button className="td-shop-hotspot" style={{ left: "35%", top: "18%", width: "24%", height: "62%" }}
+      <button className="td-shop-hotspot" style={{ left: "52%", top: "40%", width: "7%", height: "40%" }}
         onClick={() => setShop("hatt")} aria-label="Gå in i hattmakaren">
-        <span className="td-shop-label" style={{ top: "-4%" }}>🎩 Hattmakaren</span>
+        <span className="td-shop-label" style={{ top: "-11%" }}>🎩 Hattmakaren</span>
       </button>
-      <button className="td-shop-hotspot" style={{ left: "76%", top: "30%", width: "23%", height: "52%" }}
+      <button className="td-shop-hotspot" style={{ left: "75%", top: "38%", width: "9%", height: "42%" }}
         onClick={() => setShop("varld")} aria-label="Gå in i världsbutiken">
-        <span className="td-shop-label" style={{ top: "-6%" }}>🌍 Världsbutiken</span>
+        <span className="td-shop-label" style={{ top: "-11%" }}>🌍 Världsbutiken</span>
       </button>
       <div className="td-scene-hint">Klicka på en butik för att gå in</div>
     </div>
@@ -3306,8 +3306,8 @@ function Styles() {
         justify-content: center;
       }
       .td-shop-hotspot:hover, .td-shop-hotspot:focus-visible {
-        background: rgba(253, 201, 77, 0.18);
-        border-color: rgba(253, 201, 77, 0.85);
+        background: rgba(253, 201, 77, 0.08);
+        border-color: rgba(253, 201, 77, 0.4);
         outline: none;
       }
       .td-shop-label {
