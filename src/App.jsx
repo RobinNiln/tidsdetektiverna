@@ -1960,10 +1960,14 @@ const WORLD_ITEMS = [
   { id: "vase", icon: "🏺", name: "Antik vas", region: "europa" },
 ];
 const WORLD_REGIONS = [
-  { id: "europa", name: "Europa" },
-  { id: "afrika", name: "Afrika" },
-  { id: "asien", name: "Asien" },
-  { id: "amerika", name: "Amerika" },
+  { id: "amerika", name: "Amerika", cx: 38, cy: 55,
+    path: "M30 18 Q44 16 46 30 Q40 40 44 52 Q52 66 42 84 Q34 96 30 86 Q36 70 30 60 Q24 48 30 40 Q22 30 30 18 Z" },
+  { id: "europa", name: "Europa", cx: 96, cy: 33,
+    path: "M86 22 Q104 18 108 28 Q104 40 96 44 Q86 44 84 36 Q80 28 86 22 Z" },
+  { id: "afrika", name: "Afrika", cx: 100, cy: 70,
+    path: "M88 48 Q110 46 112 60 Q108 78 100 92 Q92 84 90 70 Q84 58 88 48 Z" },
+  { id: "asien", name: "Asien", cx: 145, cy: 42,
+    path: "M114 20 Q150 14 172 26 Q176 42 160 50 Q140 54 124 48 Q112 40 114 20 Z" },
 ];
 
 function BokgrandenScene({ completed, foundItems, setDialog, onPickUpItem, onStartMission }) {
@@ -1986,17 +1990,17 @@ function BokgrandenScene({ completed, foundItems, setDialog, onPickUpItem, onSta
   return (
     <div className="td-scene-image td-fade-in"
          style={{ backgroundImage: `url(${ASSETS.bokgrandenGata})` }}>
-      <button className="td-shop-hotspot" style={{ left: "28%", top: "42%", width: "8%", height: "38%" }}
+      <button className="td-shop-hotspot" style={{ left: "30%", top: "38%", width: "8.5%", height: "45%" }}
         onClick={() => setShop("bok")} aria-label="Gå in i bokbutiken">
-        <span className="td-shop-label" style={{ top: "-12%" }}>📖 Bokbutiken</span>
+        <span className="td-shop-label" style={{ top: "-11%" }}>📖 Bokbutiken</span>
       </button>
-      <button className="td-shop-hotspot" style={{ left: "52%", top: "40%", width: "7%", height: "40%" }}
+      <button className="td-shop-hotspot" style={{ left: "53.5%", top: "34%", width: "7%", height: "47%" }}
         onClick={() => setShop("hatt")} aria-label="Gå in i hattmakaren">
-        <span className="td-shop-label" style={{ top: "-11%" }}>🎩 Hattmakaren</span>
+        <span className="td-shop-label" style={{ top: "-10%" }}>🎩 Hattmakaren</span>
       </button>
-      <button className="td-shop-hotspot" style={{ left: "75%", top: "38%", width: "9%", height: "42%" }}
+      <button className="td-shop-hotspot" style={{ left: "76%", top: "33%", width: "8.5%", height: "53%" }}
         onClick={() => setShop("varld")} aria-label="Gå in i världsbutiken">
-        <span className="td-shop-label" style={{ top: "-11%" }}>🌍 Världsbutiken</span>
+        <span className="td-shop-label" style={{ top: "-9%" }}>🌍 Världsbutiken</span>
       </button>
 
       {/* Gatufigurer — liv och rörelse, klickbara med dialog */}
@@ -2161,43 +2165,53 @@ function VarldsaffarShop({ onBack, setDialog }) {
     <div className="td-scene-image td-fade-in"
          style={{ backgroundImage: `url(${ASSETS.varldsaffaren})` }}>
       <button className="td-shop-back td-btn td-btn-small" onClick={onBack}>← Ut på gatan</button>
-      <div className="td-world-game">
+      <div className="td-world-game td-world-game-map">
         <div className="td-world-instructions">
-          🌍 Etiketterna har ramlat av! Välj ett föremål och placera det på rätt världsdel.
+          {allDone
+            ? "🎉 Alla föremål på rätt plats!"
+            : selected
+              ? "Klicka på rätt världsdel på kartan!"
+              : "🌍 Välj ett föremål och placera det på rätt världsdel på kartan."}
         </div>
+
+        {/* KARTAN ÄR SPELPLANEN */}
+        <div className="td-map-board">
+          <svg viewBox="0 0 200 110" className="td-map-svg" aria-label="Världskarta">
+            {/* hav */}
+            <rect x="0" y="0" width="200" height="110" rx="6" className="td-map-sea" />
+            {WORLD_REGIONS.map((r) => {
+              const here = WORLD_ITEMS.find((it) => placed[it.id] === r.id);
+              const isWrong = wrong === r.id;
+              return (
+                <g key={r.id}
+                   className={`td-map-region ${here ? "td-map-filled" : ""} ${isWrong ? "td-map-wrong" : ""} ${selected ? "td-map-active" : ""}`}
+                   onClick={() => tryPlace(r.id)}>
+                  <path d={r.path} className="td-map-land" />
+                  <text x={r.cx} y={r.cy} className="td-map-name" textAnchor="middle">{r.name}</text>
+                  {here && <text x={r.cx} y={r.cy + 11} className="td-map-icon" textAnchor="middle">{here.icon}</text>}
+                </g>
+              );
+            })}
+          </svg>
+        </div>
+
         {!allDone ? (
-          <>
-            <div className="td-world-items">
-              {remaining.map((it) => (
-                <button key={it.id}
-                  className={`td-world-item ${selected === it.id ? "td-world-item-sel" : ""}`}
-                  onClick={() => setSelected(it.id)}>
-                  <span className="td-world-item-icon">{it.icon}</span>
-                  <span>{it.name}</span>
-                </button>
-              ))}
-            </div>
-            <div className="td-world-regions">
-              {WORLD_REGIONS.map((r) => {
-                const here = WORLD_ITEMS.find((it) => placed[it.id] === r.id);
-                return (
-                  <button key={r.id}
-                    className={`td-world-region ${wrong === r.id ? "td-world-wrong" : ""} ${here ? "td-world-filled" : ""}`}
-                    onClick={() => tryPlace(r.id)}>
-                    <span className="td-world-region-name">{r.name}</span>
-                    {here && <span className="td-world-region-icon">{here.icon}</span>}
-                  </button>
-                );
-              })}
-            </div>
-          </>
+          <div className="td-world-items">
+            {remaining.map((it) => (
+              <button key={it.id}
+                className={`td-world-item ${selected === it.id ? "td-world-item-sel" : ""}`}
+                onClick={() => setSelected(it.id)}>
+                <span className="td-world-item-icon">{it.icon}</span>
+                <span>{it.name}</span>
+              </button>
+            ))}
+          </div>
         ) : (
           <div className="td-world-done">
-            <p>🎉 Alla föremål på rätt plats! Du är en riktig världsresenär.</p>
             <button className="td-btn td-btn-big" onClick={() => {
               setDialog("Världsbutikens ägare applåderar: 'Imponerande! Du kan din geografi.'");
               onBack();
-            }}>Klar!</button>
+            }}>Klar! ★</button>
           </div>
         )}
       </div>
@@ -3476,6 +3490,32 @@ function Styles() {
       }
       .td-world-done { text-align: center; }
       .td-world-done p { font-size: 18px; font-weight: bold; margin-bottom: 12px; }
+
+      /* Kart-spelplanen */
+      .td-world-game-map { max-width: 680px; }
+      .td-map-board {
+        width: 100%;
+        margin: 0 auto 14px;
+        background: #cfe0e6;
+        border: 3px solid var(--ink);
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: inset 0 0 0 2px rgba(58,42,23,0.15);
+      }
+      .td-map-svg { width: 100%; height: auto; display: block; }
+      .td-map-sea { fill: #bcd4dc; }
+      .td-map-land { fill: #d8c08a; stroke: var(--ink); stroke-width: 1.2; transition: fill 0.2s; }
+      .td-map-name {
+        font-family: 'Georgia', serif; font-size: 7px; font-weight: bold;
+        fill: var(--ink); pointer-events: none;
+      }
+      .td-map-icon { font-size: 11px; pointer-events: none; }
+      .td-map-region { cursor: pointer; }
+      .td-map-region:hover .td-map-land { fill: #e6cf9a; }
+      .td-map-active .td-map-land { stroke-dasharray: 3 2; }
+      .td-map-active:hover .td-map-land { fill: var(--gold); }
+      .td-map-filled .td-map-land { fill: #a9cf94; }
+      .td-map-wrong .td-map-land { fill: #e0a59c; animation: tdWorldShake 0.3s; }
 
       .td-paper-tag {
         position: absolute;
