@@ -21,6 +21,8 @@ const ASSETS = {
   leksaksbodenInne: "/tidsdetektiverna/leksaksboden_inne.jpg",
   brunnNer: "/tidsdetektiverna/brunn_ner.jpg",
   murreFull: "/tidsdetektiverna/murre_full.png",
+  tornInne: "/tidsdetektiverna/torn_inne.jpg",
+  papegojaFull: "/tidsdetektiverna/papegoja_full.png",
   mira: "/tidsdetektiverna/mira.jpg",
   klonk: "/tidsdetektiverna/klonk.jpg",
   klonkFull: "/tidsdetektiverna/klonk_full.png",
@@ -210,6 +212,12 @@ const ITEM_DATA = {
     icon: "🪙",
     obtainedFrom: "Gömt i brunnen i Tidsstaden",
     description: "Ett mynt som glittrade på botten av den gamla brunnen. Till skillnad från hamnens gröna mynt är det här alldeles blankt, som om någon nyss tappat det. Eller som om tiden inte biter på det.",
+  },
+  "city:feather": {
+    name: "Papegojans fjäder",
+    icon: "🪶",
+    obtainedFrom: "Papegojan i tornet",
+    description: "En lysande fjäder i rött, blått och gult som den kloka papegojan i tornet gav dig sedan du löst alla tre gåtor. Den är len som siden och skiftar i färg när du vrider på den.",
   },
 };
 
@@ -3531,6 +3539,10 @@ function TidsstadenScene({ foundItems, setDialog, onPickUpItem, onEnterMachine }
     return <BrunnView found={foundItems.includes("city:coin")}
       onPickUpItem={onPickUpItem} setDialog={setDialog} onBack={() => setSub(null)} />;
   }
+  if (sub === "torn") {
+    return <TornView featherFound={foundItems.includes("city:feather")}
+      onPickUpItem={onPickUpItem} setDialog={setDialog} onBack={() => setSub(null)} />;
+  }
 
   // TORGET
   return (
@@ -3564,6 +3576,12 @@ function TidsstadenScene({ foundItems, setDialog, onPickUpItem, onEnterMachine }
           });
         }}>
         <span className="td-shop-label" style={{ top: "-6%" }}>✦ Tidsmaskinen</span>
+      </button>
+
+      {/* Tornet — papegojans gåtor (uppe till höger, justera mot bilden) */}
+      <button className="td-shop-hotspot" style={{ left: "62%", top: "6%", width: "12%", height: "30%" }}
+        onClick={() => setSub("torn")} aria-label="Gå upp i tornet">
+        <span className="td-shop-label" style={{ top: "-6%" }}>🦜 Tornet</span>
       </button>
 
       <div className="td-cave-clue td-cave-clue-final td-clue-narrow">
@@ -3631,6 +3649,114 @@ function BrunnView({ found, onPickUpItem, setDialog, onBack }) {
       />
       <div className="td-cave-clue td-cave-clue-final td-clue-narrow">
         🪣 Du tittar ner i den djupa brunnen. Vattnet är mörkt och stilla... men något blänker.
+      </div>
+    </div>
+  );
+}
+
+// --- TORNET: papegojan ställer tre gåtor, ger en fjäder ---
+const PARROT_RIDDLES = [
+  {
+    q: "Jag har städer men inga hus, skogar men inga träd, och vatten men ingen fisk. Vad är jag?",
+    options: ["En karta", "En sjö", "En trädgård"],
+    correct: 0,
+  },
+  {
+    q: "Ju mer du tar bort av mig, desto större blir jag. Vad är jag?",
+    options: ["En kaka", "Ett hål", "En boll"],
+    correct: 1,
+  },
+  {
+    q: "Jag går runt hela huset, men rör mig aldrig ur fläcken. Vad är jag?",
+    options: ["En katt", "Vinden", "Ett staket"],
+    correct: 2,
+  },
+];
+
+function TornView({ featherFound, onPickUpItem, setDialog, onBack }) {
+  const [step, setStep] = useState("intro"); // intro | q0 | q1 | q2 | done
+  const [wrong, setWrong] = useState(false);
+
+  function startRiddles() {
+    setStep("q0");
+  }
+
+  function answer(qIndex, optIndex) {
+    if (optIndex === PARROT_RIDDLES[qIndex].correct) {
+      setWrong(false);
+      if (qIndex < PARROT_RIDDLES.length - 1) {
+        setStep(`q${qIndex + 1}`);
+      } else {
+        setStep("done");
+        if (!featherFound) onPickUpItem("city:feather");
+      }
+    } else {
+      setWrong(true);
+    }
+  }
+
+  const qMatch = step.match(/^q(\d)$/);
+  const qIndex = qMatch ? parseInt(qMatch[1], 10) : -1;
+
+  return (
+    <div className="td-scene-image td-fade-in"
+         style={{ backgroundImage: `url(${ASSETS.tornInne})` }}>
+      <button className="td-shop-back td-btn td-btn-small" onClick={onBack}>← Ut på torget</button>
+
+      {/* Papegojan står i rummet */}
+      <button className="td-shop-figure td-shop-figure-btn"
+        style={{ left: "55%", bottom: "2%", height: "62%", aspectRatio: "773 / 1655" }}
+        aria-label="Prata med papegojan"
+        onClick={() => { if (step === "intro") startRiddles(); }}>
+        <img src={ASSETS.papegojaFull} alt="Papegojan" />
+      </button>
+
+      {/* Gåtepanel */}
+      <div className="td-clocktower-panel td-parrot-panel">
+        {step === "intro" && (
+          <>
+            <div className="td-shop-speaker">🦜 Papegojan</div>
+            {featherFound ? (
+              <>
+                <p>"Vraak! Du har redan löst mina gåtor, kloka vän. Fjädern är din."</p>
+                <button className="td-btn" onClick={onBack}>← Ut på torget</button>
+              </>
+            ) : (
+              <>
+                <p>"Vraak! En besökare! Jag är tornets papegoja. Klarar du mina tre gåtor får du en vacker fjäder. Är du redo?"</p>
+                <button className="td-btn td-btn-big" onClick={startRiddles}>Ja, ställ gåtorna! →</button>
+              </>
+            )}
+          </>
+        )}
+
+        {qIndex >= 0 && (
+          <>
+            <div className="td-shop-speaker">🦜 Gåta {qIndex + 1} av {PARROT_RIDDLES.length}</div>
+            <p>{PARROT_RIDDLES[qIndex].q}</p>
+            <div className="td-answer-list">
+              {PARROT_RIDDLES[qIndex].options.map((opt, i) => (
+                <button key={i} className="td-btn td-answer-btn" onClick={() => answer(qIndex, i)}>{opt}</button>
+              ))}
+            </div>
+            {wrong && <p className="td-wrong-hint">"Vraak! Inte riktigt — tänk efter och försök igen!"</p>}
+          </>
+        )}
+
+        {step === "done" && (
+          <>
+            <div className="td-shop-speaker">⭐ Alla gåtor lösta!</div>
+            <p>"Vraaak! Du är en riktig gåtmästare! Här är din belöning — en av mina finaste fjädrar."</p>
+            <button className="td-btn td-btn-big" onClick={() => {
+              setDialog({
+                name: "Papegojan",
+                portrait: ASSETS.papegojaFull,
+                lines: ["Du fick Papegojans fjäder! 🪶 Den lägger du i väskan."],
+              });
+              onBack();
+            }}>Ta emot fjädern 🪶</button>
+          </>
+        )}
       </div>
     </div>
   );
@@ -6066,6 +6192,13 @@ function Styles() {
         z-index: 10;
       }
       .td-clock-panel { text-align: center; }
+      /* Papegojans gåtepanel: placerad vänster om fågeln */
+      .td-parrot-panel {
+        left: 30%;
+        top: 50%;
+        max-width: 380px;
+        width: min(380px, 44%);
+      }
       .td-clock-draggable { width: 220px; touch-action: none; }
 
       /* === OBSERVATORIET === */
