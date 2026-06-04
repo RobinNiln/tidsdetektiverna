@@ -635,9 +635,12 @@ export default function App() {
           dialog={interiorDialog}
           setDialog={setInteriorDialog}
           onPickUpItem={pickUpItem}
-          onEnterMachine={() => setView("end")}
+          onEnterMachine={() => setView("finale")}
           onBack={backToMap}
         />
+      )}
+      {view === "finale" && (
+        <FinaleView foundItems={foundItems} onWin={() => setView("end")} onBack={() => setView("city")} />
       )}
       {view === "end" && (
         <MissionOverlay grand onClose={() => setView("map")}>
@@ -2988,6 +2991,7 @@ function ClockTowerScene({ completed, setDialog, onStartMission }) {
               "Åh, en besökare! Välkommen upp i klocktornet, lilla detektiv.",
               "Jag är Professor Tickelton, stadens klockmakare. Men jag har ett stort problem...",
               "Alla mina klockor har hamnat i oordning! Ingen visar rätt tid längre, och den stora tornklockan har slutat slå.",
+              "En främling i kappa var här i natt och viskade något konstigt: att tornklockan inte räknar sekunder, utan något annat. Sedan var hon borta.",
               "Kan du hjälpa mig att ställa klockorna rätt? Då vaknar tornet till liv igen!",
             ],
             action: { label: "Jag hjälper dig! →", onClick: () => { setDialog(null); setPlaying(true); } },
@@ -4039,20 +4043,202 @@ function TornView({ featherFound, onPickUpItem, setDialog, onBack }) {
   );
 }
 
+// ============================================================
+// FINALEN — mötet med Främlingen, tre utmaningar, valet, avslöjandet
+// ============================================================
+function FinaleView({ foundItems, onWin, onBack }) {
+  const [step, setStep] = useState("meet");
+
+  // --- UTMANING 1: sätt i de tre nycklarna (klicka i rätt ordning) ---
+  const KEYS = [
+    { id: "k1", label: "🗝️ Hamnens nyckel" },
+    { id: "k2", label: "⭐ Stjärnnyckeln" },
+    { id: "k3", label: "🗝️ Den sista nyckeln" },
+  ];
+  const [keysIn, setKeysIn] = useState([]);
+
+  // --- UTMANING 2: ställ in rätt årtal på tre rattar ---
+  const TARGET_YEAR = [1, 8, 9]; // valfritt "magiskt" årtal
+  const [dials, setDials] = useState([0, 0, 0]);
+
+  // --- UTMANING 3: upprepa mönstret (4 lampor) ---
+  const PATTERN = [2, 0, 3, 1];
+  const [patternShow, setPatternShow] = useState(false);
+  const [litLamp, setLitLamp] = useState(-1);
+  const [patternStep, setPatternStep] = useState(0);
+  const [patternWrong, setPatternWrong] = useState(false);
+
+  // --- VALET: tre knappar, den som glöder starkast är fällan ---
+  const [choiceWrong, setChoiceWrong] = useState(false);
+
+  function bumpDial(i, dir) {
+    setDials((d) => {
+      const nd = [...d];
+      nd[i] = (nd[i] + dir + 10) % 10;
+      return nd;
+    });
+  }
+  const dialsCorrect = dials.every((v, i) => v === TARGET_YEAR[i]);
+
+  function showPattern() {
+    setPatternShow(true);
+    setPatternWrong(false);
+    setPatternStep(0);
+    let i = 0;
+    function flash() {
+      setLitLamp(PATTERN[i]);
+      setTimeout(() => {
+        setLitLamp(-1); i++;
+        if (i < PATTERN.length) setTimeout(flash, 350);
+        else setTimeout(() => setPatternShow(false), 400);
+      }, 650);
+    }
+    setTimeout(flash, 500);
+  }
+  function clickLamp(n) {
+    if (patternShow) return;
+    if (n === PATTERN[patternStep]) {
+      const next = patternStep + 1;
+      if (next === PATTERN.length) { setStep("choice"); }
+      else setPatternStep(next);
+    } else {
+      setPatternWrong(true);
+      setPatternStep(0);
+    }
+  }
+
+  return (
+    <div className="td-interior td-fade-in">
+      <div className="td-interior-topbar">
+        <button className="td-btn td-btn-small" onClick={onBack}>← Tillbaka</button>
+        <div className="td-interior-title-banner"><span>Tidsmaskinen</span></div>
+        <div style={{ width: "150px" }} />
+      </div>
+      <div className="td-interior-stage">
+        <div className="td-scene-image td-finale-bg">
+
+          {/* Främlingen står vid maskinen (avslöjad efter mötet) */}
+          <img className="td-finale-stranger"
+            src={step === "reveal" ? ASSETS.framlingAvslojad : ASSETS.framlingFull}
+            alt="Främlingen" />
+
+          {/* STEG: MÖTE */}
+          {step === "meet" && (
+            <div className="td-clocktower-panel td-finale-panel">
+              <div className="td-shop-speaker">Främlingen</div>
+              <p>"Så du kom ända hit. Jag visste det." Främlingen står vid den stora maskinen. "Det är dags att du får veta sanningen — men först måste vi laga den tillsammans."</p>
+              <button className="td-btn td-btn-big" onClick={() => setStep("keys")}>Hjälp till att laga maskinen →</button>
+            </div>
+          )}
+
+          {/* STEG 1: NYCKLARNA */}
+          {step === "keys" && (
+            <div className="td-clocktower-panel td-finale-panel">
+              <div className="td-shop-speaker">⚙️ Sätt i de tre nycklarna</div>
+              <p>Maskinen har tre nyckelhål. Klicka på nycklarna en i taget för att sätta i dem.</p>
+              <div className="td-answer-list">
+                {KEYS.map((k) => (
+                  <button key={k.id} className="td-btn td-answer-btn"
+                    disabled={keysIn.includes(k.id)}
+                    onClick={() => {
+                      const nk = [...keysIn, k.id];
+                      setKeysIn(nk);
+                      if (nk.length === KEYS.length) setTimeout(() => setStep("dials"), 600);
+                    }}>
+                    {keysIn.includes(k.id) ? "✓ " : ""}{k.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* STEG 2: ÄRTALET */}
+          {step === "dials" && (
+            <div className="td-clocktower-panel td-finale-panel">
+              <div className="td-shop-speaker">🔢 Ställ in rätt årtal</div>
+              <p>Vrid rattarna tills de visar årtalet maskinen behöver: <strong>1 8 9</strong></p>
+              <div className="td-dials">
+                {dials.map((v, i) => (
+                  <div key={i} className="td-dial">
+                    <button className="td-dial-btn" onClick={() => bumpDial(i, +1)}>▲</button>
+                    <div className="td-dial-num">{v}</div>
+                    <button className="td-dial-btn" onClick={() => bumpDial(i, -1)}>▼</button>
+                  </div>
+                ))}
+              </div>
+              <button className="td-btn td-btn-big" disabled={!dialsCorrect}
+                onClick={() => { setStep("pattern"); }}>
+                {dialsCorrect ? "Rätt årtal! Fortsätt →" : "Ställ in 1 8 9"}
+              </button>
+            </div>
+          )}
+
+          {/* STEG 3: MÖNSTRET */}
+          {step === "pattern" && (
+            <div className="td-clocktower-panel td-finale-panel">
+              <div className="td-shop-speaker">💡 Upprepa ljusmönstret</div>
+              <p>{patternShow ? "Titta noga på ordningen..." : "Klicka lamporna i samma ordning!"}</p>
+              <div className="td-lamp-row">
+                {[0, 1, 2, 3].map((n) => (
+                  <button key={n}
+                    className={`td-lamp ${litLamp === n ? "td-lamp-lit" : ""}`}
+                    onClick={() => clickLamp(n)} aria-label={`Lampa ${n + 1}`} />
+                ))}
+              </div>
+              {patternWrong && <p className="td-wrong-hint">Fel ordning — titta igen!</p>}
+              {!patternShow && (
+                <button className="td-btn" onClick={showPattern}>▸ Visa mönstret</button>
+              )}
+            </div>
+          )}
+
+          {/* STEG 4: DET DRAMATISKA VALET */}
+          {step === "choice" && (
+            <div className="td-clocktower-panel td-finale-panel">
+              <div className="td-shop-speaker">⚠️ Det sista valet</div>
+              <p>Tre knappar lyser. Minns Främlingens varning: <em>välj INTE den som glöder starkast.</em></p>
+              <div className="td-choice-buttons">
+                <button className="td-glow-btn td-glow-weak" onClick={() => setStep("reveal")}>Blå knapp</button>
+                <button className="td-glow-btn td-glow-strong" onClick={() => setChoiceWrong(true)}>Röd knapp</button>
+                <button className="td-glow-btn td-glow-medium" onClick={() => setStep("reveal")}>Grön knapp</button>
+              </div>
+              {choiceWrong && <p className="td-wrong-hint">Den glödde för starkt! Inget hände — försök igen, välj en lugnare knapp.</p>}
+            </div>
+          )}
+
+          {/* STEG 5: AVSLÖJANDET */}
+          {step === "reveal" && (
+            <div className="td-clocktower-panel td-finale-panel">
+              <div className="td-shop-speaker">Främlingen fäller ner sin huva</div>
+              <p>Maskinen vaknar med ett mjukt surr. Främlingen ler och drar ner huvan. "Tack, lilla detektiv. Jag är uppfinnaren som byggde den här maskinen — fast i en tid som ännu inte hänt. När den gick sönder där, började era klockor gå fel här. Nu har du lagat allt — på rätt sätt."</p>
+              <button className="td-btn td-btn-big td-btn-gold" onClick={onWin}>Se vad som händer ✦</button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function EndScreen({ onReset }) {
   return (
     <div className="td-end">
       <div className="td-stamp">✦ Äventyr fullbordat ✦</div>
-      <h2 className="td-h2">Tidsmaskinen lever!</h2>
+      <h2 className="td-h2">Tiden är lagad!</h2>
       <div className="td-trio">
         <CharacterPortrait src={ASSETS.tickelton} name="Professor Tickelton" />
         <CharacterPortrait src={ASSETS.mira} name="Mira Murr" />
         <CharacterPortrait src={ASSETS.klonk} name="Herr Klonk" />
       </div>
-      <p className="td-intro">Fantastiskt! Du hittade alla tre stjärnor och lagade stadens första tidsmaskin.</p>
+      <p className="td-intro">
+        Maskinen surrar till liv, och i hela staden börjar klockorna ticka rätt
+        igen. Tornklockan slår sina slag för första gången på länge.
+      </p>
       <p className="td-intro td-intro-small">
-        Nästa gång kan äventyret fortsätta till <strong>Hamnen</strong>,{" "}
-        <strong>Observatoriet</strong> och <strong>Den glömda grottan</strong>.
+        Främlingen — uppfinnaren från en tid som ännu inte hänt — tackar dig och
+        stiger in i porten för att resa hem. "Vi ses igen, lilla detektiv. Tiden
+        minns dem som lagar den." Tack vare dig är staden räddad, och din väska
+        är full av minnen från äventyret.
       </p>
       <div className="td-end-stars"><StarRow filled={3} /></div>
       <button className="td-btn td-btn-big" onClick={onReset}>↺ Spela igen</button>
@@ -6469,6 +6655,65 @@ function Styles() {
         z-index: 10;
       }
       .td-clock-panel { text-align: center; }
+
+      /* === FINALEN === */
+      .td-finale-bg {
+        background: radial-gradient(ellipse at center, #2a3a5a 0%, #14182c 70%, #0a0c18 100%);
+        position: relative;
+      }
+      .td-finale-stranger {
+        position: absolute;
+        left: 12%; bottom: 0;
+        height: 80%; width: auto;
+        filter: drop-shadow(4px 6px 10px rgba(0,0,0,0.5));
+        z-index: 4;
+      }
+      .td-finale-panel {
+        left: auto; right: 6%;
+        top: 50%;
+        width: min(440px, 50%);
+      }
+      .td-dials { display: flex; justify-content: center; gap: 16px; margin: 14px 0; }
+      .td-dial { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+      .td-dial-btn {
+        background: var(--ink); color: var(--cream);
+        border: none; border-radius: 6px; width: 40px; height: 30px;
+        font-size: 16px; cursor: pointer;
+      }
+      .td-dial-num {
+        font-size: 38px; font-weight: bold; font-family: 'Georgia', serif;
+        width: 48px; height: 56px; line-height: 56px;
+        background: #1a1206; color: var(--gold);
+        border-radius: 8px; border: 2px solid var(--gold);
+      }
+      .td-lamp-row { display: flex; justify-content: center; gap: 14px; margin: 16px 0; }
+      .td-lamp {
+        width: 52px; height: 52px; border-radius: 50%;
+        background: #2a2a3a; border: 3px solid var(--ink);
+        cursor: pointer; transition: background 0.15s, box-shadow 0.2s;
+      }
+      .td-lamp:nth-child(1){ border-color:#c0392b; }
+      .td-lamp:nth-child(2){ border-color:#3a6ea8; }
+      .td-lamp:nth-child(3){ border-color:#5fa860; }
+      .td-lamp:nth-child(4){ border-color:#fdc94d; }
+      .td-lamp-lit { background: var(--gold); box-shadow: 0 0 22px 6px rgba(253,201,77,0.9); }
+      .td-choice-buttons { display: flex; flex-direction: column; gap: 10px; margin: 14px 0; }
+      .td-glow-btn {
+        font-family: 'Georgia', serif; font-size: 17px; font-weight: bold;
+        padding: 12px; border-radius: 10px; border: 3px solid var(--ink);
+        cursor: pointer; color: var(--ink);
+      }
+      .td-glow-weak { background: #aac4e8; box-shadow: 0 0 6px 1px rgba(170,196,232,0.5); }
+      .td-glow-medium { background: #9fd0a0; box-shadow: 0 0 8px 2px rgba(159,208,160,0.6); }
+      .td-glow-strong {
+        background: #ff8a7a;
+        box-shadow: 0 0 26px 8px rgba(255,120,90,0.95);
+        animation: tdGlowPulse 1.2s ease-in-out infinite;
+      }
+      @keyframes tdGlowPulse {
+        0%,100% { box-shadow: 0 0 22px 6px rgba(255,120,90,0.8); }
+        50% { box-shadow: 0 0 38px 12px rgba(255,120,90,1); }
+      }
       /* Papegojans gåtepanel: placerad vänster om fågeln */
       .td-parrot-panel {
         left: 30%;
