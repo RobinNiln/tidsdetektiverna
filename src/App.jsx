@@ -2599,8 +2599,8 @@ function ClockTowerScene({ completed, setDialog, onStartMission }) {
   return (
     <div className="td-scene-image td-fade-in"
          style={{ backgroundImage: `url(${ASSETS.klocktornBg})` }}>
-      <button className="td-shop-figure td-shop-figure-btn"
-        style={{ left: "50%", bottom: "2%", height: "78%", aspectRatio: "773 / 1655", transform: "translateX(-50%)" }}
+      <button className="td-shop-figure td-shop-figure-btn td-ugglemark-center"
+        style={{ left: "35%", bottom: "0%", height: "82%", aspectRatio: "773 / 1655" }}
         aria-label="Prata med Professor Tickelton"
         onClick={() => {
           setDialog({
