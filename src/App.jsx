@@ -23,6 +23,8 @@ const ASSETS = {
   murreFull: "/tidsdetektiverna/murre_full.png",
   tornInne: "/tidsdetektiverna/torn_inne.jpg",
   papegojaFull: "/tidsdetektiverna/papegoja_full.png",
+  urmakareFull: "/tidsdetektiverna/urmakare_full.png",
+  leksaksmakareFull: "/tidsdetektiverna/leksaksmakare_full.png",
   mira: "/tidsdetektiverna/mira.jpg",
   klonk: "/tidsdetektiverna/klonk.jpg",
   klonkFull: "/tidsdetektiverna/klonk_full.png",
@@ -218,6 +220,18 @@ const ITEM_DATA = {
     icon: "🪶",
     obtainedFrom: "Papegojan i tornet",
     description: "En lysande fjäder i rött, blått och gult som den kloka papegojan i tornet gav dig sedan du löst alla tre gåtor. Den är len som siden och skiftar i färg när du vrider på den.",
+  },
+  "city:watch": {
+    name: "Den fina fickklockan",
+    icon: "⏱️",
+    obtainedFrom: "Urmakaren i Tidsstaden",
+    description: "En blank fickklocka i silver som urmakaren gav dig sedan du räknat hennes klockor rätt. Den tickar mjukt och lockets insida är graverad med små stjärnor.",
+  },
+  "city:spinningtop": {
+    name: "Den målade snurran",
+    icon: "🎁",
+    obtainedFrom: "Leksaksmakaren i Tidsstaden",
+    description: "En vacker handmålad snurra som leksaksmakaren gav dig sedan du klarat hans minnesspel. När den snurrar blandas färgerna till en regnbåge.",
   },
 };
 
@@ -3528,11 +3542,11 @@ function TidsstadenScene({ foundItems, setDialog, onPickUpItem, onEnterMachine }
   const [sub, setSub] = useState(null); // null = torg, annars "urmakare"/"leksak"/"brunn"
 
   if (sub === "urmakare") {
-    return <UrmakareShop found={foundItems.includes("city:gear")}
+    return <UrmakareShop foundItems={foundItems}
       onPickUpItem={onPickUpItem} setDialog={setDialog} onBack={() => setSub(null)} />;
   }
   if (sub === "leksak") {
-    return <LeksaksbodShop found={foundItems.includes("city:toy")}
+    return <LeksaksbodShop foundItems={foundItems}
       onPickUpItem={onPickUpItem} setDialog={setDialog} onBack={() => setSub(null)} />;
   }
   if (sub === "brunn") {
@@ -3592,43 +3606,223 @@ function TidsstadenScene({ foundItems, setDialog, onPickUpItem, onEnterMachine }
 }
 
 // --- URMAKAREN: gömt kugghjul ---
-function UrmakareShop({ found, onPickUpItem, setDialog, onBack }) {
+function UrmakareShop({ foundItems, onPickUpItem, setDialog, onBack }) {
+  const gearFound = foundItems.includes("city:gear");
+  const watchDone = foundItems.includes("city:watch");
+  const [counting, setCounting] = useState(false);
+  const [wrong, setWrong] = useState(false);
+
+  // Räkneövning: hur många gökur? Vi ritar ut 6 klockor och rätt svar är 6.
+  const CLOCK_COUNT = 6;
+  const clockPositions = [
+    { x: 12, y: 18 }, { x: 24, y: 30 }, { x: 16, y: 46 },
+    { x: 30, y: 16 }, { x: 8, y: 62 }, { x: 26, y: 56 },
+  ];
+
+  function answer(n) {
+    if (n === CLOCK_COUNT) {
+      setWrong(false);
+      setCounting(false);
+      if (!watchDone) onPickUpItem("city:watch");
+      setDialog({
+        name: "Urmakaren",
+        portrait: ASSETS.urmakareFull,
+        lines: [
+          "Alldeles rätt! Sex gökur, precis! Du har skarpa ögon, lilla detektiv.",
+          "Här, ta den här fina fickklockan som tack. ⏱️",
+        ],
+      });
+    } else {
+      setWrong(true);
+    }
+  }
+
   return (
     <div className="td-scene-image td-fade-in"
          style={{ backgroundImage: `url(${ASSETS.urmakarenInne})` }}>
       <button className="td-shop-back td-btn td-btn-small" onClick={onBack}>← Ut på torget</button>
+
+      {/* Urmakaren — figur till vänster */}
+      <button className="td-shop-figure td-shop-figure-btn"
+        style={{ left: "6%", bottom: "-4%", height: "70%", aspectRatio: "773 / 1655" }}
+        aria-label="Prata med urmakaren"
+        onClick={() => {
+          if (watchDone) {
+            setDialog({ name: "Urmakaren", portrait: ASSETS.urmakareFull,
+              lines: ["Tack för hjälpen med att räkna, lilla vän! Titta dig gärna omkring."] });
+          } else {
+            setDialog({
+              name: "Urmakaren", portrait: ASSETS.urmakareFull,
+              lines: [
+                "Välkommen till min verkstad! Här tickar tusen klockor.",
+                "Jag har tappat räkningen på mina gökur... Kan du hjälpa mig räkna hur många de är?",
+              ],
+              action: { label: "Räkna gökuren →", onClick: () => { setDialog(null); setCounting(true); } },
+            });
+          }
+        }}>
+        <img src={ASSETS.urmakareFull} alt="Urmakaren" />
+      </button>
+
+      {/* Gökur att räkna (visas under räkneövningen) */}
+      {counting && clockPositions.map((p, i) => (
+        <div key={i} className="td-count-clock" style={{ left: `${p.x}%`, top: `${p.y}%` }}>🕰️</div>
+      ))}
+
+      {/* Räknepanel */}
+      {counting && (
+        <div className="td-clocktower-panel td-parrot-panel" style={{ left: "62%" }}>
+          <div className="td-shop-speaker">⏰ Räkna gökuren</div>
+          <p>Hur många gökur (🕰️) ser du i rummet?</p>
+          <div className="td-answer-list">
+            {[5, 6, 7].map((n) => (
+              <button key={n} className="td-btn td-answer-btn" onClick={() => answer(n)}>{n} stycken</button>
+            ))}
+          </div>
+          {wrong && <p className="td-wrong-hint">Inte riktigt — räkna en gång till!</p>}
+        </div>
+      )}
+
       <Hideaway
         x={70} y={55} size={5}
-        found={found}
+        found={gearFound}
         icon="⚙️"
         hint="Något litet glittrar bland urverken..."
         foundText="Du hittade ett litet blankt kugghjul bland klockorna! Det lägger du i väskan."
         onFind={(t) => { onPickUpItem("city:gear"); setDialog(t); }}
       />
-      <div className="td-cave-clue td-cave-clue-final td-clue-narrow">
-        ⏰ Urmakarens verkstad. Här tickar tusen klockor. Hittar du något?
-      </div>
+      {!counting && (
+        <div className="td-cave-clue td-cave-clue-final td-clue-narrow">
+          ⏰ Urmakarens verkstad. Prata med urmakaren — och se om något glittrar bland klockorna.
+        </div>
+      )}
     </div>
   );
 }
 
-// --- LEKSAKSBODEN: gömd leksak ---
-function LeksaksbodShop({ found, onPickUpItem, setDialog, onBack }) {
+// --- LEKSAKSBODEN: figur, minnesspel + gömd leksak ---
+function LeksaksbodShop({ foundItems, onPickUpItem, setDialog, onBack }) {
+  const toyFound = foundItems.includes("city:toy");
+  const topDone = foundItems.includes("city:spinningtop");
+  const TOYS = ["🧸", "🚂", "🎈", "🪁"];
+  const SEQUENCE = [0, 2, 1]; // björn, ballong, tåg
+
+  const [phase, setPhase] = useState("idle"); // idle | show | input | done
+  const [litIndex, setLitIndex] = useState(-1);
+  const [playerStep, setPlayerStep] = useState(0);
+  const [wrong, setWrong] = useState(false);
+
+  // Visa sekvensen genom att tända leksakerna en i taget.
+  function startGame() {
+    setPhase("show");
+    setWrong(false);
+    setPlayerStep(0);
+    let i = 0;
+    function flash() {
+      setLitIndex(SEQUENCE[i]);
+      setTimeout(() => {
+        setLitIndex(-1);
+        i++;
+        if (i < SEQUENCE.length) {
+          setTimeout(flash, 350);
+        } else {
+          setTimeout(() => setPhase("input"), 400);
+        }
+      }, 700);
+    }
+    setTimeout(flash, 500);
+  }
+
+  function clickToy(toyIndex) {
+    if (phase !== "input") return;
+    if (toyIndex === SEQUENCE[playerStep]) {
+      const next = playerStep + 1;
+      if (next === SEQUENCE.length) {
+        setPhase("done");
+        if (!topDone) onPickUpItem("city:spinningtop");
+        setDialog({
+          name: "Leksaksmakaren", portrait: ASSETS.leksaksmakareFull,
+          lines: [
+            "Helt rätt ordning! Vilket minne du har!",
+            "Här får du den här målade snurran som tack. 🎁",
+          ],
+        });
+      } else {
+        setPlayerStep(next);
+      }
+    } else {
+      setWrong(true);
+      setPhase("idle");
+    }
+  }
+
+  const toyPositions = [
+    { x: 40, y: 30 }, { x: 54, y: 28 }, { x: 47, y: 48 }, { x: 61, y: 46 },
+  ];
+
   return (
     <div className="td-scene-image td-fade-in"
          style={{ backgroundImage: `url(${ASSETS.leksaksbodenInne})` }}>
       <button className="td-shop-back td-btn td-btn-small" onClick={onBack}>← Ut på torget</button>
+
+      {/* Leksaksmakaren — figur till höger */}
+      <button className="td-shop-figure td-shop-figure-btn"
+        style={{ left: "74%", bottom: "-4%", height: "70%", aspectRatio: "773 / 1655" }}
+        aria-label="Prata med leksaksmakaren"
+        onClick={() => {
+          if (topDone) {
+            setDialog({ name: "Leksaksmakaren", portrait: ASSETS.leksaksmakareFull,
+              lines: ["Tack för att du spelade med mig! Titta dig gärna omkring i boden."] });
+          } else {
+            setDialog({
+              name: "Leksaksmakaren", portrait: ASSETS.leksaksmakareFull,
+              lines: [
+                "Hej och välkommen till leksaksboden!",
+                "Vill du spela ett litet minnesspel? Jag tänder tre leksaker i en ordning — sen ska du klicka dem i samma ordning!",
+              ],
+              action: { label: "Spela minnesspelet →", onClick: () => { setDialog(null); startGame(); } },
+            });
+          }
+        }}>
+        <img src={ASSETS.leksaksmakareFull} alt="Leksaksmakaren" />
+      </button>
+
+      {/* Leksakerna att minnas/klicka */}
+      {(phase === "show" || phase === "input") && toyPositions.map((p, i) => (
+        <button key={i}
+          className={`td-memory-toy ${litIndex === i ? "td-memory-toy-lit" : ""}`}
+          style={{ left: `${p.x}%`, top: `${p.y}%` }}
+          onClick={() => clickToy(i)}
+          aria-label={`Leksak ${i + 1}`}>
+          {TOYS[i]}
+        </button>
+      ))}
+
+      {/* Instruktionspanel */}
+      {(phase === "show" || phase === "input") && (
+        <div className="td-cave-clue td-cave-clue-final td-clue-narrow">
+          {phase === "show" ? "Titta noga... kom ihåg ordningen!" : "Din tur! Klicka leksakerna i samma ordning."}
+        </div>
+      )}
+      {wrong && phase === "idle" && (
+        <div className="td-cave-clue td-cave-clue-final td-clue-narrow">
+          Oj, fel ordning! Prata med leksaksmakaren och försök igen.
+        </div>
+      )}
+
       <Hideaway
-        x={32} y={60} size={5}
-        found={found}
+        x={20} y={62} size={5}
+        found={toyFound}
         icon="🪀"
         hint="Något står och väntar bland leksakerna..."
         foundText="Du hittade en uppdragbar plåtleksak! Den surrar glatt ner i väskan."
         onFind={(t) => { onPickUpItem("city:toy"); setDialog(t); }}
       />
-      <div className="td-cave-clue td-cave-clue-final td-clue-narrow">
-        🧸 Leksaksboden. Hyllorna är fulla av under. Något kanske vill följa med dig?
-      </div>
+      {phase === "idle" && !wrong && (
+        <div className="td-cave-clue td-cave-clue-final td-clue-narrow">
+          🧸 Leksaksboden. Prata med leksaksmakaren — och leta efter något gömt bland leksakerna.
+        </div>
+      )}
     </div>
   );
 }
@@ -6204,6 +6398,33 @@ function Styles() {
         animation: none;
         bottom: auto;
         filter: drop-shadow(0 8px 12px rgba(0,0,0,0.3));
+      }
+      /* Urmakarens räknebara gökur */
+      .td-count-clock {
+        position: absolute;
+        font-size: 38px;
+        z-index: 8;
+        filter: drop-shadow(2px 3px 3px rgba(0,0,0,0.4));
+        transform: translate(-50%, -50%);
+      }
+      /* Leksaksmakarens minnesspel */
+      .td-memory-toy {
+        position: absolute;
+        font-size: 46px;
+        background: rgba(253,243,216,0.85);
+        border: 3px solid var(--ink);
+        border-radius: 14px;
+        padding: 4px 8px;
+        cursor: pointer;
+        z-index: 9;
+        transform: translate(-50%, -50%);
+        transition: transform 0.15s, box-shadow 0.2s, background 0.2s;
+      }
+      .td-memory-toy:hover { transform: translate(-50%, -50%) scale(1.08); }
+      .td-memory-toy-lit {
+        background: var(--gold);
+        box-shadow: 0 0 22px 6px rgba(253,201,77,0.9);
+        transform: translate(-50%, -50%) scale(1.15);
       }
       .td-clock-draggable { width: 220px; touch-action: none; }
 
