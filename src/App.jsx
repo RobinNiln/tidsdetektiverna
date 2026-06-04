@@ -2735,9 +2735,9 @@ const CONSTELLATIONS = [
 
 // Andra himlaobjekt man kan hitta genom att panorera runt (x,y i % av stjärnkartan).
 const SKY_OBJECTS = [
-  { id: "komet", name: "Kometen", type: "comet", x: 14, y: 70 },
-  { id: "saturnus", name: "Planeten Saturnus", type: "planet", x: 86, y: 64 },
-  { id: "manen", name: "Månen", type: "moon", x: 88, y: 14 },
+  { id: "komet", name: "Kometen", type: "comet", x: 10, y: 78 },
+  { id: "saturnus", name: "Planeten Saturnus", type: "planet", x: 90, y: 70 },
+  { id: "manen", name: "Månen", type: "moon", x: 92, y: 10 },
 ];
 
 function ObservatoryScene({ foundItems, setDialog, onPickUpItem }) {
@@ -2774,10 +2774,43 @@ function ObservatoryScene({ foundItems, setDialog, onPickUpItem }) {
 }
 
 function StarMapView({ onBack }) {
-  // Panorering: hur långt stjärnkartan är förflyttad (i px), styrt av drag.
-  const [pan, setPan] = useState({ x: -200, y: -120 });
-  const [found, setFound] = useState([]); // id:n på upptäckta stjärnbilder
+  // Panorering (px) + zoom (skalfaktor). Större karta = mer att utforska.
+  const [pan, setPan] = useState({ x: -400, y: -300 });
+  const [zoom, setZoom] = useState(1);
+  const [found, setFound] = useState([]);
+  const [shootingStar, setShootingStar] = useState(null); // {key} när ett stjärnfall visas
   const dragRef = useRef(null);
+
+  // Den stora himmelsytan i px (vid zoom 1). Större än förut.
+  const MAP_W = 2600;
+  const MAP_H = 1800;
+
+  // Stjärnfall: dyker upp slumpvis var 4-9:e sekund och far förbi.
+  useEffect(() => {
+    let timer;
+    function schedule() {
+      const delay = 4000 + Math.random() * 5000;
+      timer = setTimeout(() => {
+        setShootingStar({ key: Date.now(), top: 10 + Math.random() * 50, left: 20 + Math.random() * 50 });
+        setTimeout(() => setShootingStar(null), 1200);
+        schedule();
+      }, delay);
+    }
+    schedule();
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Begränsa panorering så man inte drar bort kartan (beror på zoom).
+  function clampPan(nx, ny) {
+    const maxX = 0;
+    const maxY = 0;
+    const minX = -(MAP_W * zoom - 600);
+    const minY = -(MAP_H * zoom - 500);
+    return {
+      x: Math.max(minX, Math.min(maxX, nx)),
+      y: Math.max(minY, Math.min(maxY, ny)),
+    };
+  }
 
   function startDrag(e) {
     const point = e.touches ? e.touches[0] : e;
@@ -2788,26 +2821,23 @@ function StarMapView({ onBack }) {
     const point = e.touches ? e.touches[0] : e;
     const dx = point.clientX - dragRef.current.startX;
     const dy = point.clientY - dragRef.current.startY;
-    // Begränsa hur långt man kan dra så man inte tappar bort kartan.
-    let nx = dragRef.current.panX + dx;
-    let ny = dragRef.current.panY + dy;
-    nx = Math.max(-700, Math.min(0, nx));
-    ny = Math.max(-500, Math.min(0, ny));
-    setPan({ x: nx, y: ny });
+    setPan(clampPan(dragRef.current.panX + dx, dragRef.current.panY + dy));
   }
   function endDrag() { dragRef.current = null; }
 
-  function clickConstellation(c) {
-    if (c.single) return; // Polstjärnan hittas via Lilla björn
-    if (!found.includes(c.id)) {
-      setFound((f) => [...f, c.id]);
-    }
+  function zoomBy(factor) {
+    setZoom((z) => {
+      const nz = Math.max(0.7, Math.min(2.2, z * factor));
+      return nz;
+    });
   }
 
+  function clickConstellation(c) {
+    if (c.single) return;
+    if (!found.includes(c.id)) setFound((f) => [...f, c.id]);
+  }
   function clickObject(o) {
-    if (!found.includes(o.id)) {
-      setFound((f) => [...f, o.id]);
-    }
+    if (!found.includes(o.id)) setFound((f) => [...f, o.id]);
   }
 
   const allFound = CONSTELLATIONS.filter((c) => !c.single).every((c) => found.includes(c.id))
@@ -2815,19 +2845,21 @@ function StarMapView({ onBack }) {
 
   return (
     <div className="td-starmap-wrap">
-      {/* Kikarlinsens runda öppning — allt utanför är svart */}
       <div className="td-telescope-lens">
         <div
           className="td-starmap-pan"
           style={{
+            width: `${MAP_W}px`, height: `${MAP_H}px`,
             backgroundImage: `url(${ASSETS.stjarnhimmel})`,
-            transform: `translate(${pan.x}px, ${pan.y}px)`,
+            transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+            transformOrigin: "top left",
           }}
           onMouseDown={startDrag} onMouseMove={onDrag} onMouseUp={endDrag} onMouseLeave={endDrag}
           onTouchStart={startDrag} onTouchMove={onDrag} onTouchEnd={endDrag}
         >
-          {/* Stjärnbilderna ritas som SVG ovanpå himlen */}
-          <svg className="td-constellation-layer" viewBox="0 0 1000 700" preserveAspectRatio="none">
+          {/* Stjärnbilder + objekt ritas i SVG som täcker hela den stora ytan */}
+          <svg className="td-constellation-layer" viewBox="0 0 1000 700" preserveAspectRatio="none"
+               style={{ width: `${MAP_W}px`, height: `${MAP_H}px` }}>
             {CONSTELLATIONS.map((c) => {
               if (c.single) return null;
               const lit = found.includes(c.id);
@@ -2848,7 +2880,6 @@ function StarMapView({ onBack }) {
               );
             })}
 
-            {/* Komet, planet och måne */}
             {SKY_OBJECTS.map((o) => {
               const cx = o.x * 10, cy = o.y * 7;
               const lit = found.includes(o.id);
@@ -2879,9 +2910,20 @@ function StarMapView({ onBack }) {
             })}
           </svg>
         </div>
+
+        {/* Stjärnfall — far diagonalt över linsen då och då */}
+        {shootingStar && (
+          <div key={shootingStar.key} className="td-shooting-star"
+               style={{ top: `${shootingStar.top}%`, left: `${shootingStar.left}%` }} />
+        )}
       </div>
 
-      {/* Namn på upptäckta stjärnbilder */}
+      {/* Zoom-knappar */}
+      <div className="td-zoom-controls">
+        <button className="td-zoom-btn" onClick={() => zoomBy(1.25)} aria-label="Zooma in">+</button>
+        <button className="td-zoom-btn" onClick={() => zoomBy(0.8)} aria-label="Zooma ut">−</button>
+      </div>
+
       <div className="td-starmap-names">
         {found.map((id) => {
           const c = CONSTELLATIONS.find((x) => x.id === id);
@@ -2890,7 +2932,6 @@ function StarMapView({ onBack }) {
           if (o) return <span key={id} className="td-starmap-name">✦ {o.name}</span>;
           return null;
         })}
-        {/* Polstjärnan namnges automatiskt när Lilla björn hittats */}
         {found.includes("lillabjorn") && <span className="td-starmap-name">✦ Polstjärnan</span>}
       </div>
 
@@ -6506,7 +6547,6 @@ function Styles() {
       .td-telescope-lens:active { cursor: grabbing; }
       .td-starmap-pan {
         position: absolute;
-        width: 1700px; height: 1200px;
         background-size: cover;
         background-position: center;
         background-color: #0a0c1a;
@@ -6514,6 +6554,44 @@ function Styles() {
         user-select: none;
       }
       .td-constellation-layer {
+        position: absolute; inset: 0;
+      }
+      /* Zoom-knappar */
+      .td-zoom-controls {
+        position: absolute; bottom: 16px; right: 16px;
+        display: flex; flex-direction: column; gap: 8px;
+        z-index: 25;
+      }
+      .td-zoom-btn {
+        width: 44px; height: 44px;
+        font-size: 26px; font-weight: bold;
+        background: rgba(20,24,48,0.85);
+        color: #fff8d0;
+        border: 2px solid var(--gold);
+        border-radius: 10px;
+        cursor: pointer;
+        line-height: 1;
+        display: flex; align-items: center; justify-content: center;
+      }
+      .td-zoom-btn:hover { background: rgba(40,48,90,0.95); }
+      /* Stjärnfall som far diagonalt över linsen */
+      .td-shooting-star {
+        position: absolute;
+        width: 90px; height: 2px;
+        background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.95) 100%);
+        border-radius: 2px;
+        transform: rotate(35deg);
+        z-index: 18;
+        pointer-events: none;
+        animation: tdShoot 1.2s ease-out forwards;
+        filter: drop-shadow(0 0 4px rgba(255,255,255,0.8));
+      }
+      @keyframes tdShoot {
+        0% { opacity: 0; transform: translate(0, 0) rotate(35deg); }
+        15% { opacity: 1; }
+        100% { opacity: 0; transform: translate(220px, 150px) rotate(35deg); }
+      }
+      .td-constellation-layer-old {
         position: absolute; inset: 0;
         width: 1000px; height: 700px;
       }
