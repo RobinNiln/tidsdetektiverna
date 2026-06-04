@@ -2574,6 +2574,54 @@ function CaveScene({ completed, foundItems, setDialog, onPickUpItem, onStartMiss
   );
 }
 
+// Loopande bakgrundsvideo med mjuk cross-fade vid skarven (inget "hopp").
+// Två kopior av videon spelar förskjutet; den ena tonar ut medan den andra tonar in.
+function LoopingVideo({ src, poster, fade = 0.8 }) {
+  const vidA = useRef(null);
+  const vidB = useRef(null);
+  const [front, setFront] = useState("a"); // vilken video som syns just nu
+
+  useEffect(() => {
+    const a = vidA.current;
+    const b = vidB.current;
+    if (!a || !b) return;
+    a.play().catch(() => {});
+
+    let raf;
+    let switching = false;
+    function tick() {
+      const active = front === "a" ? a : b;
+      const other = front === "a" ? b : a;
+      if (active.duration && active.currentTime >= active.duration - fade && !switching) {
+        // Starta den andra videon från början och börja tona över.
+        switching = true;
+        other.currentTime = 0;
+        other.play().catch(() => {});
+        setFront((f) => (f === "a" ? "b" : "a"));
+      }
+      // När den gamla videon tonat klart: pausa och nollställ så den är redo nästa varv.
+      if (active.duration && active.currentTime >= active.duration - 0.05) {
+        active.pause();
+        active.currentTime = 0;
+      }
+      raf = requestAnimationFrame(tick);
+    }
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [front, fade]);
+
+  return (
+    <>
+      <video ref={vidA} className="td-scene-video td-loop-video"
+        src={src} poster={poster} muted playsInline aria-hidden="true"
+        style={{ opacity: front === "a" ? 1 : 0, transition: `opacity ${fade}s linear` }} />
+      <video ref={vidB} className="td-scene-video td-loop-video"
+        src={src} muted playsInline aria-hidden="true"
+        style={{ opacity: front === "b" ? 1 : 0, transition: `opacity ${fade}s linear` }} />
+    </>
+  );
+}
+
 function ClockTowerScene({ completed, setDialog, onStartMission }) {
   const [playing, setPlaying] = useState(false);
 
@@ -2581,13 +2629,7 @@ function ClockTowerScene({ completed, setDialog, onStartMission }) {
   if (playing || completed.clock) {
     return (
       <div className="td-scene-image td-scene-video-wrap">
-        <video
-          className="td-scene-video"
-          src={ASSETS.klocktornVideo}
-          poster={ASSETS.klocktornBg}
-          autoPlay loop muted playsInline
-          aria-hidden="true"
-        />
+        <LoopingVideo src={ASSETS.klocktornVideo} poster={ASSETS.klocktornBg} />
         {!completed.clock && (
           <button className="td-shop-back td-btn td-btn-small" onClick={() => setPlaying(false)}>← Tillbaka</button>
         )}
@@ -2605,13 +2647,7 @@ function ClockTowerScene({ completed, setDialog, onStartMission }) {
   // Annars: tornrummet med Tickelton stående, klickbar.
   return (
     <div className="td-scene-image td-scene-video-wrap">
-      <video
-        className="td-scene-video"
-        src={ASSETS.klocktornVideo}
-        poster={ASSETS.klocktornBg}
-        autoPlay loop muted playsInline
-        aria-hidden="true"
-      />
+      <LoopingVideo src={ASSETS.klocktornVideo} poster={ASSETS.klocktornBg} />
       <button className="td-shop-figure td-shop-figure-btn td-ugglemark-center"
         style={{ left: "35%", bottom: "14%", height: "62%", aspectRatio: "773 / 1655" }}
         aria-label="Prata med Professor Tickelton"
