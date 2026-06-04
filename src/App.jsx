@@ -11,6 +11,7 @@ const ASSETS = {
   map: "/tidsdetektiverna/map.jpg",
   tickelton: "/tidsdetektiverna/tickelton.jpg",
   klocktornBg: "/tidsdetektiverna/klocktorn_inne.jpg",
+  tickeltonFull: "/tidsdetektiverna/tickelton_full.png",
   mira: "/tidsdetektiverna/mira.jpg",
   klonk: "/tidsdetektiverna/klonk.jpg",
   klonkFull: "/tidsdetektiverna/klonk_full.png",
@@ -997,7 +998,7 @@ function InteriorView({ locationKey, completed, foundItems, dialog, setDialog,
     );
   } else if (locationKey === "clock") {
     scene = (
-      <ClockTowerScene completed={completed} onStartMission={onStartMission} />
+      <ClockTowerScene completed={completed} setDialog={setDialog} onStartMission={onStartMission} />
     );
   } else {
     scene = <ComingSoonScene title={hotspot.title} onStartMission={onStartMission} />;
@@ -2572,16 +2573,53 @@ function CaveScene({ completed, foundItems, setDialog, onPickUpItem, onStartMiss
   );
 }
 
-function ClockTowerScene({ completed, onStartMission }) {
+function ClockTowerScene({ completed, setDialog, onStartMission }) {
+  const [playing, setPlaying] = useState(false);
+
+  // Klockspelet visas när man valt att hjälpa Tickelton (eller om det redan är klart).
+  if (playing || completed.clock) {
+    return (
+      <div className="td-scene-image td-fade-in"
+           style={{ backgroundImage: `url(${ASSETS.klocktornBg})` }}>
+        {!completed.clock && (
+          <button className="td-shop-back td-btn td-btn-small" onClick={() => setPlaying(false)}>← Tillbaka</button>
+        )}
+        <div className="td-clocktower-panel">
+          <ClockMission
+            alreadyDone={completed.clock}
+            onComplete={onStartMission}
+            onBack={() => setPlaying(false)}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  // Annars: tornrummet med Tickelton stående, klickbar.
   return (
     <div className="td-scene-image td-fade-in"
          style={{ backgroundImage: `url(${ASSETS.klocktornBg})` }}>
-      <div className="td-clocktower-panel">
-        <ClockMission
-          alreadyDone={completed.clock}
-          onComplete={onStartMission}
-          onBack={() => {}}
-        />
+      <button className="td-shop-figure td-shop-figure-btn"
+        style={{ left: "50%", bottom: "2%", height: "78%", aspectRatio: "773 / 1655", transform: "translateX(-50%)" }}
+        aria-label="Prata med Professor Tickelton"
+        onClick={() => {
+          setDialog({
+            name: "Professor Tickelton",
+            portrait: ASSETS.tickeltonFull,
+            lines: [
+              "Åh, en besökare! Välkommen upp i klocktornet, lilla detektiv.",
+              "Jag är Professor Tickelton, stadens klockmakare. Men jag har ett stort problem...",
+              "Alla mina klockor har hamnat i oordning! Ingen visar rätt tid längre, och den stora tornklockan har slutat slå.",
+              "Kan du hjälpa mig att ställa klockorna rätt? Då vaknar tornet till liv igen!",
+            ],
+            action: { label: "Jag hjälper dig! →", onClick: () => { setDialog(null); setPlaying(true); } },
+          });
+        }}>
+        <img src={ASSETS.tickeltonFull} alt="Professor Tickelton" />
+      </button>
+
+      <div className="td-cave-clue td-cave-clue-final">
+        🕰️ Du kom upp i klocktornet! Klicka på Professor Tickelton för att prata.
       </div>
     </div>
   );
