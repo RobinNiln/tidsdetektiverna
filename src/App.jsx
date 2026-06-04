@@ -5798,9 +5798,9 @@ function Styles() {
       /* === OBSERVATORIET === */
       .td-telescope-btn {
         position: absolute;
-        left: 50%; top: 42%;
+        left: 48%; top: 45%;
         transform: translate(-50%, -50%);
-        width: 28%; height: 55%;
+        width: 42%; height: 60%;
         background: transparent;
         border: none;
         cursor: pointer;
