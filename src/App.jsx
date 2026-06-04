@@ -668,8 +668,9 @@ function StartScreen({ onStart }) {
         <div className="td-stamp">N°1 · Det första äventyret</div>
         <h1 className="td-title">Tidsdetektiverna</h1>
         <p className="td-intro">
-          Stadens klockor har börjat gå fel. Kan du hjälpa invånarna att hitta
-          ledtrådarna och laga tiden?
+          Stadens klockor har börjat gå fel. Och någon har skymtats vid platserna
+          — en främling i kappa som ingen känner. Är hon orsaken... eller
+          lösningen? Hjälp invånarna, hitta ledtrådarna och ta reda på sanningen.
         </p>
         <div className="td-trio">
           <CharacterPortrait src={ASSETS.tickelton} name="Professor Tickelton" />
@@ -1378,9 +1379,9 @@ const HARBOR_DIALOGS = {
   framling: {
     portrait: "framling",
     name: "Den mystiska främlingen",
-    initial: "*Främlingen tittar upp från sin bok och ler svagt.* Du letar efter Tidsmaskinen, inte sant? Jag har sett ditt namn i mina anteckningar... fast bläcket är inte torrt ännu. Lyssna noga: TRE nycklar krävs för att öppna porten i Tidsstaden. Du har redan börjat hitta den första.",
-    second: "*Främlingen bläddrar i sin bok med kompass i handen.* Klockan i tornet räknar inte sekunder. Den räknar något annat. Och boken i bokgränden är inte bara en bok — den är en karta. Lyssna på det som inte sägs.",
-    third: "*Främlingen slår igen sin bok med en smäll.* En sista varning, ung detektiv: när du står vid Tidsmaskinen och ska välja — välj inte den knapp som glöder starkast. Det är den som VILL bli vald som väntar på dig.",
+    initial: "*Främlingen tittar upp från sin bok och ler svagt.* Du letar efter Tidsmaskinen, inte sant? Jag har sett ditt namn i mina anteckningar... fast bläcket är inte torrt ännu. Jag kommer långt bortifrån — från en tid som ännu inte hänt. Lyssna noga: TRE nycklar krävs för att öppna porten i Tidsstaden. Du har redan börjat hitta den första.",
+    second: "*Främlingen bläddrar i sin bok med kompass i handen.* Klockan i tornet räknar inte sekunder. Den räknar något annat. Och boken i bokgränden är inte bara en bok — den är en karta. Lita på mig, jag har sett vart det här leder.",
+    third: "*Främlingen slår igen sin bok med en smäll.* En sista varning, ung detektiv: när du står vid Tidsmaskinen och ska välja — välj inte den knapp som glöder starkast. Det är den som VILL bli vald som väntar på dig. Vi ses där, vid porten.",
   },
 };
 
@@ -2606,9 +2607,9 @@ function CaveScene({ completed, foundItems, setDialog, onPickUpItem, onStartMiss
               portrait: ASSETS.ugglemarkFull,
               lines: [
                 "Va? Besök?! Här nere? Det var länge sedan någon hittade ända hit...",
-                "Jag är Professor Ugglemark. För många, många år sedan var jag med och byggde stadens allra första tidsmaskin.",
-                "Men maskinen gick sönder, och en del av den var för farlig. Jag gömde mig här med den sista delen — för att skydda den.",
-                "Främlingen i hamnen... ja, jag vet om honom. Han har letat efter mig i åratal. Men han ville ha delen av fel anledning.",
+                "Jag är Professor Ugglemark. För många, många år sedan var jag med och byggde stadens allra första tidsmaskin — tillsammans med en lysande ung uppfinnare.",
+                "Men maskinen gick sönder, och en del av den var för farlig. Jag gömde mig här med den sista delen — för att skydda den tills någon kom som kunde laga allt på rätt sätt.",
+                "Främlingen som skymtar i staden... hon påminner mig om den där uppfinnaren. Samma kappa, samma bok. Jag tror hon har rest långt för att hjälpa oss.",
                 "Du verkar vara en riktig liten detektiv. Men innan jag ger dig den sista nyckeln måste jag vara säker. Lös min gåta!",
               ],
               action: { label: "Jag är redo för gåtan →", onClick: () => { setDialog(null); setRiddleOpen(true); setRiddleWrong(false); } },
