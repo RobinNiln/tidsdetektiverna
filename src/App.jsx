@@ -50,6 +50,8 @@ const ASSETS = {
   lasseFull: "/tidsdetektiverna/lasse_full.png",
   beritFull: "/tidsdetektiverna/berit_full.png",
   framlingFull: "/tidsdetektiverna/framling_full.png",
+  framlingSkymt: "/tidsdetektiverna/framling_skymt.png",
+  framlingAvslojad: "/tidsdetektiverna/framling_avslojad_full.png",
   vik: "/tidsdetektiverna/vik.jpg",
   eka: "/tidsdetektiverna/eka.png",
   // Bokgränden
