@@ -1359,17 +1359,9 @@ function HarborScene({ foundItems, setDialog, onPickUpItem, onStartMission }) {
     <div className="td-scene-image td-scene-video-wrap">
 
       {/* Levande bakgrund: loopande video med rörligt vatten.
+          LoopingVideo ger mjuk cross-fade vid skarven (inget hopp).
           poster visas direkt medan videon laddar så scenen aldrig är tom. */}
-      <video
-        className="td-scene-video"
-        src={ASSETS.hamnVideo}
-        poster={ASSETS.hamnPoster}
-        autoPlay
-        loop
-        muted
-        playsInline
-        aria-hidden="true"
-      />
+      <LoopingVideo src={ASSETS.hamnVideo} poster={ASSETS.hamnPoster} />
 
       {/* === LEVANDE BAKGRUNDSELEMENT === */}
       {/* Lyktornas glöd — uppe vid hamnkaptenens hus */}
@@ -1393,7 +1385,7 @@ function HarborScene({ foundItems, setDialog, onPickUpItem, onStartMission }) {
 
       {/* Falk — LÄNGST FRAM, nära kameran, störst */}
       <HarborCharacter
-        style={{ left: "28%", bottom: "-6%", height: "74%", aspectRatio: "793 / 1983", zIndex: 14 }}
+        style={{ left: "33%", bottom: "-6%", height: "74%", aspectRatio: "793 / 1983", zIndex: 14 }}
         image={ASSETS.falkFull}
         label="Kapten Falk"
         onClick={() => talkTo("falk")}
@@ -1403,7 +1395,7 @@ function HarborScene({ foundItems, setDialog, onPickUpItem, onStartMission }) {
 
       {/* Lasse — närmare kameran, framför hamnkontoret */}
       <HarborCharacter
-        style={{ left: "13%", bottom: "11%", height: "47%", aspectRatio: "793 / 1983", zIndex: 10 }}
+        style={{ left: "8%", bottom: "11%", height: "47%", aspectRatio: "793 / 1983", zIndex: 10 }}
         image={ASSETS.lasseFull}
         label="???"
         onClick={() => talkTo("lasse")}
@@ -1412,7 +1404,7 @@ function HarborScene({ foundItems, setDialog, onPickUpItem, onStartMission }) {
 
       {/* Främlingen — på bryggdäcket längst bak, vid lådorna, minst, mystisk */}
       <HarborCharacter
-        style={{ left: "53%", bottom: "28%", height: "30%", aspectRatio: "793 / 1983", zIndex: 8 }}
+        style={{ left: "46%", bottom: "20%", height: "30%", aspectRatio: "793 / 1983", zIndex: 8 }}
         image={ASSETS.framlingFull}
         label="?"
         onClick={() => talkTo("framling")}
@@ -2649,7 +2641,7 @@ function ClockTowerScene({ completed, setDialog, onStartMission }) {
     <div className="td-scene-image td-scene-video-wrap">
       <LoopingVideo src={ASSETS.klocktornVideo} poster={ASSETS.klocktornBg} />
       <button className="td-shop-figure td-shop-figure-btn td-ugglemark-center"
-        style={{ left: "35%", bottom: "-4%", height: "64%", aspectRatio: "773 / 1655" }}
+        style={{ left: "35%", bottom: "-11%", height: "64%", aspectRatio: "773 / 1655" }}
         aria-label="Prata med Professor Tickelton"
         onClick={() => {
           setDialog({
