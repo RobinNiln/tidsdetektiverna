@@ -3703,9 +3703,9 @@ function TornView({ featherFound, onPickUpItem, setDialog, onBack }) {
          style={{ backgroundImage: `url(${ASSETS.tornInne})` }}>
       <button className="td-shop-back td-btn td-btn-small" onClick={onBack}>← Ut på torget</button>
 
-      {/* Papegojan står i rummet */}
-      <button className="td-shop-figure td-shop-figure-btn"
-        style={{ left: "55%", bottom: "2%", height: "62%", aspectRatio: "773 / 1655" }}
+      {/* Papegojan svävar i luften */}
+      <button className="td-shop-figure td-shop-figure-btn td-parrot-fly"
+        style={{ left: "52%", top: "14%", height: "auto", width: "34%", aspectRatio: "1191 / 1115" }}
         aria-label="Prata med papegojan"
         onClick={() => { if (step === "intro") startRiddles(); }}>
         <img src={ASSETS.papegojaFull} alt="Papegojan" />
@@ -6198,6 +6198,12 @@ function Styles() {
         top: 50%;
         max-width: 380px;
         width: min(380px, 44%);
+      }
+      /* Flygande papegojan: svävar stilla, ingen svaj-animation */
+      .td-parrot-fly {
+        animation: none;
+        bottom: auto;
+        filter: drop-shadow(0 8px 12px rgba(0,0,0,0.3));
       }
       .td-clock-draggable { width: 220px; touch-action: none; }
 
