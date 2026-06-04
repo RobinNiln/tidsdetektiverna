@@ -2649,7 +2649,7 @@ function ClockTowerScene({ completed, setDialog, onStartMission }) {
     <div className="td-scene-image td-scene-video-wrap">
       <LoopingVideo src={ASSETS.klocktornVideo} poster={ASSETS.klocktornBg} />
       <button className="td-shop-figure td-shop-figure-btn td-ugglemark-center"
-        style={{ left: "35%", bottom: "14%", height: "62%", aspectRatio: "773 / 1655" }}
+        style={{ left: "35%", bottom: "3%", height: "76%", aspectRatio: "773 / 1655" }}
         aria-label="Prata med Professor Tickelton"
         onClick={() => {
           setDialog({
@@ -2667,7 +2667,7 @@ function ClockTowerScene({ completed, setDialog, onStartMission }) {
         <img src={ASSETS.tickeltonFull} alt="Professor Tickelton" />
       </button>
 
-      <div className="td-cave-clue td-cave-clue-final">
+      <div className="td-cave-clue td-cave-clue-final td-clue-narrow">
         🕰️ Du kom upp i klocktornet! Klicka på Professor Tickelton för att prata.
       </div>
     </div>
@@ -4198,6 +4198,7 @@ function Styles() {
         box-shadow: 0 3px 10px rgba(0,0,0,0.5);
       }
       .td-cave-clue-final { background: rgba(45,32,18,0.9); border-color: var(--green); }
+      .td-clue-narrow { max-width: 420px; width: auto; font-size: 15px; padding: 8px 16px; }
       .td-cave-choices {
         position: absolute;
         bottom: 8%; left: 50%; transform: translateX(-50%);
