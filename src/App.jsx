@@ -1211,6 +1211,7 @@ function PuzzleWorkshopScene({ completed, foundItems, setDialog, onPickUpItem,
   return (
     <div className={`td-scene-image ${machineRunning ? "td-scene-shake" : ""}`}
          style={{ backgroundImage: `url(${ASSETS.puzzleWorkshop})` }}>
+      <StrangerGlimpse x={86} y={4} height={34} flip={true} />
       <svg className="td-anim-overlay" viewBox="0 0 100 100"
            style={{ left: "67%", top: "30%", width: "5%", height: "9%" }}>
         <circle cx="50" cy="50" r="42" fill="rgba(253, 201, 77, 0.18)"
@@ -2095,6 +2096,29 @@ function Hideaway({ x, y, size = 4, found, icon, hint, foundText, onFind }) {
   );
 }
 
+// Blek skymt av Främlingen som tonar bort av sig själv när man kommer in.
+// x/y i %, height i % av scenen. Visas en gång per besök.
+function StrangerGlimpse({ x = 8, y = 30, height = 38, flip = false }) {
+  const [gone, setGone] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setGone(true), 2600);
+    return () => clearTimeout(t);
+  }, []);
+  if (gone) return null;
+  return (
+    <img
+      className="td-stranger-glimpse"
+      src={ASSETS.framlingSkymt}
+      alt=""
+      aria-hidden="true"
+      style={{
+        left: `${x}%`, bottom: `${y}%`, height: `${height}%`,
+        transform: flip ? "scaleX(-1)" : "none",
+      }}
+    />
+  );
+}
+
 // ============================================================
 // BOKGRÄNDEN — gata med tre butiker man klickar in i
 // ============================================================
@@ -2156,6 +2180,7 @@ function BokgrandenScene({ completed, foundItems, setDialog, onPickUpItem, onSta
   return (
     <div className="td-scene-image td-fade-in"
          style={{ backgroundImage: `url(${ASSETS.bokgrandenGata})` }}>
+      <StrangerGlimpse x={88} y={6} height={34} flip={true} />
       <button className="td-shop-hotspot" style={{ left: "30%", top: "38%", width: "8.5%", height: "45%" }}
         onClick={() => setShop("bok")} aria-label="Gå in i bokbutiken">
         <span className="td-shop-label" style={{ top: "-11%" }}>📖 Bokbutiken</span>
@@ -2757,6 +2782,7 @@ function ObservatoryScene({ foundItems, setDialog, onPickUpItem }) {
   return (
     <div className="td-scene-image td-fade-in"
          style={{ backgroundImage: `url(${ASSETS.observatoriumBg})` }}>
+      <StrangerGlimpse x={4} y={4} height={36} />
       {/* Stora stjärnkikaren — klickbar, leder till stjärnvyn */}
       <button className="td-telescope-btn"
         aria-label="Titta i stjärnkikaren"
@@ -6657,6 +6683,23 @@ function Styles() {
         z-index: 10;
       }
       .td-clock-panel { text-align: center; }
+
+      /* Blek skymt av Främlingen som tonar bort */
+      .td-stranger-glimpse {
+        position: absolute;
+        width: auto;
+        z-index: 3;
+        opacity: 0;
+        pointer-events: none;
+        filter: grayscale(0.3) brightness(0.85) blur(0.4px);
+        animation: tdGlimpse 2.6s ease-in-out forwards;
+      }
+      @keyframes tdGlimpse {
+        0% { opacity: 0; }
+        25% { opacity: 0.45; }
+        70% { opacity: 0.4; }
+        100% { opacity: 0; }
+      }
 
       /* === FINALEN === */
       .td-finale-bg {
