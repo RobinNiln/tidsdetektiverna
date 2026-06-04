@@ -2660,6 +2660,13 @@ const CONSTELLATIONS = [
   },
 ];
 
+// Andra himlaobjekt man kan hitta genom att panorera runt (x,y i % av stjärnkartan).
+const SKY_OBJECTS = [
+  { id: "komet", name: "Kometen", type: "comet", x: 14, y: 70 },
+  { id: "saturnus", name: "Planeten Saturnus", type: "planet", x: 86, y: 64 },
+  { id: "manen", name: "Månen", type: "moon", x: 88, y: 14 },
+];
+
 function ObservatoryScene({ foundItems, setDialog, onPickUpItem }) {
   const [stargazing, setStargazing] = useState(false);
 
@@ -2724,7 +2731,14 @@ function StarMapView({ onBack }) {
     }
   }
 
-  const allFound = CONSTELLATIONS.filter((c) => !c.single).every((c) => found.includes(c.id));
+  function clickObject(o) {
+    if (!found.includes(o.id)) {
+      setFound((f) => [...f, o.id]);
+    }
+  }
+
+  const allFound = CONSTELLATIONS.filter((c) => !c.single).every((c) => found.includes(c.id))
+    && SKY_OBJECTS.every((o) => found.includes(o.id));
 
   return (
     <div className="td-starmap-wrap">
@@ -2760,6 +2774,36 @@ function StarMapView({ onBack }) {
                 </g>
               );
             })}
+
+            {/* Komet, planet och måne */}
+            {SKY_OBJECTS.map((o) => {
+              const cx = o.x * 10, cy = o.y * 7;
+              const lit = found.includes(o.id);
+              return (
+                <g key={o.id} className={`td-sky-object ${lit ? "td-sky-object-lit" : ""}`}
+                   onClick={(e) => { e.stopPropagation(); clickObject(o); }}>
+                  {o.type === "comet" && (
+                    <>
+                      <line x1={cx} y1={cy} x2={cx - 50} y2={cy - 28} className="td-comet-tail" />
+                      <line x1={cx} y1={cy} x2={cx - 44} y2={cy - 14} className="td-comet-tail" />
+                      <circle cx={cx} cy={cy} r="7" className="td-comet-head" />
+                    </>
+                  )}
+                  {o.type === "planet" && (
+                    <>
+                      <ellipse cx={cx} cy={cy} rx="22" ry="7" className="td-planet-ring" />
+                      <circle cx={cx} cy={cy} r="11" className="td-planet-body" />
+                    </>
+                  )}
+                  {o.type === "moon" && (
+                    <>
+                      <circle cx={cx} cy={cy} r="16" className="td-moon-body" />
+                      <circle cx={cx + 6} cy={cy - 3} r="14" className="td-moon-shadow" />
+                    </>
+                  )}
+                </g>
+              );
+            })}
           </svg>
         </div>
       </div>
@@ -2768,7 +2812,10 @@ function StarMapView({ onBack }) {
       <div className="td-starmap-names">
         {found.map((id) => {
           const c = CONSTELLATIONS.find((x) => x.id === id);
-          return <span key={id} className="td-starmap-name">✦ {c.name}</span>;
+          if (c) return <span key={id} className="td-starmap-name">✦ {c.name}</span>;
+          const o = SKY_OBJECTS.find((x) => x.id === id);
+          if (o) return <span key={id} className="td-starmap-name">✦ {o.name}</span>;
+          return null;
         })}
         {/* Polstjärnan namnges automatiskt när Lilla björn hittats */}
         {found.includes("lillabjorn") && <span className="td-starmap-name">✦ Polstjärnan</span>}
@@ -2776,8 +2823,8 @@ function StarMapView({ onBack }) {
 
       <div className="td-cave-clue td-cave-clue-final td-clue-narrow td-starmap-hint">
         {allFound
-          ? "✨ Du hittade alla stjärnbilder! Bra jobbat, stjärnskådare."
-          : "Dra för att titta runt. Klicka på en stjärnbild när du hittar den!"}
+          ? "✨ Du hittade allt på himlen! Bra jobbat, stjärnskådare."
+          : "Dra för att titta runt. Klicka på stjärnbilder och annat du hittar på himlen!"}
       </div>
 
       <button className="td-shop-back td-btn td-btn-small td-starmap-back" onClick={onBack}>← Tillbaka</button>
@@ -5861,6 +5908,19 @@ function Styles() {
         fill: #fff8d0;
         filter: drop-shadow(0 0 6px rgba(255,240,180,0.9));
       }
+      /* Himlaobjekt: komet, planet, måne — diskreta tills man hittar dem */
+      .td-sky-object { cursor: pointer; opacity: 0.5; transition: opacity 0.4s ease; }
+      .td-sky-object:hover { opacity: 0.85; }
+      .td-sky-object-lit { opacity: 1; }
+      .td-comet-head { fill: #fff; filter: drop-shadow(0 0 5px rgba(200,220,255,0.9)); }
+      .td-comet-tail { stroke: rgba(200,220,255,0.5); stroke-width: 4; stroke-linecap: round; }
+      .td-sky-object-lit .td-comet-tail { stroke: rgba(210,230,255,0.95); }
+      .td-planet-body { fill: #e8c98a; }
+      .td-planet-ring { fill: none; stroke: #d8b878; stroke-width: 3; }
+      .td-sky-object-lit .td-planet-body { filter: drop-shadow(0 0 6px rgba(232,201,138,0.9)); }
+      .td-moon-body { fill: #f3efd8; }
+      .td-moon-shadow { fill: #0a0c1a; }
+      .td-sky-object-lit .td-moon-body { filter: drop-shadow(0 0 8px rgba(243,239,216,0.7)); }
       .td-starmap-names {
         position: absolute; top: 16px; left: 16px;
         display: flex; flex-direction: column; gap: 6px;
