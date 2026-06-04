@@ -13,6 +13,8 @@ const ASSETS = {
   klocktornBg: "/tidsdetektiverna/klocktorn_inne.jpg",
   klocktornVideo: "/tidsdetektiverna/klocktorn.mp4",
   tickeltonFull: "/tidsdetektiverna/tickelton_full.png",
+  observatoriumBg: "/tidsdetektiverna/observatorium_inne.jpg",
+  stjarnhimmel: "/tidsdetektiverna/stjarnhimmel.jpg",
   mira: "/tidsdetektiverna/mira.jpg",
   klonk: "/tidsdetektiverna/klonk.jpg",
   klonkFull: "/tidsdetektiverna/klonk_full.png",
@@ -313,6 +315,13 @@ const HOTSPOTS = {
     character: null,
     x: 86, y: 30, w: 11, h: 16,
     cx: 91, cy: 38,
+    bonus: true, // räknas inte som stjärnuppdrag
+  },
+  observatory: {
+    key: "observatory", title: "Observatoriet", short: "Titta på stjärnorna",
+    character: null,
+    x: 70, y: 6, w: 14, h: 18,
+    cx: 76, cy: 13,
     bonus: true, // räknas inte som stjärnuppdrag
   },
 };
@@ -628,7 +637,7 @@ function CharacterPortrait({ src, name }) {
 // KARTAN — Spotlight + Förstoringsglas + Gömd katt
 // ============================================================
 function MapView({ completed, stars, allDone, hovered, setHovered, onPick, onReset }) {
-  const visibleHotspots = ["reading", "clock", "puzzle", "harbor", "cave"];
+  const visibleHotspots = ["reading", "clock", "puzzle", "harbor", "cave", "observatory"];
   const mapRef = useRef(null);
 
   // === Förstoringsglas-läge ===
@@ -1000,6 +1009,10 @@ function InteriorView({ locationKey, completed, foundItems, dialog, setDialog,
   } else if (locationKey === "clock") {
     scene = (
       <ClockTowerScene completed={completed} setDialog={setDialog} onStartMission={onStartMission} />
+    );
+  } else if (locationKey === "observatory") {
+    scene = (
+      <ObservatoryScene foundItems={foundItems} setDialog={setDialog} onPickUpItem={onPickUpItem} />
     );
   } else {
     scene = <ComingSoonScene title={hotspot.title} onStartMission={onStartMission} />;
@@ -2611,6 +2624,164 @@ function LoopingVideo({ src, poster, fade = 0.8 }) {
         src={src} muted playsInline aria-hidden="true"
         style={{ opacity: front === "b" ? 1 : 0, transition: `opacity ${fade}s linear` }} />
     </>
+  );
+}
+
+// Stjärnbilder i stjärnvyn. Koordinater i procent av den stora stjärnkartan.
+// stars = punkter (x,y i %), lines = vilka punkter som binds ihop (index-par).
+const CONSTELLATIONS = [
+  {
+    id: "karlavagnen",
+    name: "Karlavagnen",
+    fact: "Karlavagnen är kanske den mest kända stjärnbilden på vår himmel. Dess sju stjärnor bildar en kastrull eller vagn!",
+    stars: [
+      { x: 22, y: 30 }, { x: 30, y: 28 }, { x: 38, y: 32 }, { x: 44, y: 40 },
+      { x: 52, y: 38 }, { x: 58, y: 46 }, { x: 47, y: 50 },
+    ],
+    lines: [[0,1],[1,2],[2,3],[3,6],[6,0],[3,4],[4,5],[5,6]],
+  },
+  {
+    id: "lillabjorn",
+    name: "Lilla björn",
+    fact: "Lilla björn ser ut som en mindre karlavagn. Längst ut i svansen sitter Polstjärnan!",
+    stars: [
+      { x: 70, y: 18 }, { x: 66, y: 26 }, { x: 62, y: 34 }, { x: 56, y: 40 },
+      { x: 64, y: 44 }, { x: 72, y: 40 }, { x: 70, y: 30 },
+    ],
+    lines: [[0,1],[1,2],[2,3],[3,4],[4,5],[5,6],[6,1]],
+  },
+  {
+    id: "polstjarnan",
+    name: "Polstjärnan",
+    fact: "Polstjärnan står nästan rakt i norr och rör sig nästan inte alls. Sjömän har hittat hem med den i tusentals år.",
+    stars: [{ x: 70, y: 18 }],
+    lines: [],
+    single: true,
+  },
+];
+
+function ObservatoryScene({ foundItems, setDialog, onPickUpItem }) {
+  const [stargazing, setStargazing] = useState(false);
+
+  if (stargazing) {
+    return <StarMapView onBack={() => setStargazing(false)} />;
+  }
+
+  return (
+    <div className="td-scene-image td-fade-in"
+         style={{ backgroundImage: `url(${ASSETS.observatoriumBg})` }}>
+      {/* Stora stjärnkikaren — klickbar, leder till stjärnvyn */}
+      <button className="td-telescope-btn"
+        aria-label="Titta i stjärnkikaren"
+        onClick={() => {
+          setDialog({
+            name: "Stjärnkikaren",
+            lines: [
+              "Den stora mässingskikaren pekar upp mot kupolens öppning, rakt mot natthimlen.",
+              "Vill du titta i den? Kanske kan du hitta några stjärnbilder där uppe...",
+            ],
+            action: { label: "Titta i kikaren →", onClick: () => { setDialog(null); setStargazing(true); } },
+          });
+        }}>
+        <span className="td-telescope-glow" />
+      </button>
+
+      <div className="td-cave-clue td-cave-clue-final td-clue-narrow">
+        🔭 Du kom in i Observatoriet! Klicka på den stora stjärnkikaren.
+      </div>
+    </div>
+  );
+}
+
+function StarMapView({ onBack }) {
+  // Panorering: hur långt stjärnkartan är förflyttad (i px), styrt av drag.
+  const [pan, setPan] = useState({ x: -200, y: -120 });
+  const [found, setFound] = useState([]); // id:n på upptäckta stjärnbilder
+  const dragRef = useRef(null);
+
+  function startDrag(e) {
+    const point = e.touches ? e.touches[0] : e;
+    dragRef.current = { startX: point.clientX, startY: point.clientY, panX: pan.x, panY: pan.y };
+  }
+  function onDrag(e) {
+    if (!dragRef.current) return;
+    const point = e.touches ? e.touches[0] : e;
+    const dx = point.clientX - dragRef.current.startX;
+    const dy = point.clientY - dragRef.current.startY;
+    // Begränsa hur långt man kan dra så man inte tappar bort kartan.
+    let nx = dragRef.current.panX + dx;
+    let ny = dragRef.current.panY + dy;
+    nx = Math.max(-700, Math.min(0, nx));
+    ny = Math.max(-500, Math.min(0, ny));
+    setPan({ x: nx, y: ny });
+  }
+  function endDrag() { dragRef.current = null; }
+
+  function clickConstellation(c) {
+    if (c.single) return; // Polstjärnan hittas via Lilla björn
+    if (!found.includes(c.id)) {
+      setFound((f) => [...f, c.id]);
+    }
+  }
+
+  const allFound = CONSTELLATIONS.filter((c) => !c.single).every((c) => found.includes(c.id));
+
+  return (
+    <div className="td-starmap-wrap">
+      {/* Kikarlinsens runda öppning — allt utanför är svart */}
+      <div className="td-telescope-lens">
+        <div
+          className="td-starmap-pan"
+          style={{
+            backgroundImage: `url(${ASSETS.stjarnhimmel})`,
+            transform: `translate(${pan.x}px, ${pan.y}px)`,
+          }}
+          onMouseDown={startDrag} onMouseMove={onDrag} onMouseUp={endDrag} onMouseLeave={endDrag}
+          onTouchStart={startDrag} onTouchMove={onDrag} onTouchEnd={endDrag}
+        >
+          {/* Stjärnbilderna ritas som SVG ovanpå himlen */}
+          <svg className="td-constellation-layer" viewBox="0 0 1000 700" preserveAspectRatio="none">
+            {CONSTELLATIONS.map((c) => {
+              if (c.single) return null;
+              const lit = found.includes(c.id);
+              return (
+                <g key={c.id} className={`td-constellation ${lit ? "td-constellation-lit" : ""}`}
+                   onClick={(e) => { e.stopPropagation(); clickConstellation(c); }}>
+                  {c.lines.map(([a, b], i) => (
+                    <line key={i}
+                      x1={c.stars[a].x * 10} y1={c.stars[a].y * 7}
+                      x2={c.stars[b].x * 10} y2={c.stars[b].y * 7}
+                      className="td-constellation-line" />
+                  ))}
+                  {c.stars.map((s, i) => (
+                    <circle key={i} cx={s.x * 10} cy={s.y * 7} r={lit ? 6 : 4}
+                      className="td-constellation-star" />
+                  ))}
+                </g>
+              );
+            })}
+          </svg>
+        </div>
+      </div>
+
+      {/* Namn på upptäckta stjärnbilder */}
+      <div className="td-starmap-names">
+        {found.map((id) => {
+          const c = CONSTELLATIONS.find((x) => x.id === id);
+          return <span key={id} className="td-starmap-name">✦ {c.name}</span>;
+        })}
+        {/* Polstjärnan namnges automatiskt när Lilla björn hittats */}
+        {found.includes("lillabjorn") && <span className="td-starmap-name">✦ Polstjärnan</span>}
+      </div>
+
+      <div className="td-cave-clue td-cave-clue-final td-clue-narrow td-starmap-hint">
+        {allFound
+          ? "✨ Du hittade alla stjärnbilder! Bra jobbat, stjärnskådare."
+          : "Dra för att titta runt. Klicka på en stjärnbild när du hittar den!"}
+      </div>
+
+      <button className="td-shop-back td-btn td-btn-small td-starmap-back" onClick={onBack}>← Tillbaka</button>
+    </div>
   );
 }
 
@@ -5623,7 +5794,89 @@ function Styles() {
       }
       .td-clock-panel { text-align: center; }
       .td-clock-draggable { width: 220px; touch-action: none; }
-      .td-clock-draggable circle[style*="grab"] { cursor: grab; }
+
+      /* === OBSERVATORIET === */
+      .td-telescope-btn {
+        position: absolute;
+        left: 50%; top: 42%;
+        transform: translate(-50%, -50%);
+        width: 28%; height: 55%;
+        background: transparent;
+        border: none;
+        cursor: pointer;
+        z-index: 12;
+      }
+      .td-telescope-glow {
+        position: absolute; inset: 0;
+        border-radius: 50%;
+        transition: background 0.3s ease;
+      }
+      .td-telescope-btn:hover .td-telescope-glow {
+        background: radial-gradient(circle, rgba(255,230,150,0.28) 35%, rgba(255,230,150,0) 70%);
+      }
+      .td-starmap-wrap {
+        position: absolute; inset: 0;
+        background: #05060f;
+        overflow: hidden;
+      }
+      .td-telescope-lens {
+        position: absolute;
+        left: 50%; top: 48%;
+        transform: translate(-50%, -50%);
+        width: min(80vh, 90%); height: min(80vh, 90%);
+        max-width: 620px; max-height: 620px;
+        border-radius: 50%;
+        overflow: hidden;
+        border: 14px solid #1a1206;
+        box-shadow: 0 0 0 6px #3a2a17, 0 0 60px rgba(0,0,0,0.9) inset, 0 0 30px rgba(0,0,0,0.6);
+        cursor: grab;
+      }
+      .td-telescope-lens:active { cursor: grabbing; }
+      .td-starmap-pan {
+        position: absolute;
+        width: 1700px; height: 1200px;
+        background-size: cover;
+        background-position: center;
+        background-color: #0a0c1a;
+        touch-action: none;
+        user-select: none;
+      }
+      .td-constellation-layer {
+        position: absolute; inset: 0;
+        width: 1000px; height: 700px;
+      }
+      .td-constellation { cursor: pointer; }
+      .td-constellation-line {
+        stroke: rgba(150,180,255,0);
+        stroke-width: 2;
+        transition: stroke 0.4s ease;
+      }
+      .td-constellation-star {
+        fill: rgba(255,255,255,0.55);
+        transition: fill 0.4s ease, r 0.4s ease;
+      }
+      .td-constellation:hover .td-constellation-star { fill: #fff; }
+      .td-constellation-lit .td-constellation-line { stroke: rgba(170,200,255,0.9); }
+      .td-constellation-lit .td-constellation-star {
+        fill: #fff8d0;
+        filter: drop-shadow(0 0 6px rgba(255,240,180,0.9));
+      }
+      .td-starmap-names {
+        position: absolute; top: 16px; left: 16px;
+        display: flex; flex-direction: column; gap: 6px;
+        z-index: 20;
+      }
+      .td-starmap-name {
+        background: rgba(20,24,48,0.85);
+        color: #fff8d0;
+        border: 1px solid var(--gold);
+        border-radius: 8px;
+        padding: 5px 12px;
+        font-family: 'Georgia', serif;
+        font-size: 15px;
+      }
+      .td-starmap-hint { top: auto; bottom: 16px; }
+      .td-starmap-back { position: absolute; top: 12px; right: 12px; z-index: 20; }
       .td-clock-locked { opacity: 0.9; }
       .td-clock-hint {
         text-align: center; font-size: 15px; color: #6b5836;
