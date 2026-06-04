@@ -2613,7 +2613,7 @@ function ClockTowerScene({ completed, setDialog, onStartMission }) {
         aria-hidden="true"
       />
       <button className="td-shop-figure td-shop-figure-btn td-ugglemark-center"
-        style={{ left: "35%", bottom: "0%", height: "82%", aspectRatio: "773 / 1655" }}
+        style={{ left: "35%", bottom: "14%", height: "62%", aspectRatio: "773 / 1655" }}
         aria-label="Prata med Professor Tickelton"
         onClick={() => {
           setDialog({
