@@ -52,6 +52,7 @@ const ASSETS = {
   framlingFull: "/tidsdetektiverna/framling_full.png",
   framlingSkymt: "/tidsdetektiverna/framling_skymt.png",
   framlingAvslojad: "/tidsdetektiverna/framling_avslojad_full.png",
+  tidsmaskin: "/tidsdetektiverna/tidsmaskin.jpg",
   vik: "/tidsdetektiverna/vik.jpg",
   eka: "/tidsdetektiverna/eka.png",
   // Bokgränden
@@ -4115,7 +4116,8 @@ function FinaleView({ foundItems, onWin, onBack }) {
         <div style={{ width: "150px" }} />
       </div>
       <div className="td-interior-stage">
-        <div className="td-scene-image td-finale-bg">
+        <div className="td-scene-image td-finale-bg"
+             style={{ backgroundImage: `url(${ASSETS.tidsmaskin})` }}>
 
           {/* Främlingen står vid maskinen (avslöjad efter mötet) */}
           <img className="td-finale-stranger"
@@ -6658,7 +6660,10 @@ function Styles() {
 
       /* === FINALEN === */
       .td-finale-bg {
-        background: radial-gradient(ellipse at center, #2a3a5a 0%, #14182c 70%, #0a0c18 100%);
+        background-color: #14182c;
+        background-image: radial-gradient(ellipse at center, #2a3a5a 0%, #14182c 70%, #0a0c18 100%);
+        background-size: cover;
+        background-position: center;
         position: relative;
       }
       .td-finale-stranger {
