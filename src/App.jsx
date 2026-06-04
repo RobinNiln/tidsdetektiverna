@@ -2890,7 +2890,8 @@ function ClockTowerScene({ completed, setDialog, onStartMission }) {
   if (playing || completed.clock) {
     return (
       <div className="td-scene-image td-scene-video-wrap">
-        <LoopingVideo src={ASSETS.klocktornVideo} poster={ASSETS.klocktornBg} />
+        <video className="td-scene-video" src={ASSETS.klocktornVideo} poster={ASSETS.klocktornBg}
+          autoPlay loop muted playsInline aria-hidden="true" />
         {!completed.clock && (
           <button className="td-shop-back td-btn td-btn-small" onClick={() => setPlaying(false)}>← Tillbaka</button>
         )}
@@ -2908,7 +2909,8 @@ function ClockTowerScene({ completed, setDialog, onStartMission }) {
   // Annars: tornrummet med Tickelton stående, klickbar.
   return (
     <div className="td-scene-image td-scene-video-wrap">
-      <LoopingVideo src={ASSETS.klocktornVideo} poster={ASSETS.klocktornBg} />
+      <video className="td-scene-video" src={ASSETS.klocktornVideo} poster={ASSETS.klocktornBg}
+        autoPlay loop muted playsInline aria-hidden="true" />
       <button className="td-shop-figure td-shop-figure-btn td-ugglemark-center"
         style={{ left: "35%", bottom: "-19%", height: "55%", aspectRatio: "773 / 1655" }}
         aria-label="Prata med Professor Tickelton"
