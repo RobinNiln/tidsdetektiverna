@@ -15,6 +15,11 @@ const ASSETS = {
   tickeltonFull: "/tidsdetektiverna/tickelton_full.png",
   observatoriumBg: "/tidsdetektiverna/observatorium_inne.jpg",
   stjarnhimmel: "/tidsdetektiverna/stjarnhimmel.jpg",
+  // Tidsstaden (finalen)
+  tidsstadenTorg: "/tidsdetektiverna/tidsstaden_torg.jpg",
+  urmakarenInne: "/tidsdetektiverna/urmakaren_inne.jpg",
+  leksaksbodenInne: "/tidsdetektiverna/leksaksboden_inne.jpg",
+  brunnNer: "/tidsdetektiverna/brunn_ner.jpg",
   mira: "/tidsdetektiverna/mira.jpg",
   klonk: "/tidsdetektiverna/klonk.jpg",
   klonkFull: "/tidsdetektiverna/klonk_full.png",
@@ -184,6 +189,26 @@ const ITEM_DATA = {
     icon: "🗝️",
     obtainedFrom: "Professor Ugglemark",
     description: "En tung mässingsnyckel format som ett kugghjul. Professor Ugglemark gömde den i grottan i åratal. Med den kan stadens tidsmaskin äntligen lagas — på rätt sätt.",
+  },
+
+  // === TIDSSTADEN (finalen) ===
+  "city:gear": {
+    name: "Det lilla kugghjulet",
+    icon: "⚙️",
+    obtainedFrom: "Urmakaren i Tidsstaden",
+    description: "Ett blankt litet kugghjul som låg och glittrade i urmakarens verkstad. Det passar precis i handflatan, och tänderna är så fina att de nästan inte syns. Kanske behövs det till något stort?",
+  },
+  "city:toy": {
+    name: "Den uppdragbara leksaken",
+    icon: "🪀",
+    obtainedFrom: "Leksaksmakaren i Tidsstaden",
+    description: "En liten plåtleksak som man drar upp med en nyckel. När den går surrar och hoppar den glatt omkring. Leksaksmakaren sa att den 'aldrig slutar förrän tiden är inne'.",
+  },
+  "city:coin": {
+    name: "Det blanka myntet",
+    icon: "🪙",
+    obtainedFrom: "Gömt i brunnen i Tidsstaden",
+    description: "Ett mynt som glittrade på botten av den gamla brunnen. Till skillnad från hamnens gröna mynt är det här alldeles blankt, som om någon nyss tappat det. Eller som om tiden inte biter på det.",
   },
 };
 
@@ -501,7 +526,7 @@ export default function App() {
   const allDone = stars === 3;
 
   function enterLocation(key) {
-    if (key === "timemachine") { if (allDone) setView("end"); return; }
+    if (key === "timemachine") { if (allDone) setView("city"); return; }
     setActiveLocation(key); setInteriorDialog(null); setDetailView(null);
     setView("interior");
   }
@@ -575,6 +600,16 @@ export default function App() {
             setView("interior");
           }}
           onBack={() => setView("interior")}
+        />
+      )}
+      {view === "city" && (
+        <CityView
+          foundItems={foundItems}
+          dialog={interiorDialog}
+          setDialog={setInteriorDialog}
+          onPickUpItem={pickUpItem}
+          onEnterMachine={() => setView("end")}
+          onBack={backToMap}
         />
       )}
       {view === "end" && (
@@ -3438,6 +3473,151 @@ function AnalogClock({ hour, minute }) {
   );
 }
 
+// CityView — ramen runt Tidsstaden (topbar + scen + dialog)
+function CityView({ foundItems, dialog, setDialog, onPickUpItem, onEnterMachine, onBack }) {
+  return (
+    <div className="td-interior td-fade-in">
+      <div className="td-interior-topbar">
+        <button className="td-btn td-btn-small" onClick={onBack}>← Tillbaka till kartan</button>
+        <div className="td-interior-title-banner"><span>Tidsstaden</span></div>
+        <div style={{ width: "150px" }} />
+      </div>
+      <div className="td-interior-stage">
+        <TidsstadenScene
+          foundItems={foundItems}
+          setDialog={setDialog}
+          onPickUpItem={onPickUpItem}
+          onEnterMachine={onEnterMachine}
+        />
+      </div>
+      {dialog && <DialogBubble dialog={dialog} onClose={() => setDialog(null)} />}
+    </div>
+  );
+}
+
+// ============================================================
+// TIDSSTADEN — finalens utforskningslager (torg, brunn, butiker)
+// ============================================================
+function TidsstadenScene({ foundItems, setDialog, onPickUpItem, onEnterMachine }) {
+  const [sub, setSub] = useState(null); // null = torg, annars "urmakare"/"leksak"/"brunn"
+
+  if (sub === "urmakare") {
+    return <UrmakareShop found={foundItems.includes("city:gear")}
+      onPickUpItem={onPickUpItem} setDialog={setDialog} onBack={() => setSub(null)} />;
+  }
+  if (sub === "leksak") {
+    return <LeksaksbodShop found={foundItems.includes("city:toy")}
+      onPickUpItem={onPickUpItem} setDialog={setDialog} onBack={() => setSub(null)} />;
+  }
+  if (sub === "brunn") {
+    return <BrunnView found={foundItems.includes("city:coin")}
+      onPickUpItem={onPickUpItem} setDialog={setDialog} onBack={() => setSub(null)} />;
+  }
+
+  // TORGET
+  return (
+    <div className="td-scene-image td-fade-in"
+         style={{ backgroundImage: `url(${ASSETS.tidsstadenTorg})` }}>
+      {/* Urmakaren — vänster */}
+      <button className="td-shop-hotspot" style={{ left: "8%", top: "34%", width: "16%", height: "42%" }}
+        onClick={() => setSub("urmakare")} aria-label="Gå in hos urmakaren">
+        <span className="td-shop-label" style={{ top: "-8%" }}>⏰ Urmakaren</span>
+      </button>
+      {/* Leksaksboden — höger */}
+      <button className="td-shop-hotspot" style={{ left: "76%", top: "34%", width: "16%", height: "42%" }}
+        onClick={() => setSub("leksak")} aria-label="Gå in i leksaksboden">
+        <span className="td-shop-label" style={{ top: "-8%" }}>🧸 Leksaksboden</span>
+      </button>
+      {/* Brunnen — nere i mitten */}
+      <button className="td-shop-hotspot" style={{ left: "40%", top: "70%", width: "20%", height: "24%" }}
+        onClick={() => setSub("brunn")} aria-label="Titta ner i brunnen">
+        <span className="td-shop-label" style={{ top: "-14%" }}>🪣 Brunnen</span>
+      </button>
+      {/* Tidsmaskinen — i mitten, leder till finalen */}
+      <button className="td-machine-hotspot" style={{ left: "42%", top: "30%", width: "16%", height: "34%" }}
+        onClick={() => {
+          setDialog({
+            name: "Tidsmaskinen",
+            lines: [
+              "Mitt på torget står den stora tidsmaskinen. Kugghjul, rattar och en port som väntar på att öppnas.",
+              "Du har samlat allt du behöver. Är du redo att laga den och starta tidsresan?",
+            ],
+            action: { label: "Gå till tidsmaskinen →", onClick: () => { setDialog(null); onEnterMachine(); } },
+          });
+        }}>
+        <span className="td-shop-label" style={{ top: "-6%" }}>✦ Tidsmaskinen</span>
+      </button>
+
+      <div className="td-cave-clue td-cave-clue-final td-clue-narrow">
+        🏛️ Välkommen till Tidsstaden! Utforska torget — och gå till tidsmaskinen när du är redo.
+      </div>
+    </div>
+  );
+}
+
+// --- URMAKAREN: gömt kugghjul ---
+function UrmakareShop({ found, onPickUpItem, setDialog, onBack }) {
+  return (
+    <div className="td-scene-image td-fade-in"
+         style={{ backgroundImage: `url(${ASSETS.urmakarenInne})` }}>
+      <button className="td-shop-back td-btn td-btn-small" onClick={onBack}>← Ut på torget</button>
+      <Hideaway
+        x={70} y={55} size={5}
+        found={found}
+        icon="⚙️"
+        hint="Något litet glittrar bland urverken..."
+        foundText="Du hittade ett litet blankt kugghjul bland klockorna! Det lägger du i väskan."
+        onFind={(t) => { onPickUpItem("city:gear"); setDialog(t); }}
+      />
+      <div className="td-cave-clue td-cave-clue-final td-clue-narrow">
+        ⏰ Urmakarens verkstad. Här tickar tusen klockor. Hittar du något?
+      </div>
+    </div>
+  );
+}
+
+// --- LEKSAKSBODEN: gömd leksak ---
+function LeksaksbodShop({ found, onPickUpItem, setDialog, onBack }) {
+  return (
+    <div className="td-scene-image td-fade-in"
+         style={{ backgroundImage: `url(${ASSETS.leksaksbodenInne})` }}>
+      <button className="td-shop-back td-btn td-btn-small" onClick={onBack}>← Ut på torget</button>
+      <Hideaway
+        x={32} y={60} size={5}
+        found={found}
+        icon="🪀"
+        hint="Något står och väntar bland leksakerna..."
+        foundText="Du hittade en uppdragbar plåtleksak! Den surrar glatt ner i väskan."
+        onFind={(t) => { onPickUpItem("city:toy"); setDialog(t); }}
+      />
+      <div className="td-cave-clue td-cave-clue-final td-clue-narrow">
+        🧸 Leksaksboden. Hyllorna är fulla av under. Något kanske vill följa med dig?
+      </div>
+    </div>
+  );
+}
+
+// --- BRUNNEN: gömt mynt ---
+function BrunnView({ found, onPickUpItem, setDialog, onBack }) {
+  return (
+    <div className="td-scene-image td-fade-in"
+         style={{ backgroundImage: `url(${ASSETS.brunnNer})` }}>
+      <button className="td-shop-back td-btn td-btn-small" onClick={onBack}>← Tillbaka upp</button>
+      <Hideaway
+        x={50} y={52} size={6}
+        found={found}
+        icon="🪙"
+        hint="Något blänker längst ner i vattnet..."
+        foundText="Du fiskade upp ett blankt mynt från brunnens botten! Det glittrar i väskan."
+        onFind={(t) => { onPickUpItem("city:coin"); setDialog(t); }}
+      />
+      <div className="td-cave-clue td-cave-clue-final td-clue-narrow">
+        🪣 Du tittar ner i den djupa brunnen. Vattnet är mörkt och stilla... men något blänker.
+      </div>
+    </div>
+  );
+}
+
 function EndScreen({ onReset }) {
   return (
     <div className="td-end">
@@ -4188,6 +4368,23 @@ function Styles() {
         background: transparent;
         border-color: transparent;
         outline: none;
+      }
+      /* Tidsmaskinen på torget: alltid en svag lockande glöd */
+      .td-machine-hotspot {
+        position: absolute;
+        background: radial-gradient(ellipse at center, rgba(253,201,77,0.18) 0%, rgba(253,201,77,0) 70%);
+        border: none;
+        border-radius: 16px;
+        cursor: pointer;
+        z-index: 6;
+        display: flex;
+        align-items: flex-start;
+        justify-content: center;
+        animation: tdMachinePulse 2.5s ease-in-out infinite;
+      }
+      @keyframes tdMachinePulse {
+        0%, 100% { background: radial-gradient(ellipse at center, rgba(253,201,77,0.12) 0%, rgba(253,201,77,0) 70%); }
+        50% { background: radial-gradient(ellipse at center, rgba(253,201,77,0.30) 0%, rgba(253,201,77,0) 72%); }
       }
       .td-shop-label {
         position: absolute;
