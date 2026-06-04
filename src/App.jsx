@@ -20,6 +20,7 @@ const ASSETS = {
   urmakarenInne: "/tidsdetektiverna/urmakaren_inne.jpg",
   leksaksbodenInne: "/tidsdetektiverna/leksaksboden_inne.jpg",
   brunnNer: "/tidsdetektiverna/brunn_ner.jpg",
+  murreFull: "/tidsdetektiverna/murre_full.png",
   mira: "/tidsdetektiverna/mira.jpg",
   klonk: "/tidsdetektiverna/klonk.jpg",
   klonkFull: "/tidsdetektiverna/klonk_full.png",
@@ -1272,6 +1273,19 @@ function PuzzleWorkshopScene({ completed, foundItems, setDialog, onPickUpItem,
         <span className={`td-character-bubble ${klonkSurprised ? "td-character-bubble-surprised" : ""}`}>
           {klonkSurprised ? "!!" : "!"}
         </span>
+      </button>
+      {/* Murre — katten, sitter bredvid Klonks fötter, klickbar */}
+      <button className="td-murre"
+        aria-label="Klappa Murre katten"
+        onClick={() => setDialog({
+          name: "Murre",
+          portrait: ASSETS.murreFull,
+          lines: [
+            "*Murre tittar upp på dig och spinner.* Mjau!",
+            "*Katten gnider sig mot ditt ben och kurar ihop sig nöjt.* Mrrrow.",
+          ],
+        })}>
+        <img src={ASSETS.murreFull} alt="Murre katten" />
       </button>
       {/* === GÖMDA SAMLARPRYLAR === */}
       <Hideaway
@@ -4867,6 +4881,17 @@ function Styles() {
         height: 100%; width: auto; display: block;
         pointer-events: none;
       }
+      /* Murre — katten bredvid Klonks fötter */
+      .td-murre {
+        position: absolute; bottom: -1%; left: 47%;
+        height: 17%; width: auto;
+        background: transparent; border: none; padding: 0;
+        cursor: pointer; z-index: 5;
+        transition: transform 0.2s ease;
+        filter: drop-shadow(3px 4px 5px rgba(0,0,0,0.35));
+      }
+      .td-murre img { height: 100%; width: auto; display: block; pointer-events: none; }
+      .td-murre:hover { transform: scale(1.05); }
       @keyframes tdCharSway {
         0%, 100% { transform: rotate(-0.5deg); }
         50% { transform: rotate(0.5deg); }
