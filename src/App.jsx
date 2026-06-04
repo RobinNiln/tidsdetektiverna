@@ -11,6 +11,7 @@ const ASSETS = {
   map: "/tidsdetektiverna/map.jpg",
   tickelton: "/tidsdetektiverna/tickelton.jpg",
   klocktornBg: "/tidsdetektiverna/klocktorn_inne.jpg",
+  klocktornVideo: "/tidsdetektiverna/klocktorn.mp4",
   tickeltonFull: "/tidsdetektiverna/tickelton_full.png",
   mira: "/tidsdetektiverna/mira.jpg",
   klonk: "/tidsdetektiverna/klonk.jpg",
@@ -2579,8 +2580,14 @@ function ClockTowerScene({ completed, setDialog, onStartMission }) {
   // Klockspelet visas när man valt att hjälpa Tickelton (eller om det redan är klart).
   if (playing || completed.clock) {
     return (
-      <div className="td-scene-image td-fade-in"
-           style={{ backgroundImage: `url(${ASSETS.klocktornBg})` }}>
+      <div className="td-scene-image td-scene-video-wrap">
+        <video
+          className="td-scene-video"
+          src={ASSETS.klocktornVideo}
+          poster={ASSETS.klocktornBg}
+          autoPlay loop muted playsInline
+          aria-hidden="true"
+        />
         {!completed.clock && (
           <button className="td-shop-back td-btn td-btn-small" onClick={() => setPlaying(false)}>← Tillbaka</button>
         )}
@@ -2597,8 +2604,14 @@ function ClockTowerScene({ completed, setDialog, onStartMission }) {
 
   // Annars: tornrummet med Tickelton stående, klickbar.
   return (
-    <div className="td-scene-image td-fade-in"
-         style={{ backgroundImage: `url(${ASSETS.klocktornBg})` }}>
+    <div className="td-scene-image td-scene-video-wrap">
+      <video
+        className="td-scene-video"
+        src={ASSETS.klocktornVideo}
+        poster={ASSETS.klocktornBg}
+        autoPlay loop muted playsInline
+        aria-hidden="true"
+      />
       <button className="td-shop-figure td-shop-figure-btn td-ugglemark-center"
         style={{ left: "35%", bottom: "0%", height: "82%", aspectRatio: "773 / 1655" }}
         aria-label="Prata med Professor Tickelton"
