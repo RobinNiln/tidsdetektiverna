@@ -524,7 +524,9 @@ export default function App() {
   const [inventoryOpen, setInventoryOpen] = useState(false);
 
   const stars = Object.values(completed).filter(Boolean).length;
-  const allDone = stars === 3;
+  // TILLFÄLLIGT FÖR TEST: tidsmaskinen alltid upplåst.
+  // Ändra tillbaka till "stars === 3" när finalen är klar att låsas igen.
+  const allDone = true; // const allDone = stars === 3;
 
   function enterLocation(key) {
     if (key === "timemachine") { if (allDone) setView("city"); return; }
