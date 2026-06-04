@@ -2641,7 +2641,7 @@ function ClockTowerScene({ completed, setDialog, onStartMission }) {
     <div className="td-scene-image td-scene-video-wrap">
       <LoopingVideo src={ASSETS.klocktornVideo} poster={ASSETS.klocktornBg} />
       <button className="td-shop-figure td-shop-figure-btn td-ugglemark-center"
-        style={{ left: "35%", bottom: "-11%", height: "64%", aspectRatio: "773 / 1655" }}
+        style={{ left: "35%", bottom: "-7%", height: "55%", aspectRatio: "773 / 1655" }}
         aria-label="Prata med Professor Tickelton"
         onClick={() => {
           setDialog({
