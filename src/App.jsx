@@ -674,14 +674,13 @@ function StartScreen({ onStart }) {
         <div className="td-stamp">N°1 · Det första äventyret</div>
         <h1 className="td-title">Tidsdetektiverna</h1>
         <p className="td-intro">
-          Stadens klockor har börjat gå fel. Och någon har skymtats vid platserna
-          — en främling i kappa som ingen känner. Är hon orsaken... eller
-          lösningen? Hjälp invånarna, hitta ledtrådarna och ta reda på sanningen.
+          Något är fel med tiden. Stadens klockor har stannat, slår fel, går
+          baklänges... Och i skuggorna skymtar en gåtfull främling som ingen
+          känner. Är hon orsaken — eller den enda som kan rädda staden? Bara en
+          riktig tidsdetektiv kan lösa mysteriet. Är du redo?
         </p>
-        <div className="td-trio">
-          <CharacterPortrait src={ASSETS.tickelton} name="Professor Tickelton" />
+        <div className="td-trio td-trio-single">
           <CharacterPortrait src={ASSETS.mira} name="Mira Murr" />
-          <CharacterPortrait src={ASSETS.klonk} name="Herr Klonk" />
         </div>
         <button className="td-btn td-btn-big" onClick={onStart}>
           ▸ Starta äventyret
@@ -4345,6 +4344,8 @@ function Styles() {
       .td-intro-small { font-size: 15px; opacity: 0.85; }
 
       .td-trio { display: flex; justify-content: center; gap: 14px; margin: 24px 0; flex-wrap: wrap; }
+      .td-trio-single { margin: 20px 0; }
+      .td-trio-single .td-portrait-frame { width: 150px; height: 150px; }
       .td-portrait { margin: 0; text-align: center; flex: 1 1 130px; max-width: 160px; }
       .td-portrait-frame {
         width: 100%; aspect-ratio: 1 / 1;
