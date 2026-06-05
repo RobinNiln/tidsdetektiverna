@@ -791,15 +791,22 @@ function MapView({ completed, stars, allDone, hovered, setHovered, onPick, onRes
           const h = HOTSPOTS[key];
           const done = completed[key];
           const isHovered = hovered === key;
+          // Huvuduppdragen låses upp i ordning: puzzle → clock → reading.
+          // Bonusplatser (h.bonus) är alltid öppna.
+          const unlockOrder = { puzzle: null, clock: "puzzle", reading: "clock" };
+          const needs = unlockOrder[key];
+          const locked = !h.bonus && needs && !completed[needs];
           return (
             <button key={key}
-              className={`td-hotspot ${done ? "td-hotspot-done" : ""} ${isHovered ? "td-hotspot-hover" : ""}`}
+              className={`td-hotspot ${done ? "td-hotspot-done" : ""} ${locked ? "td-hotspot-locked" : ""} ${isHovered ? "td-hotspot-hover" : ""}`}
               style={{ left: `${h.x}%`, top: `${h.y}%`, width: `${h.w}%`, height: `${h.h}%` }}
-              onClick={() => onPick(key)}
+              onClick={() => locked ? null : onPick(key)}
               onMouseEnter={() => setHovered(key)}
               onMouseLeave={() => setHovered(null)}
-              aria-label={h.title}>
+              aria-label={locked ? `${h.title} (låst)` : h.title}
+              disabled={locked}>
               {done && <span className="td-hotspot-star">★</span>}
+              {locked && <span className="td-hotspot-lock">🔒</span>}
             </button>
           );
         })}
@@ -817,9 +824,17 @@ function MapView({ completed, stars, allDone, hovered, setHovered, onPick, onRes
           disabled={!allDone}>
         </button>
 
-        {hovered && (
-          <HoverLabel hotspot={HOTSPOTS[hovered]} done={completed[hovered]} allDone={allDone} />
-        )}
+        {hovered && (() => {
+          const unlockOrder = { puzzle: null, clock: "puzzle", reading: "clock" };
+          const needs = unlockOrder[hovered];
+          const h = HOTSPOTS[hovered];
+          const locked = h && !h.bonus && needs && !completed[needs];
+          const lockedBy = needs ? HOTSPOTS[needs]?.title : "";
+          return (
+            <HoverLabel hotspot={HOTSPOTS[hovered]} done={completed[hovered]}
+              allDone={allDone} locked={locked} lockedBy={lockedBy} />
+          );
+        })()}
 
         {/* === FÖRSTORINGSGLASETS LINS === */}
         {magnifierOn && insideMap && (
@@ -959,11 +974,12 @@ function MapAtmosphere() {
   );
 }
 
-function HoverLabel({ hotspot, done, allDone }) {
+function HoverLabel({ hotspot, done, allDone, locked, lockedBy }) {
   const isFinale = hotspot.key === "timemachine";
   const characterSrc = hotspot.character ? ASSETS[hotspot.character] : null;
   let status;
   if (isFinale) status = allDone ? "✦ Redo att öppnas" : "Låst tills alla stjärnor hittats";
+  else if (locked) status = `🔒 Klara ${lockedBy} först`;
   else status = done ? "★ Klart" : "Inte klart";
 
   // Om hotspoten ligger långt till höger får kortet inte plats till höger om den.
@@ -980,7 +996,7 @@ function HoverLabel({ hotspot, done, allDone }) {
       )}
       <div className="td-hover-content">
         <div className="td-hover-title">{hotspot.title}</div>
-        <div className="td-hover-short">{hotspot.short}</div>
+        <div className="td-hover-short">{locked ? "Den här platsen är ännu inte upplåst." : hotspot.short}</div>
         <div className={`td-hover-status ${done || (isFinale && allDone) ? "ok" : ""}`}>{status}</div>
       </div>
     </div>
@@ -4594,6 +4610,18 @@ function Styles() {
         50% { filter: drop-shadow(0 0 28px rgba(253, 201, 77, 0.7)); }
       }
       .td-hotspot-finale-locked { cursor: not-allowed; opacity: 0.5; }
+      .td-hotspot-locked {
+        cursor: not-allowed;
+        filter: grayscale(0.7) brightness(0.7);
+      }
+      .td-hotspot-lock {
+        position: absolute;
+        top: 50%; left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 26px;
+        filter: drop-shadow(0 2px 3px rgba(0,0,0,0.6));
+        pointer-events: none;
+      }
       .td-hotspot-finale-active {
         animation: tdFinaleGlow 1.4s ease-in-out infinite;
       }
