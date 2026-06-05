@@ -7030,8 +7030,8 @@ function Styles() {
       .td-telescope-lens:active { cursor: grabbing; }
       .td-starmap-pan {
         position: absolute;
-        background-repeat: repeat;
-        background-size: 1200px auto;
+        background-repeat: no-repeat;
+        background-size: 100% 100%;
         background-color: #0a0c1a;
         touch-action: none;
         user-select: none;
