@@ -1290,28 +1290,7 @@ function PuzzleWorkshopScene({ completed, foundItems, setDialog, onPickUpItem,
     setDialog("Du hittade en hemlig lucka i golvet! Inuti finns en burk pepparkakor, ett gammalt mynt, och en lapp: 'Gå inte ner i kloakerna utan kompass.' Vad i hela friden...");
   }
 
-  const [valvePhase, setValvePhase] = useState("idle");
-  const [valveClickedOnce, setValveClickedOnce] = useState(false);
-
-  function handleValveClick() {
-    if (valvePhase !== "idle") return;
-    setValvePhase("twisting");
-    setKlonkSurprised(true);
-    setTimeout(() => { setValvePhase("running"); }, 500);
-    setTimeout(() => {
-      setValvePhase("cooling");
-      setKlonkSurprised(false);
-      setDialog(
-        valveClickedOnce
-          ? "PUFF... PUFF... \"Skramlar bara,\" suckar Klonk. \"Maskinen behöver rätt mönster för att fungera på riktigt — inte bara en knapp.\""
-          : "PUFF... PUFF... Klonk stryker bort en oljedroppe från glasögonen. \"Oj, det är testventilen! Jag glömde nästan att den fanns. Men utan rätt mönster bara skramlar maskinen. Vi behöver lösa pusslet på riktigt.\""
-      );
-      setValveClickedOnce(true);
-    }, 2500);
-    setTimeout(() => { setValvePhase("idle"); }, 7500);
-  }
-
-  const machineRunning = valvePhase === "running";
+  // Maskinen är alltid i lugnt viloläge (ingen testventil längre).
 
   if (insideMachine) {
     return <CableRepairScene
@@ -1324,50 +1303,26 @@ function PuzzleWorkshopScene({ completed, foundItems, setDialog, onPickUpItem,
   }
 
   return (
-    <div className={`td-scene-image td-tidy ${machineRunning ? "td-scene-shake" : ""}`}
+    <div className="td-scene-image td-tidy"
          style={{ backgroundImage: `url(${ASSETS.puzzleWorkshop})` }}>
       <StrangerGlimpse x={86} y={4} height={34} flip={true} />
       <svg className="td-anim-overlay" viewBox="0 0 100 100"
            style={{ left: "67%", top: "30%", width: "5%", height: "9%" }}>
         <circle cx="50" cy="50" r="42" fill="rgba(253, 201, 77, 0.12)"
                 style={{ transformOrigin: "50% 50%",
-                  animation: `tdSpin ${machineRunning ? "0.5s" : "16s"} linear infinite` }} />
+                  animation: "tdSpin 16s linear infinite" }} />
       </svg>
       <svg className="td-anim-overlay" viewBox="0 0 100 100"
            style={{ left: "75%", top: "32%", width: "4%", height: "7%" }}>
         <circle cx="50" cy="50" r="42" fill="rgba(253, 201, 77, 0.1)"
                 style={{ transformOrigin: "50% 50%",
-                  animation: `tdSpinReverse ${machineRunning ? "0.7s" : "20s"} linear infinite` }} />
+                  animation: "tdSpinReverse 20s linear infinite" }} />
       </svg>
       <div className="td-steam" style={{ left: "76%", top: "8%", width: "5%", height: "10%" }}>
-        <span className="td-steam-puff td-steam-puff-1" style={{ animationDuration: machineRunning ? "0.8s" : "5s" }} />
-        <span className="td-steam-puff td-steam-puff-2" style={{ animationDuration: machineRunning ? "0.8s" : "5s" }} />
-        <span className="td-steam-puff td-steam-puff-3" style={{ animationDuration: machineRunning ? "0.8s" : "5s" }} />
+        <span className="td-steam-puff td-steam-puff-1" style={{ animationDuration: "5s" }} />
+        <span className="td-steam-puff td-steam-puff-2" style={{ animationDuration: "5s" }} />
+        <span className="td-steam-puff td-steam-puff-3" style={{ animationDuration: "5s" }} />
       </div>
-      {machineRunning && (
-        <>
-          <div className="td-extra-steam" style={{ left: "60%", top: "30%" }}><span className="td-burst-puff" /></div>
-          <div className="td-extra-steam" style={{ left: "85%", top: "40%" }}><span className="td-burst-puff" style={{ animationDelay: "0.3s" }} /></div>
-          <div className="td-extra-steam" style={{ left: "73%", top: "55%" }}><span className="td-burst-puff" style={{ animationDelay: "0.6s" }} /></div>
-          <div className="td-extra-steam" style={{ left: "62%", top: "65%" }}><span className="td-burst-puff" style={{ animationDelay: "0.9s" }} /></div>
-        </>
-      )}
-      {machineRunning && (
-        <div className="td-lamp-flicker td-lamp-overdrive"
-             style={{ left: "42%", top: "23%", width: "8%", height: "10%" }} />
-      )}
-      {machineRunning && (
-        <div className="td-puzzle-grid td-puzzle-grid-running"
-             style={{ left: "63%", top: "46%", width: "5%", height: "11%" }}>
-          <span style={{ animationDelay: "0s" }} />
-          <span style={{ animationDelay: "0.4s" }} />
-          <span style={{ animationDelay: "0.8s" }} />
-          <span style={{ animationDelay: "1.2s" }} />
-        </div>
-      )}
-      {machineRunning && (
-        <div className="td-machine-running-text-big">RAGGA-DAGG!</div>
-      )}
       <TaggedHotspot
         style={{ left: "57%", top: "10%", width: "34%", height: "33%" }}
         tagPosition={{ left: "50%", top: "100%" }} tagRotation={-2}
@@ -1381,25 +1336,6 @@ function PuzzleWorkshopScene({ completed, foundItems, setDialog, onPickUpItem,
         onClick={() => setInsideMachine(true)}
         label={foundItems.includes("puzzle:cables") ? "Insidan ✓" : "Öppna luckan"}
         ariaLabel="Öppna luckan och gå in i maskinen" />
-      <button className={`td-tagged td-tagged-valve td-valve-${valvePhase}`}
-        style={{ left: "80%", top: "58%", width: "5%", height: "7%" }}
-        onClick={handleValveClick}
-        aria-label="Röd ventil — testkör maskinen"
-        disabled={valvePhase !== "idle"}>
-        <span className="td-tagged-glow" />
-        <span className="td-valve-knob">
-          <svg viewBox="0 0 40 40">
-            <circle cx="20" cy="20" r="14" fill="rgba(217, 76, 61, 0.4)" stroke="rgba(58, 42, 23, 0.6)" strokeWidth="2" />
-            <line x1="20" y1="8" x2="20" y2="32" stroke="rgba(58, 42, 23, 0.8)" strokeWidth="3" />
-            <line x1="8" y1="20" x2="32" y2="20" stroke="rgba(58, 42, 23, 0.8)" strokeWidth="3" />
-            <circle cx="20" cy="20" r="3" fill="rgba(58, 42, 23, 0.9)" />
-          </svg>
-        </span>
-        <span className="td-paper-tag"
-              style={{ left: "50%", top: "115%", transform: "translateX(-50%) rotate(4deg)" }}>
-          {valvePhase === "cooling" ? "...puh..." : "Ventilen"}
-        </span>
-      </button>
       <TaggedHotspot
         style={{ left: "1%", top: "26%", width: "32%", height: "40%" }}
         tagPosition={{ left: "50%", top: "100%" }} tagRotation={2}
