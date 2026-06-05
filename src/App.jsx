@@ -728,6 +728,19 @@ function MapView({ completed, stars, allDone, hovered, setHovered, onPick, onRes
     setMouseProc({ x, y });
   }
 
+  // Touch: låt förstoringsglaset följa fingret (för läsplattor).
+  function handleTouchMove(e) {
+    if (!magnifierOn || !mapRef.current) return;
+    const touch = e.touches[0];
+    if (!touch) return;
+    const rect = mapRef.current.getBoundingClientRect();
+    const x = ((touch.clientX - rect.left) / rect.width) * 100;
+    const y = ((touch.clientY - rect.top) / rect.height) * 100;
+    setMouseProc({ x, y });
+    setInsideMap(true);
+    e.preventDefault(); // hindra att sidan skrollar medan man drar
+  }
+
   // Hitta vilken spotlight-cirkel som ska visas (den hovrade hotspotens cx/cy)
   let spotlight = null;
   if (hovered) {
@@ -763,6 +776,9 @@ function MapView({ completed, stars, allDone, hovered, setHovered, onPick, onRes
         onMouseMove={handleMouseMove}
         onMouseEnter={() => setInsideMap(true)}
         onMouseLeave={() => setInsideMap(false)}
+        onTouchStart={handleTouchMove}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={() => setInsideMap(false)}
       >
 
         <MapAtmosphere />
@@ -4557,6 +4573,12 @@ function Styles() {
         pointer-events: none;
         z-index: 20;
         background-color: var(--paper);
+      }
+      /* På pekskärm: lyft linsen ovanför fingret så det inte skymmer. */
+      @media (hover: none) {
+        .td-magnifier-lens {
+          transform: translate(-50%, calc(-50% - 120px));
+        }
       }
       /* Liten "handtag" på förstoringsglaset */
       .td-magnifier-lens::after {
