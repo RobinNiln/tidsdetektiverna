@@ -718,6 +718,7 @@ function MapView({ completed, stars, allDone, hovered, setHovered, onPick, onRes
   const [magnifierOn, setMagnifierOn] = useState(false);
   const [mouseProc, setMouseProc] = useState({ x: 50, y: 50 }); // procent
   const [insideMap, setInsideMap] = useState(false);
+  const [showWelcome, setShowWelcome] = useState(true);
 
   function handleMouseMove(e) {
     if (!magnifierOn || !mapRef.current) return;
@@ -736,6 +737,25 @@ function MapView({ completed, stars, allDone, hovered, setHovered, onPick, onRes
 
   return (
     <div className="td-map-wrap td-fade-in">
+      {showWelcome && (
+        <div className="td-welcome-overlay" onClick={() => setShowWelcome(false)}>
+          <div className="td-welcome-card" onClick={(e) => e.stopPropagation()}>
+            <div className="td-welcome-icon">🔍</div>
+            <h2 className="td-welcome-title">Välkommen, tidsdetektiv!</h2>
+            <p className="td-welcome-text">
+              Res runt på kartan och besök stadens platser. Hjälp invånarna att
+              lösa sina uppdrag — varje löst uppdrag ger dig en stjärna ★.
+            </p>
+            <p className="td-welcome-text">
+              När du samlat alla <strong>tre stjärnorna</strong> öppnas
+              Tidsmaskinen, och du kan lösa mysteriet om den gåtfulla främlingen.
+            </p>
+            <button className="td-btn td-btn-big" onClick={() => setShowWelcome(false)}>
+              Börja utforska! →
+            </button>
+          </div>
+        </div>
+      )}
       <div
         ref={mapRef}
         className={`td-map ${magnifierOn ? "td-map-magnifier-on" : ""}`}
@@ -4632,6 +4652,32 @@ function Styles() {
       .td-hotspot-touchlabel { display: none; }
       /* Rotera-tips: dolt som standard */
       .td-rotate-hint { display: none; }
+      /* Välkomstruta på kartan */
+      .td-welcome-overlay {
+        position: absolute; inset: 0;
+        z-index: 60;
+        background: rgba(20, 14, 6, 0.7);
+        display: flex; align-items: center; justify-content: center;
+        padding: 24px;
+        animation: tdFadeIn 0.3s ease;
+      }
+      .td-welcome-card {
+        background: var(--paper, #fdf3d8);
+        border: 4px solid var(--ink, #2a1a0c);
+        border-radius: 18px;
+        box-shadow: 6px 6px 0 var(--ink, #2a1a0c);
+        max-width: 460px; width: 100%;
+        padding: 28px 30px; text-align: center;
+      }
+      .td-welcome-icon { font-size: 48px; margin-bottom: 8px; }
+      .td-welcome-title {
+        font-family: 'Georgia', serif; font-size: 26px; font-weight: bold;
+        color: var(--ink, #2a1a0c); margin: 0 0 14px;
+      }
+      .td-welcome-text {
+        font-family: 'Georgia', serif; font-size: 17px; line-height: 1.55;
+        color: var(--ink, #2a1a0c); margin: 0 0 14px;
+      }
       @media (hover: none) {
         .td-hotspot-touchlabel {
           display: block;
