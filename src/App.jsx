@@ -54,6 +54,7 @@ const ASSETS = {
   framlingAvslojad: "/tidsdetektiverna/framling_avslojad_full.png",
   tidsmaskin: "/tidsdetektiverna/tidsmaskin.jpg",
   framlingPortratt: "/tidsdetektiverna/framling_portratt.jpg",
+  maskinInuti: "/tidsdetektiverna/maskin_inuti.jpg",
   vik: "/tidsdetektiverna/vik.jpg",
   eka: "/tidsdetektiverna/eka.png",
   // Bokgränden
@@ -1147,6 +1148,108 @@ function DetailOverlay({ type, onClose }) {
   return null;
 }
 
+// --- Inuti maskinen: koppla rätt färg-kablar ---
+function CableRepairScene({ done, onSolve, setDialog, onBack }) {
+  const COLORS = [
+    { id: "red", color: "#d94c3d", name: "röd" },
+    { id: "blue", color: "#3a6ea8", name: "blå" },
+    { id: "green", color: "#5fa860", name: "grön" },
+    { id: "yellow", color: "#e8b93a", name: "gul" },
+  ];
+  // Uttagens ordning (blandad mot kablarna till vänster).
+  const SOCKET_ORDER = ["green", "yellow", "red", "blue"];
+
+  const [connected, setConnected] = useState([]); // färg-id:n som kopplats
+  const [selected, setSelected] = useState(null);  // vald kabel
+  const [wrong, setWrong] = useState(false);
+  const [justSolved, setJustSolved] = useState(false);
+
+  const allDone = connected.length === COLORS.length;
+
+  function clickCable(id) {
+    if (connected.includes(id)) return;
+    setSelected(id);
+    setWrong(false);
+  }
+  function clickSocket(id) {
+    if (!selected) return;
+    if (connected.includes(id)) return;
+    if (selected === id) {
+      const nc = [...connected, id];
+      setConnected(nc);
+      setSelected(null);
+      setWrong(false);
+      if (nc.length === COLORS.length) {
+        setJustSolved(true);
+        onSolve();
+        setDialog({
+          name: "Herr Klonk",
+          portrait: ASSETS.klonkFull,
+          lines: [
+            "Alla kablar rätt kopplade! Du är en riktig liten ingenjör!",
+            "Nu surrar maskinen som den ska igen. Tack, lilla detektiv!",
+          ],
+        });
+      }
+    } else {
+      setWrong(true);
+      setSelected(null);
+    }
+  }
+
+  return (
+    <div className="td-scene-image td-fade-in"
+         style={{ backgroundImage: `url(${ASSETS.maskinInuti})` }}>
+      <button className="td-shop-back td-btn td-btn-small" onClick={onBack}>← Ut ur maskinen</button>
+
+      <div className="td-cable-board">
+        {/* Vänster: kabeländar */}
+        <div className="td-cable-col td-cable-left">
+          {COLORS.map((c) => (
+            <button key={c.id}
+              className={`td-cable-plug ${selected === c.id ? "td-cable-selected" : ""} ${connected.includes(c.id) ? "td-cable-connected" : ""}`}
+              style={{ "--cable": c.color }}
+              onClick={() => clickCable(c.id)}
+              disabled={connected.includes(c.id)}
+              aria-label={`${c.name} kabel`}>
+              <span className="td-cable-dot" />
+            </button>
+          ))}
+        </div>
+
+        {/* Höger: uttag i blandad ordning */}
+        <div className="td-cable-col td-cable-right">
+          {SOCKET_ORDER.map((id) => {
+            const c = COLORS.find((x) => x.id === id);
+            return (
+              <button key={id}
+                className={`td-cable-socket ${connected.includes(id) ? "td-cable-connected" : ""}`}
+                style={{ "--cable": c.color }}
+                onClick={() => clickSocket(id)}
+                disabled={connected.includes(id)}
+                aria-label={`${c.name} uttag`}>
+                <span className="td-cable-hole" />
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="td-cave-clue td-cave-clue-final td-clue-narrow">
+        {done && !justSolved
+          ? "🔧 Maskinen är redan lagad! Alla kablar sitter rätt."
+          : allDone
+            ? "✨ Klart! Alla kablar är rätt kopplade."
+            : wrong
+              ? "Hoppsan — kablarna måste matcha färgen! Försök igen."
+              : selected
+                ? "Bra! Klicka nu på uttaget med SAMMA färg till höger."
+                : "🔧 Koppla varje kabel till uttaget med samma färg. Klicka en kabel först."}
+      </div>
+    </div>
+  );
+}
+
 function PuzzleWorkshopScene({ completed, foundItems, setDialog, onPickUpItem,
                                 onStartMission, setDetailView }) {
   const gearFound = foundItems.includes("puzzle:gear");
@@ -1165,6 +1268,7 @@ function PuzzleWorkshopScene({ completed, foundItems, setDialog, onPickUpItem,
 
   const [trapdoorVisible, setTrapdoorVisible] = useState(false);
   const [trapdoorPos, setTrapdoorPos] = useState({ x: 50, y: 85 });
+  const [insideMachine, setInsideMachine] = useState(false);
 
   useEffect(() => {
     if (trapdoorFound) return;
@@ -1209,26 +1313,36 @@ function PuzzleWorkshopScene({ completed, foundItems, setDialog, onPickUpItem,
 
   const machineRunning = valvePhase === "running";
 
+  if (insideMachine) {
+    return <CableRepairScene
+      done={foundItems.includes("puzzle:cables")}
+      onSolve={() => {
+        if (!foundItems.includes("puzzle:cables")) onPickUpItem("puzzle:cables");
+      }}
+      setDialog={setDialog}
+      onBack={() => setInsideMachine(false)} />;
+  }
+
   return (
-    <div className={`td-scene-image ${machineRunning ? "td-scene-shake" : ""}`}
+    <div className={`td-scene-image td-tidy ${machineRunning ? "td-scene-shake" : ""}`}
          style={{ backgroundImage: `url(${ASSETS.puzzleWorkshop})` }}>
       <StrangerGlimpse x={86} y={4} height={34} flip={true} />
       <svg className="td-anim-overlay" viewBox="0 0 100 100"
            style={{ left: "67%", top: "30%", width: "5%", height: "9%" }}>
-        <circle cx="50" cy="50" r="42" fill="rgba(253, 201, 77, 0.18)"
+        <circle cx="50" cy="50" r="42" fill="rgba(253, 201, 77, 0.12)"
                 style={{ transformOrigin: "50% 50%",
-                  animation: `tdSpin ${machineRunning ? "0.5s" : "8s"} linear infinite` }} />
+                  animation: `tdSpin ${machineRunning ? "0.5s" : "16s"} linear infinite` }} />
       </svg>
       <svg className="td-anim-overlay" viewBox="0 0 100 100"
            style={{ left: "75%", top: "32%", width: "4%", height: "7%" }}>
-        <circle cx="50" cy="50" r="42" fill="rgba(253, 201, 77, 0.15)"
+        <circle cx="50" cy="50" r="42" fill="rgba(253, 201, 77, 0.1)"
                 style={{ transformOrigin: "50% 50%",
-                  animation: `tdSpinReverse ${machineRunning ? "0.7s" : "12s"} linear infinite` }} />
+                  animation: `tdSpinReverse ${machineRunning ? "0.7s" : "20s"} linear infinite` }} />
       </svg>
       <div className="td-steam" style={{ left: "76%", top: "8%", width: "5%", height: "10%" }}>
-        <span className="td-steam-puff td-steam-puff-1" style={{ animationDuration: machineRunning ? "0.8s" : "3s" }} />
-        <span className="td-steam-puff td-steam-puff-2" style={{ animationDuration: machineRunning ? "0.8s" : "3s" }} />
-        <span className="td-steam-puff td-steam-puff-3" style={{ animationDuration: machineRunning ? "0.8s" : "3s" }} />
+        <span className="td-steam-puff td-steam-puff-1" style={{ animationDuration: machineRunning ? "0.8s" : "5s" }} />
+        <span className="td-steam-puff td-steam-puff-2" style={{ animationDuration: machineRunning ? "0.8s" : "5s" }} />
+        <span className="td-steam-puff td-steam-puff-3" style={{ animationDuration: machineRunning ? "0.8s" : "5s" }} />
       </div>
       {machineRunning && (
         <>
@@ -1238,15 +1352,19 @@ function PuzzleWorkshopScene({ completed, foundItems, setDialog, onPickUpItem,
           <div className="td-extra-steam" style={{ left: "62%", top: "65%" }}><span className="td-burst-puff" style={{ animationDelay: "0.9s" }} /></div>
         </>
       )}
-      <div className={`td-lamp-flicker ${machineRunning ? "td-lamp-overdrive" : ""}`}
-           style={{ left: "42%", top: "23%", width: "8%", height: "10%" }} />
-      <div className={`td-puzzle-grid ${machineRunning ? "td-puzzle-grid-running" : ""}`}
-           style={{ left: "63%", top: "46%", width: "5%", height: "11%" }}>
-        <span style={{ animationDelay: "0s" }} />
-        <span style={{ animationDelay: "0.4s" }} />
-        <span style={{ animationDelay: "0.8s" }} />
-        <span style={{ animationDelay: "1.2s" }} />
-      </div>
+      {machineRunning && (
+        <div className="td-lamp-flicker td-lamp-overdrive"
+             style={{ left: "42%", top: "23%", width: "8%", height: "10%" }} />
+      )}
+      {machineRunning && (
+        <div className="td-puzzle-grid td-puzzle-grid-running"
+             style={{ left: "63%", top: "46%", width: "5%", height: "11%" }}>
+          <span style={{ animationDelay: "0s" }} />
+          <span style={{ animationDelay: "0.4s" }} />
+          <span style={{ animationDelay: "0.8s" }} />
+          <span style={{ animationDelay: "1.2s" }} />
+        </div>
+      )}
       {machineRunning && (
         <div className="td-machine-running-text-big">RAGGA-DAGG!</div>
       )}
@@ -1256,6 +1374,13 @@ function PuzzleWorkshopScene({ completed, foundItems, setDialog, onPickUpItem,
         onClick={onStartMission}
         label={completed ? "Maskinen ✓" : "Maskinen"} primary
         ariaLabel="Den stora maskinen" />
+      {/* Lucka in i maskinen — leder till kabel-pysslet */}
+      <TaggedHotspot
+        style={{ left: "78%", top: "52%", width: "11%", height: "20%" }}
+        tagPosition={{ left: "50%", top: "100%" }} tagRotation={3}
+        onClick={() => setInsideMachine(true)}
+        label={foundItems.includes("puzzle:cables") ? "Insidan ✓" : "Öppna luckan"}
+        ariaLabel="Öppna luckan och gå in i maskinen" />
       <button className={`td-tagged td-tagged-valve td-valve-${valvePhase}`}
         style={{ left: "55%", top: "47%", width: "5%", height: "7%" }}
         onClick={handleValveClick}
@@ -5330,6 +5455,23 @@ function Styles() {
         50% { filter: brightness(1.08); }
       }
 
+      /* Städad scen (pusselverkstaden): papperslappar syns först vid hover,
+         så miljön blir lugn som de andra platserna. */
+      .td-tidy .td-paper-tag {
+        opacity: 0;
+        transform: translateX(-50%) scale(0.96);
+        transition: opacity 0.2s ease, transform 0.2s ease;
+        animation: none;
+      }
+      .td-tidy .td-tagged:hover .td-paper-tag,
+      .td-tidy .td-tagged:focus-visible .td-paper-tag {
+        opacity: 1;
+      }
+      /* Skatten får synas svagt så den fortfarande lockar att hittas */
+      .td-tidy .td-tagged-treasure .td-paper-tag {
+        opacity: 0.85;
+      }
+
       .td-tagged-primary .td-paper-tag {
         background: var(--gold); font-size: 15px; padding: 5px 18px;
       }
@@ -6688,6 +6830,49 @@ function Styles() {
         z-index: 10;
       }
       .td-clock-panel { text-align: center; }
+
+      /* === INUTI MASKINEN: kabel-pyssel === */
+      .td-cable-board {
+        position: absolute;
+        left: 50%; top: 46%;
+        transform: translate(-50%, -50%);
+        display: flex; gap: 140px;
+        background: rgba(20, 16, 8, 0.55);
+        padding: 26px 40px; border-radius: 18px;
+        border: 3px solid var(--gold);
+      }
+      .td-cable-col { display: flex; flex-direction: column; gap: 22px; }
+      .td-cable-plug, .td-cable-socket {
+        width: 60px; height: 60px;
+        border-radius: 50%;
+        border: 4px solid var(--ink);
+        background: #2a2018;
+        cursor: pointer;
+        display: flex; align-items: center; justify-content: center;
+        transition: transform 0.15s, box-shadow 0.2s;
+        padding: 0;
+      }
+      .td-cable-dot {
+        width: 30px; height: 30px; border-radius: 50%;
+        background: var(--cable);
+        box-shadow: 0 0 8px 1px var(--cable);
+      }
+      .td-cable-hole {
+        width: 26px; height: 26px; border-radius: 50%;
+        background: #1a140c;
+        border: 3px solid var(--cable);
+      }
+      .td-cable-plug:hover, .td-cable-socket:hover { transform: scale(1.1); }
+      .td-cable-selected {
+        box-shadow: 0 0 0 4px var(--gold), 0 0 18px 4px rgba(253,201,77,0.8);
+        transform: scale(1.12);
+      }
+      .td-cable-connected {
+        opacity: 1;
+        box-shadow: 0 0 14px 3px var(--cable);
+        cursor: default;
+      }
+      .td-cable-connected .td-cable-hole { background: var(--cable); }
 
       /* Blek skymt av Främlingen som tonar bort */
       .td-stranger-glimpse {
