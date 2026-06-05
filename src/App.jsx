@@ -883,6 +883,7 @@ function MapView({ completed, stars, allDone, hovered, setHovered, onPick, onRes
           <MagnifierLens
             mouseProc={mouseProc}
             backgroundImage={ASSETS.map}
+            mapRef={mapRef}
           />
         )}
       </div>
@@ -893,14 +894,30 @@ function MapView({ completed, stars, allDone, hovered, setHovered, onPick, onRes
 // ============================================================
 // MagnifierLens — visar zoomad del av kartan vid muspekaren
 // ============================================================
-function MagnifierLens({ mouseProc, backgroundImage }) {
-  const LENS_SIZE_PX = 180; // diameter
-  const ZOOM = 2.4;
+function MagnifierLens({ mouseProc, backgroundImage, mapRef }) {
+  const LENS_SIZE_PX = 180; // linsens diameter
+  const ZOOM = 2.2;
 
-  // Hur långt ned/upp/höger/vänster ska den underliggande bilden förskjutas
-  // för att visa rätt zoomad region
-  const bgPosX = mouseProc.x;
-  const bgPosY = mouseProc.y;
+  // Mät kartans faktiska storlek i pixlar så zoomen blir korrekt.
+  const [mapSize, setMapSize] = useState({ w: 0, h: 0 });
+  useEffect(() => {
+    if (mapRef && mapRef.current) {
+      const rect = mapRef.current.getBoundingClientRect();
+      setMapSize({ w: rect.width, h: rect.height });
+    }
+  }, [mapRef, mouseProc.x, mouseProc.y]);
+
+  // Bakgrundsbilden i linsen = hela kartan förstorad ZOOM gånger.
+  const bgW = mapSize.w * ZOOM;
+  const bgH = mapSize.h * ZOOM;
+
+  // Punkten vi pekar på (i px på den förstorade kartan).
+  const pointX = (mouseProc.x / 100) * bgW;
+  const pointY = (mouseProc.y / 100) * bgH;
+
+  // Förskjut bakgrunden så att den punkten hamnar i linsens mitt.
+  const bgPosX = -(pointX - LENS_SIZE_PX / 2);
+  const bgPosY = -(pointY - LENS_SIZE_PX / 2);
 
   return (
     <div
@@ -911,8 +928,8 @@ function MagnifierLens({ mouseProc, backgroundImage }) {
         width: `${LENS_SIZE_PX}px`,
         height: `${LENS_SIZE_PX}px`,
         backgroundImage: `url(${backgroundImage})`,
-        backgroundSize: `${ZOOM * 100}% auto`,
-        backgroundPosition: `${bgPosX}% ${bgPosY}%`,
+        backgroundSize: `${bgW}px ${bgH}px`,
+        backgroundPosition: `${bgPosX}px ${bgPosY}px`,
         backgroundRepeat: "no-repeat",
       }}
     />
