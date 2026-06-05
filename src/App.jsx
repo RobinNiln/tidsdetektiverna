@@ -1369,20 +1369,20 @@ function PuzzleWorkshopScene({ completed, foundItems, setDialog, onPickUpItem,
         <div className="td-machine-running-text-big">RAGGA-DAGG!</div>
       )}
       <TaggedHotspot
-        style={{ left: "57%", top: "10%", width: "34%", height: "65%" }}
-        tagPosition={{ left: "50%", top: "78%" }} tagRotation={-2}
+        style={{ left: "57%", top: "10%", width: "34%", height: "33%" }}
+        tagPosition={{ left: "50%", top: "100%" }} tagRotation={-2}
         onClick={onStartMission}
         label={completed ? "Maskinen ✓" : "Maskinen"} primary
         ariaLabel="Den stora maskinen" />
-      {/* Lucka in i maskinen — leder till kabel-pysslet */}
+      {/* Lucka in i maskinen — egen yta under maskinen, ingen överlapp */}
       <TaggedHotspot
-        style={{ left: "78%", top: "52%", width: "11%", height: "20%" }}
+        style={{ left: "60%", top: "58%", width: "13%", height: "17%" }}
         tagPosition={{ left: "50%", top: "100%" }} tagRotation={3}
         onClick={() => setInsideMachine(true)}
         label={foundItems.includes("puzzle:cables") ? "Insidan ✓" : "Öppna luckan"}
         ariaLabel="Öppna luckan och gå in i maskinen" />
       <button className={`td-tagged td-tagged-valve td-valve-${valvePhase}`}
-        style={{ left: "55%", top: "47%", width: "5%", height: "7%" }}
+        style={{ left: "80%", top: "58%", width: "5%", height: "7%" }}
         onClick={handleValveClick}
         aria-label="Röd ventil — testkör maskinen"
         disabled={valvePhase !== "idle"}>
@@ -1412,7 +1412,7 @@ function PuzzleWorkshopScene({ completed, foundItems, setDialog, onPickUpItem,
         ariaLabel="Fönstret" />
       {!gearFound && (
         <TaggedHotspot
-          style={{ left: "76%", top: "78%", width: "12%", height: "16%" }}
+          style={{ left: "30%", top: "70%", width: "10%", height: "13%" }}
           tagPosition={{ left: "50%", top: "100%" }} tagRotation={3}
           onClick={() => {
             onPickUpItem("puzzle:gear");
