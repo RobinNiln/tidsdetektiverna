@@ -550,10 +550,9 @@ export default function App() {
   const [detailView, setDetailView] = useState(null);
   const [inventoryOpen, setInventoryOpen] = useState(false);
 
-  const stars = Object.values(completed).filter(Boolean).length;
-  // TILLFÄLLIGT FÖR TEST: tidsmaskinen alltid upplåst.
-  // Ändra tillbaka till "stars === 3" när finalen är klar att låsas igen.
-  const allDone = true; // const allDone = stars === 3;
+  // Endast de tre huvuduppdragen ger stjärnor (grottan är en bonusplats).
+  const stars = ["reading", "clock", "puzzle"].filter((k) => completed[k]).length;
+  const allDone = stars === 3;
 
   function enterLocation(key) {
     if (key === "timemachine") { if (allDone) setView("city"); return; }
