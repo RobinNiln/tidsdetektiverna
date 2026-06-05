@@ -53,6 +53,7 @@ const ASSETS = {
   framlingSkymt: "/tidsdetektiverna/framling_skymt.png",
   framlingAvslojad: "/tidsdetektiverna/framling_avslojad_full.png",
   tidsmaskin: "/tidsdetektiverna/tidsmaskin.jpg",
+  framlingPortratt: "/tidsdetektiverna/framling_portratt.jpg",
   vik: "/tidsdetektiverna/vik.jpg",
   eka: "/tidsdetektiverna/eka.png",
   // Bokgränden
@@ -679,8 +680,9 @@ function StartScreen({ onStart }) {
           känner. Är hon orsaken — eller den enda som kan rädda staden? Bara en
           riktig tidsdetektiv kan lösa mysteriet. Är du redo?
         </p>
-        <div className="td-trio td-trio-single">
+        <div className="td-trio td-trio-duo">
           <CharacterPortrait src={ASSETS.mira} name="Mira Murr" />
+          <CharacterPortrait src={ASSETS.framlingPortratt} name="? ? ?" />
         </div>
         <button className="td-btn td-btn-big" onClick={onStart}>
           ▸ Starta äventyret
@@ -4346,6 +4348,8 @@ function Styles() {
       .td-trio { display: flex; justify-content: center; gap: 14px; margin: 24px 0; flex-wrap: wrap; }
       .td-trio-single { margin: 20px 0; }
       .td-trio-single .td-portrait-frame { width: 150px; height: 150px; }
+      .td-trio-duo { margin: 20px 0; gap: 28px; }
+      .td-trio-duo .td-portrait-frame { width: 130px; height: 130px; }
       .td-portrait { margin: 0; text-align: center; flex: 1 1 130px; max-width: 160px; }
       .td-portrait-frame {
         width: 100%; aspect-ratio: 1 / 1;
