@@ -591,6 +591,12 @@ export default function App() {
   return (
     <div className="td-app">
       <Styles />
+      <div className="td-rotate-hint">
+        <div className="td-rotate-hint-inner">
+          <span className="td-rotate-icon">📱↻</span>
+          <p>Vrid plattan på sidan för bästa upplevelse!</p>
+        </div>
+      </div>
       {view === "start" && <StartScreen onStart={() => setView("map")} />}
       {view === "map" && (
         <MapView completed={completed} stars={stars} allDone={allDone}
@@ -806,6 +812,7 @@ function MapView({ completed, stars, allDone, hovered, setHovered, onPick, onRes
               disabled={locked}>
               {done && <span className="td-hotspot-star">★</span>}
               {locked && <span className="td-hotspot-lock">🔒</span>}
+              <span className="td-hotspot-touchlabel">{h.title}</span>
             </button>
           );
         })}
@@ -4621,6 +4628,26 @@ function Styles() {
         filter: drop-shadow(0 2px 3px rgba(0,0,0,0.6));
         pointer-events: none;
       }
+      /* Namnskylt under platser — visas bara på pekskärmar (ingen hover) */
+      .td-hotspot-touchlabel { display: none; }
+      /* Rotera-tips: dolt som standard */
+      .td-rotate-hint { display: none; }
+      @media (hover: none) {
+        .td-hotspot-touchlabel {
+          display: block;
+          position: absolute;
+          left: 50%; bottom: -6px;
+          transform: translateX(-50%);
+          white-space: nowrap;
+          background: rgba(40, 26, 12, 0.85);
+          color: #fdf3d8;
+          font-family: 'Georgia', serif;
+          font-size: 12px; font-weight: bold;
+          padding: 2px 8px; border-radius: 6px;
+          pointer-events: none;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+        }
+      }
       .td-hotspot-finale-active {
         animation: tdFinaleGlow 1.4s ease-in-out infinite;
       }
@@ -5433,6 +5460,13 @@ function Styles() {
       /* Skatten får synas svagt så den fortfarande lockar att hittas */
       .td-tidy .td-tagged-treasure .td-paper-tag {
         opacity: 0.85;
+      }
+      /* På pekskärmar finns ingen hover — visa lapparna lågmält ändå
+         så man ser vad som går att trycka på. */
+      @media (hover: none) {
+        .td-tidy .td-paper-tag { opacity: 0.7; }
+        .td-tidy .td-tagged-primary .td-paper-tag { opacity: 0.92; }
+        .td-tidy .td-tagged-treasure .td-paper-tag { opacity: 0.92; }
       }
 
       .td-tagged-primary .td-paper-tag {
@@ -7160,6 +7194,24 @@ function Styles() {
 
       .td-end-stars { margin: 20px 0; }
       .td-end-stars .td-star { font-size: 44px; margin: 0 4px; }
+
+      @media (hover: none) and (orientation: portrait) {
+        .td-rotate-hint {
+          display: flex;
+          position: fixed; inset: 0;
+          z-index: 9999;
+          background: rgba(20, 14, 6, 0.96);
+          align-items: center; justify-content: center;
+          text-align: center; padding: 30px;
+        }
+        .td-rotate-hint-inner { color: #fdf3d8; font-family: 'Georgia', serif; max-width: 320px; }
+        .td-rotate-icon { font-size: 60px; display: block; margin-bottom: 18px; animation: tdRotateWiggle 1.6s ease-in-out infinite; }
+        .td-rotate-hint-inner p { font-size: 19px; line-height: 1.5; }
+      }
+      @keyframes tdRotateWiggle {
+        0%, 100% { transform: rotate(-12deg); }
+        50% { transform: rotate(12deg); }
+      }
 
       @media (max-width: 700px) {
         .td-title { font-size: 36px; }
